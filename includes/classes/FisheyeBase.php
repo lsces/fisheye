@@ -6,55 +6,91 @@
 /**
  * required setup
  */
-require_once( LIBERTY_PKG_CLASS_PATH.'LibertyMime.php' );		// FisheyeGallery base class
+namespace Bitweaver\Fisheye;
+use Bitweaver\Liberty\LibertyMime;		// FisheyeGallery base class
+use Bitweaver\Liberty\LibertyContent;
+
+define('FISHEYEGALLERY_CONTENT_TYPE_GUID', 'fisheyegallery' );
 
 /**
  * @package fisheye
  */
+#[\AllowDynamicProperties]
 abstract class FisheyeBase extends LibertyMime
 {
 	// Path of gallery images to get breadcrumbs
 	public $mGalleryPath;
+	public $mGalleryId;
 
 	abstract public static function getServiceKey();
 
 	public function __sleep() {
-		return array_merge( parent::__sleep(), array( 'mGalleryPath' ) );
+		return array_merge( parent::__sleep(), [ 'mGalleryPath' ] );
 	}
 
-	function __construct() {
+	public function __construct() {
 		$this->mGalleryPath = '';
 		parent::__construct();
 	}
 
 	// regular expression to determine if the title was computer generated
-	function isMachineName( $pString ) {
-		return( preg_match( '/(^[0-9][-0-9 ]*$)|(^[-0-9 ]*(img|dsc|dscn|pict|htg|dscf|p)[-0-9 ][-0-9 ]*.*$)/i', trim( $pString ) ) );
+	public function isMachineName( $pString ) {
+		if ( !empty($pString) ) {
+			return preg_match( '/(^[0-9][-0-9 ]*$)|(^[-0-9 ]*(img|dsc|dscn|pict|htg|dscf|p)[-0-9 ][-0-9 ]*.*$)/i', trim( $pString ) );
+		} else {
+			return '';
+		}
 	}
 
 	// Gets a list of galleries which this item is attached to
-	function getParentGalleries( $pContentId=NULL ) {
+	public function getParentGalleries( $pContentId=null ) {
 		if( !$this->verifyId( $pContentId ) ) {
 			$pContentId = $this->mContentId;
 		}
-		$ret = NULL;
+		$ret = null;
 
 		if( is_numeric( $pContentId ) ) {
 			$sql = "SELECT fg.`gallery_id` AS `hash_key`, fg.*, lc.`title`
 					FROM `".BIT_DB_PREFIX."fisheye_gallery` fg, `".BIT_DB_PREFIX."liberty_content` lc, `".BIT_DB_PREFIX."fisheye_gallery_image_map` fgim
 					WHERE fgim.`item_content_id` = ? AND fgim.`gallery_content_id`=fg.`content_id` AND fg.`content_id`=lc.`content_id`";
-			$ret = $this->mDb->getAssoc( $sql, array( $pContentId ) );
+			$ret = $this->mDb->getAssoc( $sql, [ $pContentId  ] );
+		}
+		if ( $ret ) {
+			$parents = current( $ret );
+			$sql = "WITH TREE AS
+				( SELECT fgim.`item_content_id` AS gallery_content_id,
+				LAG( fgim.`item_content_id`) OVER (ORDER BY fgim.`item_position`) AS PREVIOUS,
+				LEAD( fgim.`item_content_id` ) OVER (ORDER BY fgim.`item_position`) AS NEXT
+				FROM `".BIT_DB_PREFIX."fisheye_gallery_image_map` fgim
+				WHERE fgim.`gallery_content_id` = ?
+				order by fgim.`item_position` )
+				SELECT pr.PREVIOUS, prec.`content_type_guid` AS PRE_T, pr.NEXT, posc.`content_type_guid` AS NEXT_T FROM TREE pr
+				LEFT JOIN `".BIT_DB_PREFIX."liberty_content` prec ON prec.`content_id` = pr.PREVIOUS
+				LEFT JOIN `".BIT_DB_PREFIX."liberty_content` posc ON posc.`content_id` = pr.NEXT
+				WHERE pr.`gallery_content_id` = ?";
+			if( $parents = $this->mDb->getRow($sql, [ $parents['content_id'], $pContentId ] ) ) {
+				if ( $parents['pre_t'] == FISHEYEGALLERY_CONTENT_TYPE_GUID ) {
+					$ret['previous_gallery_id'] = $parents['previous'];
+				} else {
+					$ret['previous_image_id'] = $parents['previous'];
+				}
+				if ( $parents['next_t'] == FISHEYEGALLERY_CONTENT_TYPE_GUID ) {
+					$ret['next_gallery_id'] = $parents['next'];
+				}else {
+					$ret['next_image_id'] = $parents['previous'];
+				}
+			}
 		}
 		return $ret;
 	}
 
-	function loadParentGalleries() {
+	public function loadParentGalleries() {
 		if( $this->isValid() ) {
 			$this->mInfo['parent_galleries'] = $this->getParentGalleries();
 		}
 	}
 
-	function updatePosition($pGalleryContentId, $newPosition = NULL) {
+	public function updatePosition($pGalleryContentId, $newPosition = null) {
 		if( $pGalleryContentId && $newPosition && $this->verifyId($this->mContentId) ) {
 			// SQL optimization to prevent stupid updates of identical data
 			if( $radixPosition = strpos( $newPosition, '.' ) ) {
@@ -65,40 +101,40 @@ abstract class FisheyeBase extends LibertyMime
 			}
 			$cleanPosition = preg_replace( '/\./', '', $newPosition );
 			$sql = "UPDATE `".BIT_DB_PREFIX."fisheye_gallery_image_map` SET `item_position` = ?
-					WHERE `item_content_id` = ? AND `gallery_content_id` = ? AND (`item_position` IS NULL OR `item_position`!=?)";
-			$rs = $this->mDb->query($sql, array($newPosition, $this->mContentId, $pGalleryContentId, $newPosition));
+					WHERE `item_content_id` = ? AND `gallery_content_id` = ? AND (`item_position` IS null OR `item_position`!=?)";
+			$rs = $this->mDb->getOne($sql, [ $newPosition, $this->mContentId, $pGalleryContentId, $newPosition ] );
 		}
 	}
 
-	function setGalleryPath( $pPath ) {
+	public function setGalleryPath( $pPath ) {
 		$this->setField( 'gallery_path', rtrim( $pPath, '/' ) );
 	}
 
-	function getThumbnailContentId() {
+	public function getThumbnailContentId() {
 		// PURE VIRTUAL
 	}
 
-	function loadThumbnail( $pSize='small', $pContentId=NULL ) {
+	public function loadThumbnail( $pSize='small', $pContentId=null ) {
 		// Default does nothing
 	}
 
-	// Possible derived read-only object such as Facebook, Instagram, etc.. default is TRUE
-	function isEditable() {
-		return TRUE;
+	// Possible derived read-only object such as Facebook, Instagram, etc.. default is true
+	public function isEditable() {
+		return true;
 	}
 
 	// THis is a function that creates a mack daddy function to get a breadcrumb path with a single query.
 	// Do not muck with this query unless you really, truly understand what is going on.
 /*
 not ready for primetime
-	function getPaths() {
+	public function getPaths() {
 		global $gBitDb;
 
-		$ret = NULL;
+		$ret = null;
 		if( $this->isValid() ) {
 			if( $this->mDb->isAdvancedPostgresEnabled() ) {
-				$bindVars = array();
-				$containVars = array();
+				$bindVars = [];
+				$containVars = [];
 				$selectSql = '';
 				$joinSql = '';
 				$whereSql = '';
@@ -108,7 +144,7 @@ not ready for primetime
 							INNER JOIN `".BIT_DB_PREFIX."fisheye_gallery` fg ON (fg.`content_id`=cb_item_content_id)
 							INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON(lc.`content_id`=fg.`content_id`)
 						  ORDER BY level DESC, branch, lc.`title`";
-				if( $ret = $gBitDb->GetAssoc( $query, array( $this->mContentId ) ) ) {
+				if( $ret = $gBitDb->GetAssoc( $query, [ $this->mContentId  ] ) ) {
 				}
 			}
 		}
@@ -116,10 +152,10 @@ not ready for primetime
 	}
 */
 
-	function getBreadcrumbLinks( $pIncludeSelf = FALSE ) {
+	public function getBreadcrumbLinks( $pIncludeSelf = false ) {
 		global $gBitSystem;
 		//$ret['fisheye'] = $gBitSystem->getConfig('site_title');
-		$ret = array();
+		$ret = [];
 		if( !$this->getField( 'gallery_path' ) ) {
 			if( $this->isValid() && $parents = $this->getParentGalleries() ) {
 				$gal = current( $parents );
@@ -133,9 +169,9 @@ not ready for primetime
 			$joinSql = '';
 			$selectSql = '';//AS title$g, fg$g.gallery_id AS gallery_id$g";
 			$whereSql = '';
-			$bindVars = array();
+			$bindVars = [];
 			// We need to get min_content_status_id
-			$pListHash = array();
+			$pListHash = [];
 			LibertyContent::prepGetList($pListHash);
 			foreach( $path as $galleryId ) {
 				if( $galleryId ) {
@@ -154,10 +190,10 @@ not ready for primetime
 				INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc$c ON(fgim$c.`item_content_id`=lc$c.`content_id`) ";
 			$whereSql .= " lc$c.`content_id`=?  AND fgim$c.`gallery_content_id`=lc$p.`content_id` ";
 			array_push( $bindVars, $this->mContentId );
-			$rs = $this->mDb->query( "SELECT ".rtrim( $selectSql, ',')." FROM ".rtrim( $joinSql, ',')." WHERE $whereSql", $bindVars );
-			if( !empty( $rs->fields ) ) {
-				for( $i = 1; $i <= (count( $rs->fields ) / 2); $i++ ) {
-					$ret[$rs->fields['gallery_id'.$i]] = $rs->fields['title'.$i];
+			$rs = $this->mDb->getRow( "SELECT ".rtrim( $selectSql, ',')." FROM ".rtrim( $joinSql, ',')." WHERE $whereSql", $bindVars );
+			if( !empty( $rs ) ) {
+				for( $i = 1; $i <= (count( $rs ) / 2); $i++ ) {
+					$ret[$rs['gallery_id'.$i]] = $rs['title'.$i];
 				}
 			}
 		}
@@ -170,38 +206,38 @@ not ready for primetime
 	}
 
 
-	function addToGalleries( $pGalleryArray ) {
+	public function addToGalleries( $pGalleryArray ) {
 		global $gBitSystem;
 		if( $this->isValid() ) {
-			$inGalleries = $this->mDb->getAssoc( "SELECT `gallery_id`,`gallery_content_id` FROM `".BIT_DB_PREFIX."fisheye_gallery_image_map` fgim INNER JOIN `".BIT_DB_PREFIX."fisheye_gallery` fg ON (fgim.`gallery_content_id`=fg.`content_id`) WHERE `item_content_id` = ?", array( $this->mContentId ) );
-			$galleries = array();
+			$inGalleries = $this->mDb->getAssoc( "SELECT `gallery_id`,`gallery_content_id` FROM `".BIT_DB_PREFIX."fisheye_gallery_image_map` fgim INNER JOIN `".BIT_DB_PREFIX."fisheye_gallery` fg ON (fgim.`gallery_content_id`=fg.`content_id`) WHERE `item_content_id` = ?", [ $this->mContentId  ] );
+			$galleries = [];
 			if( is_array( $pGalleryArray ) && count( $pGalleryArray ) ) {
 				foreach( $pGalleryArray as $galleryId ) {
 					// image has been requested to be put in a new gallery
 					if( !is_numeric( $galleryId ) ) {
 						switch( $galleryId ) {
 							case 'newest':
-								$galleryId = $this->mDb->getAssoc( "SELECT `gallery_id` FROM `".BIT_DB_PREFIX."fisheye_gallery` fg INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (fg.`content_id`=lg.`content_id`) WHERE `user_id` = ? ORDER BY gallery_id DESC", array( $this->getField( 'user_id' ) ) );
+								$galleryId = $this->mDb->getAssoc( "SELECT `gallery_id` FROM `".BIT_DB_PREFIX."fisheye_gallery` fg INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (fg.`content_id`=lg.`content_id`) WHERE `user_id` = ? ORDER BY gallery_id DESC", [ $this->getField( 'user_id' ) ] );
 								break;
 												
 						}
 					}
 					if( empty( $inGalleries[$galleryId] ) ) {
 						if( empty( $galleries[$galleryId] ) ) {
-							if( $galleries[$galleryId] = FisheyeGallery::lookup( array( 'gallery_id' => $galleryId ) ) ) {
+							if( $galleries[$galleryId] = FisheyeGallery::lookup( [ 'gallery_id' => $galleryId ] ) ) {
 								$galleries[$galleryId]->load();
 							}
 						}
 						if( $galleries[$galleryId] && $galleries[$galleryId]->isValid() ) {
-							if( $galleries[$galleryId]->hasUserPermission( 'p_fisheye_upload', TRUE, FALSE ) || $galleries[$galleryId]->isPublic() ) {
+							if( $galleries[$galleryId]->hasUserPermission( 'p_fisheye_upload', true, false ) || $galleries[$galleryId]->isPublic() ) {
 								if( $gBitSystem->isFeatureActive( 'fisheye_gallery_default_sort_mode' ) ) {
-									$pos = NULL;
+									$pos = null;
 								} else {
 									$query = "SELECT MAX(`item_position`)
 											  FROM `".BIT_DB_PREFIX."fisheye_gallery_image_map` fgim
 												INNER JOIN `".BIT_DB_PREFIX."fisheye_gallery` fg ON(fgim.`gallery_content_id`=fg.`content_id`)
 											  WHERE fg.`gallery_id`=?";
-									$pos = $this->mDb->getOne( $query, array( $galleryId ) ) + 10;
+									$pos = $this->mDb->getOne( $query, [ $galleryId ] ) + 10;
 								}
 
 								$galleries[$galleryId]->addItem( $this->mContentId, $pos );
@@ -219,45 +255,46 @@ not ready for primetime
 				// if we have any left over in the inGalleries array, we should delete them. these were the "unchecked" boxes
 				foreach( $inGalleries as $galleryId ) {
 					$sql = "DELETE FROM `".BIT_DB_PREFIX."fisheye_gallery_image_map` WHERE `gallery_content_id` = ? AND `item_content_id` = ?";
-					$rs = $this->mDb->query($sql, array( $galleryId, $this->mContentId ) );
+					$rs = $this->mDb->getOne($sql, [ $galleryId, $this->mContentId ] );
 				}
 			}
 		}
 	}
 
-	function isPublic() {
+	public function isPublic() {
 		if( $this->isValid() ) {
-			return ( $this->getPreference( 'is_public' ) == 'y' );
+			return $this->getPreference( 'is_public' ) == 'y';
 		}
+		return false;
 	}
 
-	function isInGallery( $pGalleryContentId, $pItemContentId = NULL) {
+	public function isInGallery( $pGalleryContentId, $pItemContentId = null) {
 		if( !$this->verifyId( $pItemContentId ) ) {
 			$pItemContentId = $this->mContentId;
 		}
-		$ret = FALSE;
+		$ret = false;
 		if ( is_numeric( $this->mGalleryId ) && is_numeric( $pGalleryContentId ) ) {
 
 			if( $this->mDb->isAdvancedPostgresEnabled() ) {
 				global $gBitDb, $gBitSmarty;
 				// This code pulls all branches for the current node and determines if there is a path from this content to the root
-				// without hitting a security_id. If there is clear path it returns TRUE. If there is a security_id, then
+				// without hitting a security_id. If there is clear path it returns true. If there is a security_id, then
 				// it determines if the current user has permission
 				$query = "SELECT branch,level,cb_item_content_id,cb_gallery_content_id
 						  FROM connectby('`".BIT_DB_PREFIX."fisheye_gallery_image_map`', '`gallery_content_id`', '`item_content_id`', ?, 0, '/') AS t(`cb_gallery_content_id` int,`cb_item_content_id` int, `level` int, `branch` text)
 						  WHERE `cb_gallery_content_id`=?
 						  ORDER BY branch
 						";
-				if ( $this->mDb->getOne($query, array(  $pItemContentId, $pGalleryContentId ) ) ) {
-					$ret = TRUE;
+				if ( $this->mDb->getOne($query, [  $pItemContentId, $pGalleryContentId ] ) ) {
+					$ret = true;
 				}
 			} else {
 				$sql = "SELECT count(`item_content_id`) as `item_count`
 						FROM `".BIT_DB_PREFIX."fisheye_gallery_image_map`
 						WHERE `gallery_content_id` = ? AND `item_content_id` = ?";
-				$rs = $this->mDb->query($sql, array($pGalleryContentId, $pItemContentId));
-				if ($rs->fields['item_count'] > 0) {
-					$ret = TRUE;
+				$rs = $this->mDb->getRow($sql, [ $pGalleryContentId, $pItemContentId ] );
+				if ($rs['item_count'] > 0) {
+					$ret = true;
 				}
 			}
 		}
@@ -265,4 +302,3 @@ not ready for primetime
 	}
 
 }
-?>

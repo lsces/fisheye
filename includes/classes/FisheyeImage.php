@@ -6,9 +6,13 @@
 /**
  * required setup
  */
-require_once( FISHEYE_PKG_CLASS_PATH.'FisheyeBase.php' );
+namespace Bitweaver\Fisheye;
+use Bitweaver\Liberty\LibertyContent;
+use Bitweaver\Liberty\LibertyMime;
+use Bitweaver\BitBase;
+
 // Needed for getting event_time and possible image title and data
-require_once( LIBERTY_PKG_PATH.'plugins/mime.image.php' );
+require_once LIBERTY_PKG_PATH.'plugins/mime.image.php';
 
 define('FISHEYEIMAGE_CONTENT_TYPE_GUID', 'fisheyeimage');
 
@@ -17,20 +21,22 @@ define('FISHEYEIMAGE_CONTENT_TYPE_GUID', 'fisheyeimage');
  */
 class FisheyeImage extends FisheyeBase {
 	public $mImageId;
+	public $mExif;
 
-	function __construct($pImageId = NULL, $pContentId = NULL) {
+	public function __construct($pImageId = null, $pContentId = null) {
 		parent::__construct();
 		$this->mImageId = (int)$pImageId;
 		$this->mContentId = (int)$pContentId;
 
 		$this->registerContentType(
-			FISHEYEIMAGE_CONTENT_TYPE_GUID, array( 'content_type_guid' => FISHEYEIMAGE_CONTENT_TYPE_GUID,
+			FISHEYEIMAGE_CONTENT_TYPE_GUID, [
+				'content_type_guid' => FISHEYEIMAGE_CONTENT_TYPE_GUID,
 				'content_name' => 'Image',
 				'handler_class' => 'FisheyeImage',
 				'handler_package' => 'fisheye',
 				'handler_file' => 'FisheyeImage.php',
 				'maintainer_url' => 'http://www.bitweaver.org'
-		));
+		] );
 
 		// Permission setup
 		$this->mViewContentPerm  = 'p_fisheye_view';
@@ -39,23 +45,23 @@ class FisheyeImage extends FisheyeBase {
 	}
 
 	public function __sleep() {
-		$ret = array_merge( parent::__sleep(), array( 'mImageId' ) );
+		$ret = array_merge( parent::__sleep(), [ 'mImageId' ] );
 		return $ret;
 	}
 
 	public static function lookup( $pLookupHash ) {
 		global $gBitDb;
-		$ret = NULL;
+		$ret = null;
 
-		$lookupContentId = NULL;
+		$lookupContentId = null;
 		if (!empty($pLookupHash['image_id']) && is_numeric($pLookupHash['image_id'])) {
-			if( $lookup = $gBitDb->getRow( "SELECT lc.`content_id`, lc.`content_type_guid` FROM `".BIT_DB_PREFIX."fisheye_image` fi INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON(lc.`content_id`=fi.`content_id`) WHERE `image_id`=?", array( $pLookupHash['image_id'] ) ) ) {
+			if( $lookup = $gBitDb->getRow( "SELECT lc.`content_id`, lc.`content_type_guid` FROM `".BIT_DB_PREFIX."fisheye_image` fi INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON(lc.`content_id`=fi.`content_id`) WHERE `image_id`=?", [ $pLookupHash['image_id'] ] ) ) {
 				$lookupContentId = $lookup['content_id'];
 				$lookupContentGuid = $lookup['content_type_guid'];
 			}
 		} elseif (!empty($pLookupHash['content_id']) && is_numeric($pLookupHash['content_id'])) {
 			$lookupContentId = $pLookupHash['content_id'];
-			$lookupContentGuid = NULL;
+			$lookupContentGuid = null;
 		}
 
 		if( static::verifyId( $lookupContentId ) ) {
@@ -68,9 +74,9 @@ class FisheyeImage extends FisheyeBase {
 	public function load() {
 		if( $this->isValid() ) {
 			global $gBitSystem;
-			$gateSql = NULL;
+			$gateSql = null;
 			$selectSql = $joinSql = $whereSql = '';
-			$bindVars = array();
+			$bindVars = [];
 
 			if ( @$this->verifyId( $this->mImageId ) ) {
 				$whereSql = " WHERE fi.`image_id` = ?";
@@ -97,8 +103,8 @@ class FisheyeImage extends FisheyeBase {
 				$this->mImageId = $this->mInfo['image_id'];
 				$this->mContentId = $this->mInfo['content_id'];
 
-				$this->mInfo['creator'] = (isset( $this->mInfo['creator_real_name'] ) ? $this->mInfo['creator_real_name'] : $this->mInfo['creator_user'] );
-				$this->mInfo['editor'] = (isset( $this->mInfo['modifier_real_name'] ) ? $this->mInfo['modifier_real_name'] : $this->mInfo['modifier_user'] );
+				$this->mInfo['creator'] = isset( $this->mInfo['creator_real_name'] ) ? $this->mInfo['creator_real_name'] : $this->mInfo['creator_user'];
+				$this->mInfo['editor'] = isset( $this->mInfo['modifier_real_name'] ) ? $this->mInfo['modifier_real_name'] : $this->mInfo['modifier_user'];
 
 				if( $gBitSystem->isPackageActive( 'gatekeeper' ) && !@$this->verifyId( $this->mInfo['security_id'] ) ) {
 					// check to see if this image is in a protected gallery
@@ -107,10 +113,10 @@ class FisheyeImage extends FisheyeBase {
 								INNER JOIN `".BIT_DB_PREFIX."gatekeeper_security_map` tsm ON(fgim.`gallery_content_id`=tsm.`content_id` )
 								INNER JOIN `".BIT_DB_PREFIX."gatekeeper_security` ls ON(tsm.`security_id`=ls.`security_id` )
 							  WHERE fgim.`item_content_id`=?";
-					$grs = $this->mDb->query($query, array( $this->mContentId ) );
-					if( $grs && $grs->RecordCount() ) {
+					$grs = $this->mDb->getAssoc($query, [ $this->mContentId ] );
+					if( $grs ) {
 						// order matters here
-						$this->mInfo = array_merge( $grs->fields, $this->mInfo );
+						$this->mInfo = array_merge( $grs, $this->mInfo );
 					}
 				}
 
@@ -127,7 +133,7 @@ class FisheyeImage extends FisheyeBase {
 					// override original display_url that mime knows where we keep the image
 					$this->mInfo['image_file']['display_url'] = $this->getDisplayUrl();
 				} else {
-					$this->mInfo['image_file'] = NULL;
+					$this->mInfo['image_file'] = null;
 				}
 
 				if( empty( $this->mInfo['width'] ) ||  empty( $this->mInfo['height'] ) ) {
@@ -136,52 +142,53 @@ class FisheyeImage extends FisheyeBase {
 					if( !empty($details) AND $details['width'] > 0 AND $details['width'] < 9999 AND $details['height'] > 0 AND $details['height'] < 9999 ) {
 						$this->mInfo['width'] = $details['width'];
 						$this->mInfo['height'] = $details['height'];
-						$this->mDb->query( "UPDATE `".BIT_DB_PREFIX."fisheye_image` SET `width`=?, `height`=? WHERE `content_id`=?", array( $this->mInfo['width'], $this->mInfo['height'], $this->mContentId ) );
+						$this->mDb->getOne( "UPDATE `".BIT_DB_PREFIX."fisheye_image` SET `width`=?, `height`=? WHERE `content_id`=?", [ $this->mInfo['width'], $this->mInfo['height'], $this->mContentId ] );
 					}
 				}
 			}
 			$ret = count($this->mInfo);
 		} else {
 			// We don't have an image_id or a content_id so there is no way to know what to load
-			$ret = NULL;
+			$ret = null;
 		}
 
 		return $ret;
 	}
 
-	function storeDimensions( $pDetails ) {
+	public function storeDimensions( $pDetails ) {
 		if( $this->isValid() && $this->mInfo['width'] != $pDetails['width'] || $this->mInfo['height'] != $pDetails['height']  ) {
 			// if our data got out of sync with the database, force an update
 			$query = "UPDATE `".BIT_DB_PREFIX."fisheye_image` SET `width`=?, `height`=? WHERE `content_id`=?";
-			$this->mDb->query( $query, array( $pDetails['width'], $pDetails['height'], $this->mContentId ) );
+			$this->mDb->getOne( $query, [ $pDetails['width'], $pDetails['height'], $this->mContentId ] );
 			$this->mInfo['width'] = $pDetails['width'];
 			$this->mInfo['height'] = $pDetails['height'];
 			$this->clearFromCache();
 		}
 	}
 
-	function exportHash() {
-		$ret = NULL;
+	public function exportHash() {
+		$ret = null;
 		// make sure we have a valid image file.
 		if( ($ret = parent::exportHash()) && ($details = $this->getImageDetails() ) ) {
-			$ret = array_merge( $ret, array(	'type' => $this->getContentType(),
+			$ret = array_merge( $ret, [
+												'type' => $this->getContentType(),
 												'landscape' => $this->isLandscape(),
 												'has_description' => !empty( $this->mInfo['data'] ),
 												'is_favorite' => $this->getField('is_favorite'),
-											) );
+											] );
 		}
 		return $ret;
 	}
 
-	function isLandscape() {
-		return( !empty( $this->mInfo['width'] ) && !empty( $this->mInfo['height'] ) && ($this->mInfo['width'] > $this->mInfo['height']) );
+	public function isLandscape() {
+		return !empty( $this->mInfo['width'] ) && !empty( $this->mInfo['height'] ) && ($this->mInfo['width'] > $this->mInfo['height']);
 	}
 
-	function verifyImageData(&$pParamHash) {
+	public function verifyImageData(&$pParamHash) {
 		$pParamHash['content_type_guid'] = $this->getContentType();
 
 		if ( empty($pParamHash['purge_from_galleries']) ) {
-			$pParamHash['purge_from_galleries'] = FALSE;
+			$pParamHash['purge_from_galleries'] = false;
 		}
 
 		if( !empty( $pParamHash['resize'] ) ) {
@@ -197,10 +204,10 @@ class FisheyeImage extends FisheyeBase {
 			}
 		}
 
-		if( function_exists( 'mime_image_get_exif_data' ) && !empty( $pParamHash['_files_override'][0]['tmp_name'] ) ) {
+		if( function_exists( '\Bitweaver\Liberty\mime_image_get_exif_data' ) && !empty( $pParamHash['_files_override'][0]['tmp_name'] ) ) {
 			$exifFile['source_file'] = $pParamHash['_files_override'][0]['tmp_name'];
 			$exifFile['type'] =  $pParamHash['_files_override'][0]['type'];
-			$exifHash = mime_image_get_exif_data( $exifFile );
+			$exifHash = \Bitweaver\Liberty\mime_image_get_exif_data( $exifFile );
 
 			// Set some default values based on the Exif data
 			if( !empty( $exifHash['IFD0']['ImageDescription'] ) ) {
@@ -258,10 +265,10 @@ class FisheyeImage extends FisheyeBase {
 			parent::verify( $pParamHash );
 		}
 
-		return (count($this->mErrors) == 0);
+		return count($this->mErrors) == 0;
 	}
 
-	function store(&$pParamHash) {
+	public function store( array &$pParamHash): bool {
 		global $gBitSystem, $gLibertySystem;
 
 		if ($this->verifyImageData($pParamHash)) {
@@ -271,11 +278,11 @@ class FisheyeImage extends FisheyeBase {
 				$currentImageAttachmentId = $this->mInfo['attachment_id'];
 				$pParamHash['attachment_id'] = $currentImageAttachmentId;
 			} else {
-				$currentImageAttachmentId = NULL;
+				$currentImageAttachmentId = null;
 			}
 
 			// we have already done all the permission checking needed for this user to upload an image
-			$pParamHash['no_perm_check'] = TRUE;
+			$pParamHash['no_perm_check'] = true;
 
 			$this->StartTrans();
 			$pParamHash['thumbnail'] = !$gBitSystem->isFeatureActive( 'liberty_offline_thumbnailer' );
@@ -287,34 +294,31 @@ class FisheyeImage extends FisheyeBase {
 				$this->mContentId = $pParamHash['content_id'];
 				$this->mInfo['content_id'] = $this->mContentId;
 
-				if ( !empty( $this->mInfo['source_file'] ) && file_exists( $this->getSourceFile() )) {
-					$imageDetails = $this->getImageDetails( $this->getSourceFile() );
-				} else {
-					$imageDetails = NULL;
-				}
+				$imageDetails = !empty( $this->mInfo['source_file'] ) && file_exists( $this->getSourceFile() )
+					? $imageDetails = $this->getImageDetails( $this->getSourceFile() ) : null;
 
 				if (!$imageDetails) {
-					$imageDetails['width'] = (!empty($this->mInfo['width']) ? $this->mInfo['width'] : NULL);
-					$imageDetails['height'] = (!empty($this->mInfo['height']) ? $this->mInfo['height'] : NULL);
+					$imageDetails['width'] = !empty($this->mInfo['width']) ? $this->mInfo['width'] : null;
+					$imageDetails['height'] = !empty($this->mInfo['height']) ? $this->mInfo['height'] : null;
 				}
 
 				if ($this->imageExistsInDatabase()) {
 					$sql = "UPDATE `".BIT_DB_PREFIX."fisheye_image`
 							SET `content_id` = ?, `width` = ?, `height` = ?
 							WHERE `image_id` = ?";
-					$bindVars = array($this->mContentId, $imageDetails['width'], $imageDetails['height'], $this->mImageId);
+					$bindVars = [ $this->mContentId, $imageDetails['width'], $imageDetails['height'], $this->mImageId ];
 				} else {
 					$this->mImageId = defined( 'LINKED_ATTACHMENTS' ) ? $this->mContentId : $this->mDb->GenID('fisheye_image_id_seq');
 					$this->mInfo['image_id'] = $this->mImageId;
 					$sql = "INSERT INTO `".BIT_DB_PREFIX."fisheye_image` (`image_id`, `content_id`, `width`, `height`) VALUES (?,?,?,?)";
-					$bindVars = array($this->mImageId, $this->mContentId, $imageDetails['width'], $imageDetails['height']);
+					$bindVars = [ $this->mImageId, $this->mContentId, $imageDetails['width'], $imageDetails['height'] ];
 				}
 
-				$rs = $this->mDb->query($sql, $bindVars);
+				$rs = $this->mDb->getOne($sql, $bindVars);
 
 				// check to see if we need offline thumbnailing
 				if( $gBitSystem->isFeatureActive( 'liberty_offline_thumbnailer' ) ) {
-					$resize = !empty( $pParamHash['resize'] ) ? (int)$pParamHash['resize'] : NULL;
+					$resize = !empty( $pParamHash['resize'] ) ? (int)$pParamHash['resize'] : null;
 					$this->generateThumbnails( $resize );
 				} else {
 					if( !empty( $pParamHash['resize'] ) && is_numeric( $pParamHash['resize'] ) ) {
@@ -329,12 +333,12 @@ class FisheyeImage extends FisheyeBase {
 		} else {
 			$this->mErrors[] = "There were errors while attempting to save this gallery image";
 		}
-		return (count($this->mErrors) == 0);
+		return count($this->mErrors) == 0;
 	}
 
-	function getExifField( $pExifField ) {
-		$ret = NULL;
-		if( function_exists( 'exif_read_data' ) ) {
+	public function getExifField( $pExifField ) {
+		$ret = null;
+		if( function_exists( '\exif_read_data' ) ) {
 			$pExifField = strtolower( $pExifField );
 			$file = $this->getSourceFile();
 			// only attempt to get exif data from jpg or tiff files - chokes otherwise
@@ -350,7 +354,7 @@ class FisheyeImage extends FisheyeBase {
 		return $ret;
 	}
 
-	function rotateImage( $pDegrees, $pImmediateRender = FALSE ) {
+	public function rotateImage( $pDegrees, $pImmediateRender = false ) {
 		global $gBitSystem;
 		if( $this->getField( 'file_name' ) || $this->load() ) {
 			$fileHash['source_file'] = $this->getSourceFile();
@@ -359,7 +363,7 @@ class FisheyeImage extends FisheyeBase {
 			$fileHash['size'] = filesize( $fileHash['source_file'] );
 			$fileHash['dest_branch'] = dirname( $this->getSourceFile() ).'/';
 			$fileHash['name'] = $this->getField( 'file_name' );
-			if( $pDegrees == 'auto' ) {
+            if( $pDegrees == 'auto' ) {
 				if( $exifOrientation = $this->getExifField( 'orientation' ) ) {
 					switch( $exifOrientation ) {
 						 case 1: //) transform="";;
@@ -394,11 +398,11 @@ class FisheyeImage extends FisheyeBase {
 			if( is_numeric( $pDegrees ) ) {
 				$fileHash['degrees'] = $pDegrees;
 				
-				if( ($rotateFunc = liberty_get_function( 'rotate' )) && $rotateFunc( $fileHash ) ) {
-					liberty_clear_thumbnails( $fileHash );
-					$this->mDb->query( "UPDATE `".BIT_DB_PREFIX."fisheye_image` SET `width`=`height`, `height`=`width` WHERE `content_id`=?", array( $this->mContentId ) );
+				if( ($rotateFunc = \Bitweaver\Liberty\liberty_get_function( 'rotate' )) && $rotateFunc( $fileHash ) ) {
+					\Bitweaver\Liberty\liberty_clear_thumbnails( $fileHash );
+					$this->mDb->getOne( "UPDATE `".BIT_DB_PREFIX."fisheye_image` SET `width`=`height`, `height`=`width` WHERE `content_id`=?", [ $this->mContentId ] );
 					$this->clearFromCache();
-					$this->generateThumbnails( FALSE, $pImmediateRender );
+					$this->generateThumbnails( false, $pImmediateRender );
 				} else {
 					$this->mErrors['rotate'] = $fileHash['error'];
 				}
@@ -406,7 +410,7 @@ class FisheyeImage extends FisheyeBase {
 				$this->mErrors['rotate'] = "Image was not auto-rotated.";
 			}
 		}
-		return (count($this->mErrors) == 0);
+		return count($this->mErrors) == 0;
 	}
 
 
@@ -415,11 +419,11 @@ class FisheyeImage extends FisheyeBase {
 	 *
 	 * @param string $pColorSpace - target color space, only 'grayscale' is currently supported, and only when using the MagickWand image processor
 	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return bool true on success, false on failure - mErrors will contain reason for failure
 	 */
-	function convertColorspace( $pColorSpace ) {
+	public function convertColorspace( $pColorSpace ) {
 		global $gBitSystem;
-		$ret = FALSE;
+		$ret = false;
 		if( $this->getField( 'file_name' ) || $this->load() ) {
 			$fileHash['source_file'] = $this->getSourceFile();
 			$fileHash['dest_base_name'] = preg_replace('/(.+)\..*$/', '$1', basename( $fileHash['source_file'] ) );
@@ -427,11 +431,11 @@ class FisheyeImage extends FisheyeBase {
 			$fileHash['size'] = filesize( $fileHash['source_file'] );
 			$fileHash['dest_branch'] = dirname( $this->getSourceFile() ).'/';
 			$fileHash['name'] = $this->getField( 'file_name' );
-			if( $convertFunc = liberty_get_function( 'convert_colorspace' ) ) {
+			if( $convertFunc = \Bitweaver\Liberty\liberty_get_function( 'convert_colorspace' ) ) {
 				if( $ret = $convertFunc( $fileHash, $pColorSpace ) ) {
-					liberty_clear_thumbnails( $fileHash );
+					\Bitweaver\Liberty\liberty_clear_thumbnails( $fileHash );
 					$sql = "UPDATE `".BIT_DB_PREFIX."liberty_files SET `file_size`=? WHERE `file_id` = ?";
-					$this->mDb->query( $sql, array( filesize( $fileHash['dest_file'] ), $this->mInfo['file_id'] ) );
+					$this->mDb->getOne( $sql, [ filesize( $fileHash['dest_file'] ), $this->mInfo['file_id'] ] );
 					$this->generateThumbnails();
 				}
 			}
@@ -440,7 +444,7 @@ class FisheyeImage extends FisheyeBase {
 	}
 
 
-	function resizeOriginal( $pResizeOriginal ) {
+	public function resizeOriginal( $pResizeOriginal ) {
 		global $gBitSystem;
 		if( $this->getField( 'file_name' ) || $this->load() ) {
 			$fileHash['source_file'] = $this->getSourceFile();
@@ -452,7 +456,7 @@ class FisheyeImage extends FisheyeBase {
 			$fileHash['max_height'] = $fileHash['max_width'] = $pResizeOriginal;
 			// make a copy of the fileHash that we can compare output after processing
 			$preResize = $fileHash;
-			if( ($resizeFunc = liberty_get_function( 'resize' )) && ($resizeFile = $resizeFunc( $fileHash )) ) {
+			if( ($resizeFunc = \Bitweaver\Liberty\liberty_get_function( 'resize' )) && ($resizeFile = $resizeFunc( $fileHash )) ) {
 				clearstatcache();
 				// Ack this is evil direct bashing of the liberty tables! XOXO spiderr
 				// should be a cleaner way eventually
@@ -467,15 +471,15 @@ class FisheyeImage extends FisheyeBase {
 				}
 				$details = $this->getImageDetails( $resizeFile );
 				// store all the values that might have changed due to the resize
-				$storeHash = array(
+				$storeHash = [
 					'file_size' => filesize( $resizeFile ),
 					'mime_type' => $details['mime'],
-				);
-				$this->mDb->associateUpdate( BIT_DB_PREFIX."liberty_files", $storeHash, array( 'file_id' => $this->mInfo['file_id'] ) );
+				];
+				$this->mDb->associateUpdate( BIT_DB_PREFIX."liberty_files", $storeHash, [ 'file_id' => $this->mInfo['file_id'] ] );
 				//$query = "UPDATE `".BIT_DB_PREFIX."liberty_files` SET `file_size`=? WHERE `file_id`=?";
-				//$this->mDb->query( $query, array( $details['size'], $this->mInfo['file_id'] ) );
+				//$this->mDb->query( $query, [ $details['size'], $this->mInfo['file_id'] ] );
 				$query = "UPDATE `".BIT_DB_PREFIX."fisheye_image` SET `width`=?, `height`=? WHERE `content_id`=?";
-				$this->mDb->query( $query, array( $details['width'], $details['height'], $this->mContentId ) );
+				$this->mDb->getOne( $query, [ $details['width'], $details['height'], $this->mContentId ] );
 				// if we've come this far, we can try removing the original if it's different to the resized image
 				// make absolutely certain that we have 2 image files and that they are different, then remove the original
 				if( $fileHash['source_file'] != $preResize['source_file'] && is_file( $fileHash['source_file'] ) && is_file( $preResize['source_file'] ) ) {
@@ -485,21 +489,21 @@ class FisheyeImage extends FisheyeBase {
 				$this->mErrors['resize'] = $fileHash['error'];
 			}
 		}
-		return (count($this->mErrors) == 0);
+		return count($this->mErrors) == 0;
 	}
 
 
-	function generateThumbnails( $pResizeOriginal=NULL, $pImmediateRender=FALSE ) {
+	public function generateThumbnails( $pResizeOriginal=null, $pImmediateRender=false ) {
 		global $gBitSystem;
-		$ret = FALSE;
+		$ret = false;
 		// LibertyMime will take care of thumbnail generation of the offline thumbnailer is not active
 		if( $gBitSystem->isFeatureActive( 'liberty_offline_thumbnailer' ) && !$pImmediateRender ) {
 			$query = "DELETE FROM `".BIT_DB_PREFIX."liberty_process_queue`
 					  WHERE `content_id`=?";
-			$this->mDb->query( $query, array( $this->mContentId ) );
+			$this->mDb->getOne( $query, [ $this->mContentId ] );
 			$query = "INSERT INTO `".BIT_DB_PREFIX."liberty_process_queue`
 					  (`content_id`, `queue_date`, `processor_parameters`) VALUES (?,?,?)";
-			$this->mDb->query( $query, array( $this->mContentId, $gBitSystem->getUTCTime(), serialize( array( 'resize_original' => $pResizeOriginal ) ) ) );
+			$this->mDb->getOne( $query, [ $this->mContentId, $gBitSystem->getUTCTime(), serialize( [ 'resize_original' => $pResizeOriginal ] ) ] );
 		} else {
 			$ret = $this->renderThumbnails();
 		}
@@ -507,7 +511,7 @@ class FisheyeImage extends FisheyeBase {
 	}
 
 
-	function renderThumbnails( $pThumbSizes=NULL ) {
+	public function renderThumbnails( $pThumbSizes=null ) {
 		global $gBitSystem;
 		if( $this->getField( 'file_name' ) || $this->load() ) {
 			$fileHash['source_file'] = $this->getSourceFile();
@@ -517,46 +521,46 @@ class FisheyeImage extends FisheyeBase {
 			$fileHash['name'] = $this->getField( 'file_name' );
 			$fileHash['thumbnail_sizes'] = $pThumbSizes;
 			// just generate thumbnails
-			liberty_generate_thumbnails( $fileHash );
+			\Bitweaver\Liberty\liberty_generate_thumbnails( $fileHash );
 			if( !empty( $fileHash['error'] ) ) {
 				$this->mErrors['thumbnail'] = $fileHash['error'];
 			}
 		}
-		return( count($this->mErrors) == 0 );
+		return count($this->mErrors) == 0;
 	}
 
-	function getStorageUrl( $pParamHash = array() ) {
-		$pParamHash['sub_dir'] =  $this->getParameter( $pParamHash, 'sub_dir', liberty_mime_get_storage_sub_dir_name( array( 'type'=>$this->getField( 'mime_type' ), 'name'=>$this->getField('file_name') ) ) );
+	public function getStorageUrl( $pParamHash = [] ) {
+		$pParamHash['sub_dir'] =  $this->getParameter( $pParamHash, 'sub_dir', \Bitweaver\Liberty\liberty_mime_get_storage_sub_dir_name( [ 'type'=>$this->getField( 'mime_type' ), 'name'=>$this->getField('file_name') ] ) );
 		$pParamHash['user_id'] = $this->getParameter( $pParamHash, 'user_id', $this->getField('user_id') );
 		return parent::getStorageUrl( $pParamHash ).$this->getParameter( $pParamHash, 'attachment_id', $this->getField('attachment_id') ).'/';
 	}
 
-	function getStorageBranch( $pParamHash = array() ) {
-		$pParamHash['sub_dir'] = $this->getParameter( $pParamHash, 'sub_dir', liberty_mime_get_storage_sub_dir_name( array( 'type'=>$this->getField( 'mime_type' ), 'name'=>$this->getField('file_name') ) ) );
+	public function getStorageBranch( $pParamHash = [] ) {
+		$pParamHash['sub_dir'] = $this->getParameter( $pParamHash, 'sub_dir', \Bitweaver\Liberty\liberty_mime_get_storage_sub_dir_name( [ 'type'=>$this->getField( 'mime_type' ), 'name'=>$this->getField('file_name') ] ) );
 		$pParamHash['user_id'] = $this->getParameter( $pParamHash, 'user_id', $this->getField('user_id') );
 		return parent::getStorageBranch( $pParamHash ).$this->getParameter( $pParamHash, 'attachment_id', $this->getField('attachment_id') ).'/';
 	}
 
-	function getStoragePath( $pParamHash, $pRootDir=NULL ) {
-		$pParamHash['sub_dir'] = liberty_mime_get_storage_sub_dir_name( array( 'type'=>BitBase::getParameter( $pParamHash, 'mime_type', $this->getField( 'mime_type' ) ), 'name'=>BitBase::getParameter( $pParamHash, 'file_name', $this->getField('file_name') ) ) );
+	public function getStoragePath( $pParamHash, $pRootDir=null ) {
+		$pParamHash['sub_dir'] = \Bitweaver\Liberty\liberty_mime_get_storage_sub_dir_name( [ 'type'=>BitBase::getParameter( $pParamHash, 'mime_type', $this->getField( 'mime_type' ) ), 'name'=>BitBase::getParameter( $pParamHash, 'file_name', $this->getField('file_name') ) ] );
 		$pParamHash['user_id'] = $this->getParameter( $pParamHash, 'user_id', $this->getField('user_id') );
 		return parent::getStoragePath( $pParamHash ).$this->getParameter( $pParamHash, 'attachment_id', $this->getField('attachment_id') ).'/';
 	}
 
-	function getPreviewHash() {
+	public function getPreviewHash() {
 		return $this->mInfo;
 	}
 
 	// Get resolution, etc
-	function getImageDetails($pFilePath = NULL) {
-		$info = array();
-		if( file_exists( $pFilePath ) ) {
-			$checkFiles = array( $pFilePath, dirname( $pFilePath ).'/original.jpg' );
+	public function getImageDetails($pFilePath = null) {
+		$info = [];
+		if( file_exists( $pFilePath ?? '' ) ) {
+			$checkFiles = [ $pFilePath, dirname( $pFilePath ).'/original.jpg' ];
 		} else {
 			$sourceFile  = $this->getSourceFile();
-			$checkFiles = array( $sourceFile );
+			$checkFiles = [ $sourceFile ];
 			// was an original file created?
-			$originalFile = dirname( $sourceFile ).'/original.jpg';
+			$originalFile = dirname( $sourceFile ?? '' ).'/original.jpg';
 			if( file_exists( $originalFile ) && !is_link( $originalFile ) ) {
 				$checkFiles[] = $originalFile;
 			}
@@ -576,14 +580,14 @@ class FisheyeImage extends FisheyeBase {
 		return $info;
 	}
 
-	function getWidth() {
+	public function getWidth() {
 		if( !isset( $this->mInfo['width'] ) ) {
 			$this->mInfo = array_merge( $this->mInfo, $this->getImageDetails() );
 		}
 		return $this->getField('width');
 	}
 
-	function getHeight() {
+	public function getHeight() {
 		if( !isset( $this->mInfo['width'] ) ) {
 			$this->mInfo = array_merge( $this->mInfo, $this->getImageDetails() );
 		}
@@ -592,32 +596,31 @@ class FisheyeImage extends FisheyeBase {
 
     /**
     * Returns include file that will setup vars for display
-    * @return the fully specified path to file to be included
+    * @return string the fully specified path to file to be included
     */
-	function getRenderFile() {
+	public function getRenderFile() {
 		return FISHEYE_PKG_INCLUDE_PATH.'display_fisheye_image_inc.php';
 	}
 
     /**
     * Returns template file used for display
-    * @return the fully specified path to file to be included
+    * @return string the fully specified path to file to be included
     */
-	function getRenderTemplate() {
+	public function getRenderTemplate() {
 		return 'bitpackage:fisheye/view_image.tpl';
 	}
 
     /**
     * Function that returns link to display a piece of content
-    * @param pImageId id of gallery to link
-    * @param pParamHash if a string, it is assumed to be the size, if an array, it is assumed to be a mInfo hash
-    * @return the url to display the gallery.
+    * @param array pParamHash if a string, it is assumed to be the size, if an array, it is assumed to be a mInfo hash
+    * @return string the url to display the gallery.
     */
 	public static function getDisplayUrlFromHash( &$pParamHash ) {
 		$ret = '';
-		$size = (!empty( $pParamHash['size'] ) && is_string( $pParamHash['size'] ) && isset( $pParamHash['thumbnail_url'][$pParamHash['size']] ) ) ? $pParamHash['size'] : NULL ;
+		$size = (!empty( $pParamHash['size'] ) && is_string( $pParamHash['size'] ) && isset( $pParamHash['thumbnail_url'][$pParamHash['size']] ) ) ? $pParamHash['size'] : null ;
 
 		global $gBitSystem;
-		if( @BitBase::verifyId( $pParamHash['image_id'] ) ) {
+		if( BitBase::verifyId( $pParamHash['image_id'] ?? 0 ) ) {
 			if( $gBitSystem->isFeatureActive( 'pretty_urls' ) ) {
 				$ret = FISHEYE_PKG_URL.'image/'.$pParamHash['image_id'];
 				if( !empty( $pParamHash['gallery_path'] ) ) {
@@ -628,14 +631,14 @@ class FisheyeImage extends FisheyeBase {
 				}
 			} else {
 				$ret = FISHEYE_PKG_URL.'view_image.php?image_id='.$pParamHash['image_id'];
-				if( !empty( $this ) && !empty( $pParamHash['gallery_path'] ) ) {
+				if( !empty( $pParamHash['gallery_path'] ) ) {
 					$ret .= '&gallery_path='.$pParamHash['gallery_path'];
 				}
 				if( $size ) {
 					$ret .= '&size='.$size;
 				}
 			}
-		} elseif( @BitBase::verifyId( $pParamHash['content_id'] ) ) {
+		} elseif ( BitBase::verifyId( $pParamHash['content_id'] ?? 0 ) ) {
 			$ret = FISHEYE_PKG_URL.'view_image.php?content_id='.$pParamHash['content_id'];
 		}
 		return $ret;
@@ -643,34 +646,35 @@ class FisheyeImage extends FisheyeBase {
 
     /**
     * Function that returns link to display an image
-    * @return the url to display the gallery.
+    * @return string the url to display the gallery.
     */
 	public function getDisplayUrl() {
 		$info = &$this->mInfo;
 		$info['image_id'] = $this->mImageId;
 		$info['gallery_path'] = $this->mGalleryPath;
-		return static::getDisplayUrlFromHash( $info );
+		return FisheyeImage::getDisplayUrlFromHash( $info );
 	}
 
     /**
     * Function that returns link to display an image
     * Used to display thumbnails for navigation bar
-    * @param pImageId id of image to link
-    * @return the url to display the image.
+    * @param array pImageId id of image to link
+    * @return string the url to display the image.
     */
 	public function getImageUrl( $pImageId ) {
-		$info = array( 'image_id' => $pImageId );
-		return static::getDisplayUrlFromHash( $info );
+		$info = [ 'image_id' => $pImageId ];
+		return FisheyeImage::getDisplayUrlFromHash( $info );
 	}
 
 	/**
 	 * Generate a valid display link for the Blog
 	 *
-	 * @param	object	PostId of the item to use
+	 * @param	array	PostId of the item to use
+	 * @param	string	Image Title
 	 * @param	array	Not used
-	 * @return	object	Fully formatted html link for use by Liberty
+	 * @return	string	Fully formatted html link for use by Liberty
 	 */
-	static function getDisplayLinkFromHash( &$pParamHash, $pTitle=NULL, $pAnchor=NULL ) {
+	public static function getDisplayLinkFromHash( &$pParamHash, $pTitle=null, $pAnchor=null ) {
 		global $gBitSystem;
 
 		$pTitle = trim( $pTitle );
@@ -686,10 +690,10 @@ class FisheyeImage extends FisheyeBase {
 		return $ret;
 	}
 
-	static public function getTitleFromHash( &$pHash, $pDefault=TRUE ) {
+	public static function getTitleFromHash( &$pHash, $pDefault=true ) {
 		$ret = trim( parent::getTitleFromHash( $pHash, $pDefault ) );
 		if( empty( $ret ) && $pDefault ) {
-			$storage = (!empty( $this ) && !empty( $this->mStorage ) ? current( $this->mStorage ) : NULL);
+			$storage = []; // !empty( $this ) && !empty( $this->mStorage ) ? current( $this->mStorage ) : null;
 			if( !empty( $storage['file_name'] ) ) {
 				$ret = $storage['file_name'];
 			} else {
@@ -704,7 +708,7 @@ class FisheyeImage extends FisheyeBase {
 	}
 
 	public function getTitle() {
-		$ret = NULL;
+		$ret = null;
 		if( $this->isValid() ) {
 			$ret = self::getTitleFromHash( $this->mInfo );
 		}
@@ -712,69 +716,70 @@ class FisheyeImage extends FisheyeBase {
 	}
 
 
-	function getThumbnailContentId() {
-		return( $this->mContentId );
+	public function getThumbnailContentId() {
+		return $this->mContentId;
 	}
 
-	function getThumbnailUrl( $pSize = 'small', $pInfoHash = NULL, $pSecondaryId = NULL, $pDefault=TRUE ) {
-		$ret = NULL;
+	public function getThumbnailUrl( string $pSize = 'small', ?array $pInfoHash = null, ?int $pSecondaryId = null, ?int $pDefault = null ): string|null {
+		$ret = null;
 		if( $this->isValid() && isset( $this->mInfo['thumbnail_url'][$pSize] ) ) {
 			$ret = $this->mInfo['thumbnail_url'][$pSize];
 		}
 		return $ret;
 	}
 
-	public static function getThumbnailUrlFromHash( &$pParamHash, $pSize = 'small', $pSecondaryId = NULL, $pDefault=TRUE ) {
-		$ret = NULL;
+	public static function getThumbnailUrlFromHash( array &$pParamHash, string $pSize = 'small', ?int $pSecondaryId = -2, ?int $pDefault = -2 ): string {
+		$ret = '';
 		if( isset( $pParamHash['thumbnail_url'][$pSize] ) ) {
 			$ret = $pParamHash['thumbnail_url'][$pSize];
 		}
 		return $ret;
 	}
 
-	function expunge($pExpungeAttachment = TRUE) {
+	public function expunge(): bool {
 		if( $this->isValid() ) {
 			$this->StartTrans();
 			$query = "DELETE FROM `".BIT_DB_PREFIX."fisheye_gallery_image_map` WHERE `item_content_id` = ?";
-			$rs = $this->mDb->query($query, array( $this->mContentId ));
-			$query = "UPDATE `".BIT_DB_PREFIX."fisheye_gallery` SET `preview_content_id`=NULL WHERE `preview_content_id` = ?";
-			$rs = $this->mDb->query($query, array( $this->mContentId ));
+			$rs = $this->mDb->getOne($query, [ $this->mContentId ] );
+			$query = "UPDATE `".BIT_DB_PREFIX."fisheye_gallery` SET `preview_content_id`=null WHERE `preview_content_id` = ?";
+			$rs = $this->mDb->getOne($query, [ $this->mContentId ] );
 			$query = "DELETE FROM `".BIT_DB_PREFIX."fisheye_image` WHERE `content_id` = ?";
-			$rs = $this->mDb->query($query, array( $this->mContentId ));
-			if( LibertyMime::expunge($pExpungeAttachment) ) {
+			$rs = $this->mDb->getOne($query, [ $this->mContentId ] );
+			if( LibertyMime::expunge() ) {
 				$this->CompleteTrans();
-				$this->mImageId = NULL;
-				$this->mContentId = NULL;
+				$this->mImageId = null;
+				$this->mContentId = null;
 			} else {
 				$this->mDb->RollbackTrans();
 			}
 		}
-		return( count( $this->mErrors ) == 0 );
+		return true;
 	}
 
-	function expungingAttachment($pAttachmentId, $pContentIdArray) {
+	public function expungingAttachment($pAttachmentId, $pContentIdArray) {
 		foreach ($pContentIdArray as $id) {
 			$this->mContentId = $id;
 			// Vital that we call LibertyMime::expunge with false since the attachment is already being deleted.
-			$this->expunge(FALSE);
+			// TODO This needs fixing as LibertyMime does not have that option
+			$this->expunge();
 		}
 	}
 
-	function isValid() {
-		return( @$this->verifyId( $this->mImageId ) || @$this->verifyId( $this->mContentId ) );
+	public function isValid() {
+		return @$this->verifyId( $this->mImageId ) || @$this->verifyId( $this->mContentId );
 	}
 
-	function imageExistsInDatabase() {
-		$ret = FALSE;
+	public function imageExistsInDatabase() {
+		$ret = false;
 		if( $this->isValid() && $this->mImageId ) {
 			$query = "SELECT COUNT(`image_id`)
 					FROM `".BIT_DB_PREFIX."fisheye_image`
 					WHERE `image_id` = ?";
 
-			$bindVars = array($this->mImageId);
+			$bindVars = [ $this->mImageId ];
 
 			if($this->mDb->getOne($query, $bindVars) > 0){
-				$ret = TRUE;
+				$ret = true;
 			}
 
 		}
@@ -782,18 +787,17 @@ class FisheyeImage extends FisheyeBase {
 	}
 
 
-	function getList( &$pListHash ) {
+	public function getList( &$pListHash ) {
 		global $gBitUser,$gBitSystem;
 
 		LibertyContent::prepGetList( $pListHash );
-
-		$ret = $bindVars = array();
+		$ret = $bindVars = [];
 		$distinct = '';
 		$select = '';
 		$whereSql = '';
 		$joinSql = '';
 
-		if( @$this->verifyId( $pListHash['user_id'] ) ) {
+		if( @$this->verifyId( $pListHash['user_id'] ?? 0 ) ) {
 			$whereSql .= " AND lc.`user_id` = ? ";
 			$bindVars[] = $pListHash['user_id'];
 		} elseif( !empty( $pListHash['recent_users'] )) {
@@ -801,7 +805,7 @@ class FisheyeImage extends FisheyeBase {
 			$pListHash['sort_mode'] = 'uu.user_id_desc';
 		}
 
-		if( @$this->verifyId( $pListHash['gallery_id'] ) ) {
+		if( @$this->verifyId( $pListHash['gallery_id'] ?? 0 ) ) {
 			$whereSql .= " AND fg.`gallery_id` = ? ";
 			$bindVars[] = $pListHash['gallery_id'];
 		}
@@ -834,7 +838,7 @@ class FisheyeImage extends FisheyeBase {
 			$whereSql = substr_replace( $whereSql, ' WHERE ', 0, 4 );
 		}
 
-		$thumbSize = (!empty( $pListHash['size'] ) ? $pListHash['size'] : 'avatar' );
+		$thumbSize = !empty( $pListHash['size'] ) ? $pListHash['size'] : 'avatar';
 
 		$query = "SELECT $distinct fi.`image_id` AS `hash_key`, fi.*, lf.*, la.attachment_id, lc.*, fg.`gallery_id`, uu.`login`, uu.`real_name` $select $selectSql
 				FROM `".BIT_DB_PREFIX."fisheye_image` fi
@@ -845,22 +849,23 @@ class FisheyeImage extends FisheyeBase {
 					LEFT OUTER JOIN `".BIT_DB_PREFIX."fisheye_gallery_image_map` tfgim2 ON(tfgim2.`item_content_id`=lc.`content_id`)
 					LEFT OUTER JOIN `".BIT_DB_PREFIX."fisheye_gallery` fg ON(fg.`content_id`=tfgim2.`gallery_content_id`)
 				$whereSql $orderby";
-		if( $rs = $this->mDb->query( $query, $bindVars, $pListHash['max_records'], $pListHash['offset'], $pListHash['query_cache_time'] ) ) {
-			while( $row = $rs->fetchRow() ) {
+		if( $rows = $this->mDb->getAssoc( $query, $bindVars, $pListHash['max_records'], $pListHash['offset'], $pListHash['query_cache_time'] ) ) {
+			foreach( $rows as $row ) {
 				// legacy table data was named storage_path and included a partial path. strip out any path just in case
+				$row['hash_key'] = $row['image_id'];
 				$row['file_name'] = basename( $row['file_name'] );
 				$ret[$row['hash_key']] = $row;
 				$imageId = $row['image_id'];
 				if( empty( $pListHash['no_thumbnails'] ) ) {
 					$ret[$imageId]['display_url']      = static::getDisplayUrlFromHash( $row );
-					$ret[$imageId]['has_machine_name'] = $this->isMachineName( $ret[$imageId]['title'] );
-					$ret[$imageId]['source_url']      = liberty_mime_get_storage_url( $row ).$row['file_name'];
-					$ret[$imageId]['thumbnail_url']    = liberty_fetch_thumbnail_url( array(
+//					$ret[$imageId]['has_machine_name'] = $this->isMachineName( $ret[$imageId]['title'] );
+					$ret[$imageId]['source_url']      = \Bitweaver\Liberty\liberty_mime_get_storage_url( $row ).$row['file_name'];
+					$ret[$imageId]['thumbnail_url']    = \Bitweaver\Liberty\liberty_fetch_thumbnail_url( [
 						'source_file'   => $this->getSourceFile( $row ),
 						'default_image' => FISHEYE_PKG_URL.'image/generating_thumbnails.png',
 						'size'          => $thumbSize,
 						'type'			=> $row['mime_type'],
-					));
+					] );
 				}
 			}
 		}
@@ -871,9 +876,9 @@ class FisheyeImage extends FisheyeBase {
 	 * isCommentable
 	 *
 	 * @access public
-	 * @return TRUE on success, FALSE on failure
+	 * @return bool true on success, false on failure
 	 */
-	function isCommentable() {
+	public function isCommentable() {
 		global $gGallery;
 
 		// if we have a loaded gallery, we just use that to work out if we can add comments to this image
@@ -881,13 +886,13 @@ class FisheyeImage extends FisheyeBase {
 			return $gGallery->isCommentable();
 		}
 
-		$ret = FALSE;
+		$ret = false;
 		if( $parents = $this->getParentGalleries() ) {
 			// @TODO: No idea how to work out if you can add a comment to this image
 			// for now we'll take the mGalleryPath and use that gallery
 			$gal = current( $parents );
 			$query = "SELECT `pref_value` FROM `".BIT_DB_PREFIX."liberty_content_prefs` WHERE `content_id` = ? AND `pref_name` = ?";
-			$ret = ( $this->mDb->getOne( $query, array( $gal['content_id'], 'allow_comments' )) == 'y' );
+			$ret = $this->mDb->getOne( $query, [ $gal['content_id'], 'allow_comments' ] ) == 'y';
 		}
 		return $ret;
 	}
@@ -896,5 +901,3 @@ class FisheyeImage extends FisheyeBase {
 		return 'fisheye';
 	}
 }
-
-?>

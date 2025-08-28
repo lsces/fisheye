@@ -20,6 +20,12 @@
 // | Authors: spider <spider@steelsun.com>
 // +----------------------------------------------------------------------+
 
+/**
+ * required setup
+ */
+namespace Bitweaver\Fisheye;
+use Bitweaver\KernelTools;
+
 define( 'FEG2REMOTE_SUCCESS', 0 );
 
 define( 'FEG2REMOTE_PROTOCOL_MAJOR_VERSION_INVALID', 101 );
@@ -49,18 +55,18 @@ define( 'FEG2REMOTE_ROTATE_IMAGE_FAILED', 504 );
  */
 class FisheyeRemote {
 
-	public $mResponse = array();
+	public $mResponse = [];
 
 	public $mSubGalIdx = 1;
 
-	function getApiVersion() {
+	public function getApiVersion() {
 		return '2.14';
 	}
 
 
 	// separate out pPostData and pParamhash data since some plugins can populate _POST['g2_form'] and _GET['g2_form'] differently.
 	// weird but true. ubermind is an example
-    function processRequest( $pGetData, $pPostData ) {
+    public function processRequest( $pGetData, $pPostData ) {
 		$pData = array_merge($pGetData, $pPostData); //Some programs (galleryexport) pass both post and get...and the cmd can be in either get or post
 
 		if(!empty($pData)){
@@ -124,43 +130,42 @@ class FisheyeRemote {
     }
 
 
-    function cmdNoOp( $pParamHash ) {
+    public function cmdNoOp( $pParamHash ) {
 		global $gBitUser;
 	
 		$response = $this->createResponse( FEG2REMOTE_SUCCESS, 'No-op successful' );
 		return $response;
     }
 
-    function cmdLogin( $pParamHash ) {
+    public function cmdLogin( $pParamHash ) {
 		global $gBitUser, $gBitSystem;
 		$url = $gBitUser->login( $pParamHash['uname'], $pParamHash['password'] );
-		if( $gBitUser->isRegistered() ) {
+		$response = $gBitUser->isRegistered()
 			/*
 			$cookieTime =  ( int )( time() + $gBitSystem->getConfig( 'users_remember_time', 86400 ));
 			$cookiePath = $gBitSystem->getConfig( 'cookie_path', BIT_ROOT_URL );
 			$cookieDomain = $gBitSystem->getConfig( 'cookie_domain', "" );
 			setcookie( 'GALLERYSID', session_id(), $cookieTime, $cookiePath, $cookieDomain );
 			*/
-			$response = $this->createResponse( FEG2REMOTE_SUCCESS, 'Login successful.', array( 'server_version' => $this->getApiVersion() ) );
-		} else {
-			$response = $this->createResponse( FEG2REMOTE_PASSWORD_WRONG, 'Invalid username or password' );
-		}
+			? $this->createResponse( FEG2REMOTE_SUCCESS, 'Login successful.', [ 'server_version' => $this->getApiVersion() ] )
+			: $this->createResponse( FEG2REMOTE_PASSWORD_WRONG, 'Invalid username or password' );
+
 		return $response;
     }
 
 	// Recursively traverses a multi-dimensional array of galleries
-	function traverseGalleries( &$pGalHash, &$pResponse ) {
+	public function traverseGalleries( &$pGalHash, &$pResponse ) {
 		global $gBitUser;
 
 		// Albums don't like being 0 indexed 
 		$this->mSubGalIdx = 0;
 
 		// the lightroom client is dumb, and can only handle one 0 level parent
-		if( stripos( $_SERVER['HTTP_USER_AGENT'], 'lightroom' ) !== FALSE ) {
+		if( stripos( $_SERVER['HTTP_USER_AGENT'], 'lightroom' ) !== false ) {
 			$this->mSubGalIdx++;
 			$pResponse['album.parent.' . $this->mSubGalIdx] = 0;
 			$pResponse['album.name.' . $this->mSubGalIdx] = 1;
-			$pResponse['album.title.' . $this->mSubGalIdx] = tra( 'Select a Gallery' );
+			$pResponse['album.title.' . $this->mSubGalIdx] = KernelTools::tra( 'Select a Gallery' );
 			$pResponse['album.perms.add.' . $this->mSubGalIdx] = 'false';
 			$pResponse['album.perms.write.' . $this->mSubGalIdx] = 'false';
 			$pResponse['album.perms.del_alb.' . $this->mSubGalIdx] = 'false';
@@ -175,27 +180,22 @@ class FisheyeRemote {
     * @param $pGalHash branch of gallery information from FisheyeGallery::getTree
     * @param $pResponse aggregate string containing response array
     * @param $pParentRandom depth of pGalHash - this is used to non-definitively uniquify album.parent and album.name entries
-    * @return the url to display the gallery.
+    * @return string the url to display the gallery.
     */
-	function traverseSubGalleries( &$pGalHash, &$pResponse, $pParentRandom ) {
+	public function traverseSubGalleries( &$pGalHash, &$pResponse, $pParentRandom ) {
 		global $gBitUser;
 		foreach( $pGalHash as $key=>$gallery) { 
 			$this->mSubGalIdx++;
 
 			// Any number greater than 2 digits crashes iPhoto2Gallery
 			$randomizer = str_pad( rand( 1, 99 ), 2, '0' );
-			if($gallery['content']['level'] != 0){
+			$pResponse['album.parent.' . $this->mSubGalIdx] = $gallery['content']['level'] != 0
 				// Fisheye allows directories to below to multiple parents - not in gallery. This confuses some clients
 				// We pad with a random number for uniqueness
-				$pResponse['album.parent.' . $this->mSubGalIdx] = $gallery['content']['cb_gallery_content_id'].$pParentRandom;
-			} else {
+				? $gallery['content']['cb_gallery_content_id'].$pParentRandom
 				// the lightroom client is dumb, and can only handle one 0 level parent
-				if( stripos( $_SERVER['HTTP_USER_AGENT'], 'lightroom' ) !== FALSE ) {
-					$pResponse['album.parent.' . $this->mSubGalIdx] = 1;
-				} else {
-					$pResponse['album.parent.' . $this->mSubGalIdx] = 0;
-				}
-			}
+				: ( stripos( $_SERVER['HTTP_USER_AGENT'], 'lightroom' ) !== false ? 1 : 0);
+
 			// append pParentRandom to make .name probably unique since Fisheye can handle one gallery linked to multiple parents
 			$pResponse['album.name.' . $this->mSubGalIdx] = $gallery['content']['content_id'].$randomizer;
 			$pResponse['album.title.' . $this->mSubGalIdx] = $this->cleanResponseValue( $gallery['content']['title'] );
@@ -218,21 +218,21 @@ class FisheyeRemote {
 		return $ret;
 	}	
 
-    function cmdFetchAlbums( $pParamHash ) {
-		require_once( FISHEYE_PKG_CLASS_PATH.'FisheyeGallery.php' );
+    public function cmdFetchAlbums( $pParamHash ) {
+		require_once FISHEYE_PKG_CLASS_PATH.'FisheyeGallery.php';
 		global $gBitUser;
 		if( $gBitUser->isRegistered() ) {
 			$treeGallery = new FisheyeGallery();
 			$listHash['user_id'] = $gBitUser->mUserId;
-			if( $galleryList = $treeGallery->getTree( $listHash,  array( 'name' => "gallery_id", 'id' => "gallerylist", 'item_attributes' => array( 'class'=>'listingtitle' ) ) ) ) {
-				$galResponse = array();
+			if( $galleryList = $treeGallery->getTree( [ $listHash, 'name' => "gallery_id", 'id' => "gallerylist", 'item_attributes' => [ 'class'=>'listingtitle' ] ] ) ) {
+				$galResponse = [];
 				$galleryCount = $this->traverseGalleries( $galleryList, $galResponse );
 				$galResponse['album_count'] = $galleryCount;
 				$galResponse['can_create_root'] = 'true';
 				$response = $this->createResponse( FEG2REMOTE_SUCCESS, 'Gallery list successful', $galResponse );
 			} else {
 				// perhaps we should make at least on gallery at this point?
-				$response = $this->createResponse( FEG2REMOTE_SUCCESS, 'No galleries', array( 'album_count' => 0 ) );
+				$response = $this->createResponse( FEG2REMOTE_SUCCESS, 'No galleries', [ 'album_count' => 0 ] );
 			}
 		} else {
 			$response = $this->createResponse( FEG2REMOTE_PASSWORD_WRONG, 'Application not logged in' );
@@ -241,40 +241,38 @@ class FisheyeRemote {
     }
 
 
-    function cmdAddItem( $pParamHash ) {
-		$response = array();
+    public function cmdAddItem( $pParamHash ) {
+		$response = [];
 
-		$uploadFile =  (!empty( $_FILES['g2_userfile'] ) ? $_FILES['g2_userfile'] : NULL);
+		$uploadFile =  !empty( $_FILES['g2_userfile'] ) ? $_FILES['g2_userfile'] : null;
 
 		if( empty( $pParamHash['set_albumName'] ) ) {
-			$response = $this->createResponse( CREATE_ALBUM_FAILED , 'No gallery specified' );
+			$response = $this->createResponse( FEG2REMOTE_CREATE_ALBUM_FAILED , 'No gallery specified' );
 		} elseif( empty( $uploadFile ) || empty( $uploadFile['size'] ) ) {
 			$response = $this->createResponse( FEG2REMOTE_NO_FILENAME, 'No image uploaded' );
 		} else {
-			$storeHash['title'] = !empty( $pParamHash['force_filename'] ) ? $pParamHash['force_filename'] : NULL;
-			$storeHash['summary'] = !empty( $pParamHash['extrafield.Summary'] ) ? $pParamHash['extrafield.Summary'] : NULL;
-			$storeHash['edit'] = !empty( $pParamHash['extrafield.Description'] ) ? $pParamHash['extrafield.Description'] : NULL;
+			$storeHash['title'] = !empty( $pParamHash['force_filename'] ) ? $pParamHash['force_filename'] : null;
+			$storeHash['summary'] = !empty( $pParamHash['extrafield.Summary'] ) ? $pParamHash['extrafield.Summary'] : null;
+			$storeHash['edit'] = !empty( $pParamHash['extrafield.Description'] ) ? $pParamHash['extrafield.Description'] : null;
 
-			require_once (FISHEYE_PKG_INCLUDE_PATH.'upload_inc.php');	
+			require_once FISHEYE_PKG_INCLUDE_PATH.'upload_inc.php';	
 		
 			$parentGallery = new FisheyeGallery();
-			if( $parentGallery = $parentGallery->lookup(array('content_id' => $pParamHash['set_albumName'] ) ) ) {
+			if( $parentGallery = $parentGallery->lookup([ 'content_id' => $pParamHash['set_albumName'] ] ) ) {
 				$parentGallery->load();
-				$storeHash['gallery_additions'] = array($parentGallery->mGalleryId);
+				$storeHash['gallery_additions'] = [ $parentGallery->mGalleryId ];
 			}
-			if( $errors = fisheye_store_upload( $uploadFile , $storeHash ) ){
-			 	$response = $this->createResponse( FEG2REMOTE_UPLOAD_PHOTO_FAIL, 'Export Failed' );
-			} else {
-				$response = $this->createResponse( FEG2REMOTE_SUCCESS, 'Image added', array( 'item_name'=>$uploadFile['name'] ) );
-			}
+			$response = $errors = fisheye_store_upload( $uploadFile , $storeHash )
+			 	? $response = $this->createResponse( FEG2REMOTE_UPLOAD_PHOTO_FAIL, 'Export Failed' )
+				: $this->createResponse( FEG2REMOTE_SUCCESS, 'Image added', [ 'item_name'=>$uploadFile['name'] ] );
 		}
 		
 		return $response;
     }
 
-    function cmdNewAlbum( $pParamHash ) {
+    public function cmdNewAlbum( $pParamHash ) {
 		global $gBitUser;
-		$response = array();
+		$response = [];
 
 		if( empty( $pParamHash['newAlbumTitle'] ) ) {
 			$pParamHash['newAlbumTitle'] = $gBitUser->getTitle()."'s Gallery";
@@ -287,18 +285,18 @@ class FisheyeRemote {
 
 		if($pParamHash['set_albumName']){
 			$parentGallery = new FisheyeGallery();
-			if( $parentGallery = $parentGallery->lookup(array('content_id' => $pParamHash['set_albumName'] ) ) ) {
+			if( $parentGallery = $parentGallery->lookup(['content_id' => $pParamHash['set_albumName'] ] ) ) {
 				$parentGallery->load();
-				$gallery->addToGalleries(array($parentGallery->mGalleryId));
+				$gallery->addToGalleries([ $parentGallery->mGalleryId ] );
 			}
 		}
 
-		$response = $this->createResponse( FEG2REMOTE_SUCCESS, 'Gallery created', array( 'album_name' => $storeHash['title'] ) );
+		$response = $this->createResponse( FEG2REMOTE_SUCCESS, 'Gallery created', [ 'album_name' => $storeHash['title'] ] );
 
 		return $response;
     }
 
-    function sendResponse( $pResponse ) {
+    public function sendResponse( $pResponse ) {
 		global $gBitUser;
 		print "#__GR2PROTO__\n";
 //error_log( "#__GR2PROTO__".' : '.$gBitUser->mUserId );
@@ -313,13 +311,13 @@ class FisheyeRemote {
     }
 
 	
-	function createResponse( $pStatus, $pStatusText, $pExtra = NULL ) {
-		$ret = array();
+	public function createResponse( $pStatus, $pStatusText, $pExtra = null ) {
+		$ret = [];
 		
 		// Each response must contain at least the keys: status and status_text. 
 		$ret['status'] = $this->cleanResponseValue( $pStatus );
 		// translate the text response for i18n
-		$ret['status_text'] = $this->cleanResponseValue( tra( $pStatusText ) );
+		$ret['status_text'] = $this->cleanResponseValue( KernelTools::tra( $pStatusText ) );
 		// tack on any additional responses
 		if( !empty( $pExtra ) && is_array( $pExtra ) ) {
 			foreach( $pExtra as $k => $value ) {
@@ -334,17 +332,17 @@ class FisheyeRemote {
 	 * Gallery apparently is very particular about the manner in which this data is cleaned up, and must be done
 	 * in this specific order.
 	 */
-    function cleanResponseValue( $pValue ) {
+    public function cleanResponseValue( $pValue ) {
 		$pValue = str_replace('\\', '\\\\', $pValue);
 		$pValue = str_replace("\r\n", '\n', $pValue);
-		$pValue = str_replace(array("\r", "\n", "\t"), array('\n', '\n', '\t'), $pValue);
-		$pValue = str_replace(array('#', '!', '='), array('\\#', '\\!', '\\='), $pValue);
+		$pValue = str_replace([ "\r", "\n", "\t" ], [ '\n', '\n', '\t' ], $pValue);
+		$pValue = str_replace([ '#', '!', '=' ], [ '\\#', '\\!', '\\=' ], $pValue);
 		return $pValue;
     }
 
 
-	function cleanResponseKey( $pKey ) {
-		return str_replace(array('#', '!', '=', ':'), array('\\#', '\\!', '\\=', '\\:'), $pKey);
+	public function cleanResponseKey( $pKey ) {
+		return str_replace([ '#', '!', '=', ':' ], [ '\\#', '\\!', '\\=', '\\:' ], $pKey);
 	}
 	
 
