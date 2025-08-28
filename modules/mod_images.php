@@ -5,19 +5,19 @@
  * @subpackage modules
  */
 
-global $gQueryUserId, $gContent, $moduleParams;
-
-// makes things in older modules easier
-extract( $moduleParams );
-
 /**
  * required setup
  */
-require_once( FISHEYE_PKG_CLASS_PATH.'FisheyeGallery.php' );
+namespace Bitweaver\Fisheye;
+use Bitweaver\KernelTools;
+use Bitweaver\Users\RoleUser;
+global $gQueryUserId, $gContent, $moduleParams;
+// makes things in older modules easier
+extract( $moduleParams );
 
 $image = new FisheyeImage();
 
-$display = TRUE;
+$display = true;
 
 $listHash = $module_params;
 
@@ -34,19 +34,17 @@ if( $display ) {
 	if( $gQueryUserId ) {
 		$listHash['user_id'] = $gQueryUserId;
 	} elseif( !empty( $_REQUEST['user_id'] ) ) {
-		$_template->tpl_vars['userGallery'] = new Smarty_variable( $_REQUEST['user_id'] );
+		$gBitSmarty->assign( 'userGallery', $_REQUEST['user_id'] );
 		$listHash['user_id'] = $_REQUEST['user_id'];
 	} elseif( !empty( $module_params['recent_users'] ) ) {
-		$listHash['recent_users'] = TRUE;
+		$listHash['recent_users'] = true;
 	}
 
 	// this is needed to avoid wrong sort_modes entered resulting in db errors
 	$sort_options = array( 'hits', 'created' );
-	if( !empty( $module_params['sort_mode'] ) && in_array( $module_params['sort_mode'], $sort_options ) ) {
-		$sort_mode = $module_params['sort_mode'].'_desc';
-	} else {
-		$sort_mode = 'random';
-	}
+	$sort_mode = !empty( $module_params['sort_mode'] ) && in_array( $module_params['sort_mode'], $sort_options )
+		? $module_params['sort_mode'].'_desc' : 'random';
+
 	$listHash['sort_mode'] = $sort_mode;
 
 	$images = $image->getList( $listHash );
@@ -66,24 +64,23 @@ if( $display ) {
 		}
 
 		$moduleTitle .= ' Images';
-		$moduleTitle = tra( $moduleTitle );
+		$moduleTitle = KernelTools::tra( $moduleTitle );
 
 		if( !empty( $listHash['user_id'] ) ) {
-			$moduleTitle .= ' '.tra('by').' '.BitUser::getDisplayNameFromHash( current( $images ), TRUE );
+			$moduleTitle .= ' '.KernelTools::tra('by').' '.RoleUser::getDisplayNameFromHash( current( $images ), true );
 		} elseif( !empty( $listHash['recent_users'] ) ) {
-			$moduleTitle .= ' '.tra( 'by' ).' <a href="'.USERS_PKG_URL.'">'.tra( 'New Users' ).'</a>';
+			$moduleTitle .= ' '.KernelTools::tra( 'by' ).' <a href="'.USERS_PKG_URL.'">'.KernelTools::tra( 'New Users' ).'</a>';
 		}
 
 		$listHash['sort_mode'] = $sort_mode;
-		$_template->tpl_vars['moduleTitle'] = new Smarty_variable( $moduleTitle );
+		$gBitSmarty->assign( 'moduleTitle', $moduleTitle );
 	} else {
-		$_template->tpl_vars['moduleTitle'] = new Smarty_variable( $title );
+		$gBitSmarty->assign( 'moduleTitle', $title );
 	}
 
-	$_template->tpl_vars['imageSort'] = new Smarty_variable( $sort_mode );
-	$_template->tpl_vars['modImages'] = new Smarty_variable( $images );
-	$_template->tpl_vars['module_params'] = new Smarty_variable( $module_params );
-	$_template->tpl_vars['maxlen'] = new Smarty_variable( isset( $module_params["maxlen"] ) );
-	$_template->tpl_vars['maxlendesc'] = new Smarty_variable( isset( $module_params["maxlendesc"] ) );
+	$gBitSmarty->assign( 'imageSort', $sort_mode );
+	$gBitSmarty->assign( 'modImages', $images );
+	$gBitSmarty->assign( 'module_params', $module_params );
+	$gBitSmarty->assign( 'maxlen', isset( $module_params["maxlen"] ) );
+	$gBitSmarty->assign( 'maxlendesc', isset( $module_params["maxlendesc"] ) );
 }
-?>

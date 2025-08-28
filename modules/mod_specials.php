@@ -5,19 +5,19 @@
  * @subpackage modules
  */
 
+/**
+ * required setup
+ */
+namespace Bitweaver\Fisheye;
+use Bitweaver\KernelTools;
 global $gQueryUserId, $gContent, $moduleParams;
 
 // makes things in older modules easier
 extract( $moduleParams );
 
-/**
- * required setup
- */
-require_once( FISHEYE_PKG_CLASS_PATH.'FisheyeGallery.php' );
-
 $image = new FisheyeImage();
 
-$display = TRUE;
+$display = true;
 
 $listHash = $module_params;
 $listHash['gallery_id'] = 3;
@@ -29,12 +29,11 @@ if( $display ) {
 	$images = $image->getList( $listHash );
 
 	$moduleTitle = 'Specials';
-	$moduleTitle = tra( $moduleTitle );
+	$moduleTitle = KernelTools::tra( $moduleTitle );
 	
-	$_template->tpl_vars['moduleTitle'] = new Smarty_variable( $moduleTitle );
-	$_template->tpl_vars['modImages'] = new Smarty_variable( $images );
-	$_template->tpl_vars['module_params'] = new Smarty_variable( $module_params );
-	$_template->tpl_vars['maxlen'] = new Smarty_variable( isset( $module_params["maxlen"] ) ? $module_params["maxlen"] : 0 );
-	$_template->tpl_vars['maxlendesc'] = new Smarty_variable( isset( $module_params["maxlendesc"] ) ? $module_params["maxlendesc"] : 0 );
+	$gBitSmarty->assign( 'moduleTitle', $moduleTitle );
+	$gBitSmarty->assign( 'modImages', $images );
+	$gBitSmarty->assign( 'module_params', $module_params );
+	$gBitSmarty->assign( 'maxlen', isset( $module_params["maxlen"] ) ? $module_params["maxlen"] : 0 );
+	$gBitSmarty->assign( 'maxlendesc', isset( $module_params["maxlendesc"] ) ? $module_params["maxlendesc"] : 0 );
 }
-?>

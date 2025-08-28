@@ -7,7 +7,7 @@
 	<div id="banner">
 		<ul id="background">
 			{foreach from=$modImages item=modImg}
-				<li><img src="/liberty/download_file.php?attachment_id={$modImg.image_id}" title="{$modImg.title|escape}" alt="{$modImg.title|escape}" /></li>
+				<li><img src="/liberty/download/file/{$modImg.image_id|default:0}" title="{$modImg.title|default:''}" alt="{$modImg.title|default:''}" /></li>
 			{/foreach}
 		</ul>
 	</div>

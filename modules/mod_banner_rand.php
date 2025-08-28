@@ -5,30 +5,31 @@
  * @subpackage modules
  */
 
-global $gQueryUserId, $gContent, $moduleParams;
-
-// makes things in older modules easier
-extract( $moduleParams );
-
 /**
  * required setup
  */
-require_once( FISHEYE_PKG_CLASS_PATH.'FisheyeGallery.php' );
+namespace Bitweaver\Fisheye;
+use Bitweaver\KernelTools;
 
+global $gBitSmarty, $gContent;
+// makes things in older modules easier
+
+if ( !empty($gBitSmarty->tpl_vars) ) {
+	$tpls = $gBitSmarty->tpl_vars;
+	$module_params = $tpls['moduleParams'];
+    $listHash = $module_params->value;
+    $listHash['gallery_id'] = $module_params->value['module_rows'];
+}
 $image = new FisheyeImage();
 
-$display = TRUE;
-
-$listHash = $module_params;
+$display = true;
 
 $listHash['size'] = 'extra-large';
-$listHash['gallery_id'] = $module_rows;
 $listHash['max_records'] = 5;
 $listHash['sort_mode'] = 'random';
 
 $images = $image->getList( $listHash );
 $moduleTitle = 'Banner Image';
-$_template->tpl_vars['moduleTitle'] = new Smarty_variable( $title );
-$_template->tpl_vars['modImages'] = new Smarty_variable( $images );
-$_template->tpl_vars['module_params'] = new Smarty_variable( $module_params );
-?>
+$gBitSmarty->assign( 'moduleTitle', $moduleTitle );
+$gBitSmarty->assign( 'modImages', $images );
+$gBitSmarty->assign( 'module_params', $listHash );
