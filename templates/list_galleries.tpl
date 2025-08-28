@@ -29,16 +29,28 @@
 		</ul>
 
 		<div class="form-group">
-		<div class="row galleries">
-			{math assign=quarterValue equation="round(c/4)" c=$galleryList|count}
-			{foreach from=$galleryList key=galleryId item=gal}
-			<div class="col-xs-6 col-sm-4 col-md-3 ">
-				<div class="{$gal.content_type_guid} thumbnail">
-					{if $gBitSystem->isFeatureActive('fisheye_list_thumbnail') && $gal.display_url}
-					{assign var=thumbnailUri value=$gBitSystem->getParameter( $gal, 'thumbnail_uri', "`$smarty.const.FISHEYE_PKG_URL`image/no_image.png")}
-					<a href="{$gal.display_url}"><div class="square" style="background-image:url('{$thumbnailUri}');"alt="{$gal.title|escape}" title="{$gal.title|truncate:50|escape}" {if !empty($gal.data)} data-toggle="popover" data-trigger="click hover focus" data-placement="top" data-content="{$gal.data|truncate:100}"{else}{/if}><img src="{$thumbnailUri}" alt="{$gal.title|escape}"><h3 class="gallery-title"><a href="{$gal.display_url}">{if $gBitSystem->isFeatureActive('fisheye_list_title')}{$gal.title|truncate:25|escape}{else}Gallery {$gal.gallery_id}{/if}</a></h3><div class="security" style="position:absolute; top:5%;right:5%;color:#fff;">
+			<div class="row galleries">
+				{* math assign=quarterValue equation="round(c/4)" c=$galleryList|count *}
+				{foreach from=$galleryList key=galleryId item=gal}
+				<div class="col-xs-6 col-sm-4 col-md-3 ">
+					<div class="{$gal.content_type_guid} thumbnail">
+						{if $gBitSystem->isFeatureActive('fisheye_list_thumbnail') && $gal.display_url}
+							{assign var=thumbnailUri value=$gBitSystem->getParameter( $gal, 'thumbnail_uri', "`$smarty.const.FISHEYE_PKG_URL`image/no_image.png")}
+							<a href="{$gal.display_url}"><div class="square" style="background-image:url('{$thumbnailUri}');"alt="{$gal.title|escape}" 
+								title="{$gal.title|truncate:50|escape}" 
+							{if !empty($gal.data)}
+								data-toggle="popover" data-trigger="click hover focus" data-placement="top" data-content="{$gal.data|truncate}"
+							{/if}>
+							<img src="{$thumbnailUri}" alt="{$gal.title|escape}"><h3 class="gallery-title"><a href="{$gal.display_url}">
+							{if $gBitSystem->isFeatureActive('fisheye_list_title')}
+								{$gal.title|truncate|escape}
+							{else}
+								{tr}Gallery{/tr} {$gal.gallery_id}
+							{/if}
+							</a>
+							</h3><div class="security" style="position:absolute; top:5%;right:5%;color:#fff;">
 							{if $gal.is_hidden=='y' || $gal.is_private=='y' || $gal.access_answer}
-								{booticon iname="fa-lock" iexplain="Security" label=TRUE}
+								{booticon iname="fa-lock" iexplain="Security" label=true}
 							{/if}
 							{if $gal.is_hidden=='y'}
 								<span style="padding:5px;">{tr}Hidden{/tr}</span>
@@ -49,55 +61,46 @@
 							{if $gal.access_answer}
 								<span style="padding:5px;">{tr}Password{/tr}</span>
 							{/if}
-						</div></div></a>
-					{/if}
-					<div class="caption">
+							</div></div></a>
+						{/if}
+						<div class="caption">
 
-					{if $gBitSystem->isFeatureActive('fisheye_list_user')}
-						<strong>{displayname hash=$gal nolink=TRUE}</strong> <small><a href="{$smarty.const.FISHEYE_PKG_URL}list_galleries.php?user_id={$gal.user_id}" style="display:block;">{tr}Galleries{/tr}</a></small>
-					{/if}
-					{* if $galleryList[ix]->isProtected()}
-						{booticon iname="fa-lock" iexplain="Protected"}
-					{/if *}
+						{if $gBitSystem->isFeatureActive('fisheye_list_user')}
+							<strong>{displayname hash=$gal nolink=true}</strong> <small><a href="{$smarty.const.FISHEYE_PKG_URL}list_galleries.php?user_id={$gal.user_id}" style="display:block;">{tr}Galleries{/tr}</a></small>
+						{/if}
+						{* if $galleryList[ix]->isProtected()}
+							{booticon iname="fa-lock" iexplain="Protected"}
+						{/if *}
 
-					{if $gBitSystem->isFeatureActive('fisheye_list_created' ) or $gBitSystem->isFeatureActive('fisheye_list_lastmodif' )}
-						<div class="date">
-							{if $gBitSystem->isFeatureActive('fisheye_list_created' ) }
-								<strong>{tr}Created{/tr}:</strong> {$gal.created|bit_short_date}<br />
-							{/if}
-							{if $gBitSystem->isFeatureActive('fisheye_list_lastmodif' )}
-								<strong>{tr}Modified{/tr}:</strong> {$gal.last_modified|bit_short_date}<br />
-							{/if}
+						{if $gBitSystem->isFeatureActive('fisheye_list_created' ) or $gBitSystem->isFeatureActive('fisheye_list_lastmodif' )}
+							<div class="date">
+								{if $gBitSystem->isFeatureActive('fisheye_list_created' ) }
+									<strong>{tr}Created{/tr}:</strong> {$gal.created|bit_short_date}<br />
+								{/if}
+								{if $gBitSystem->isFeatureActive('fisheye_list_lastmodif' )}
+									<strong>{tr}Modified{/tr}:</strong> {$gal.last_modified|bit_short_date}<br />
+								{/if}
+							</div>
+						{/if}
+
+						<!--{if $gBitSystem->isFeatureActive('fisheye_list_hits')}
+							<small><strong>{tr}Hits{/tr}:</strong> {$gal.hits}</small>
+						{/if}-->
+
+						{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='body' serviceHash=$gal}
+
 						</div>
-					{/if}
-
-					<!--{if $gBitSystem->isFeatureActive('fisheye_list_hits')}
-						<small><strong>{tr}Hits{/tr}:</strong> {$gal.hits}</small>
-					{/if}-->
-
-					{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='body' serviceHash=$gal}
-
 					</div>
 				</div>
-			</div>
 
 			{/foreach}	
 			</div>
 		</div>
 
 		<nav>
-			{pagination}
+			{pagination gallery_id=$gContent->mGalleryId}
 		</nav>
 
-		</section>	<!-- end .body -->
-	</div>	<!-- end .fisheye -->
-	{/strip}
-	{literal}
-	<script src="/storage/static/js/popover.js"></script>
-	<script>
-		$('background-image').error(function(){
-        $(this).attr('src', '/storage/static/images/no-image.png');
-});
-	
-	</script>
-{/literal}
+	</section>	<!-- end .body -->
+{/strip}
+</div>	<!-- end .fisheye -->

@@ -1,1 +1,1 @@
-{include file="bitpackage:fisheye/list_galleries.tpl"}
+{include file="bitpackage:fisheye/list_galleries2.tpl"}

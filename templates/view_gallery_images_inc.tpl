@@ -1,8 +1,5 @@
 {strip}
 {if $gContent->getLayout() == 'auto_flow'}
-	{if $gBrowserInfo.browser eq 'ie'}
-		<!-- we need this friggin table for MSIE that images don't float outside of the designated area - once again a hack for our favourite browser - grrr -->
-		<table style="border:0;border-collapse:collapse;border-spacing:0; width:auto;"><tr><td>
 	{/if}
 	<div class="thumbnailblock">
 		{foreach from=$gContent->mItems item=galItem key=itemContentId}
@@ -17,12 +14,9 @@
 				{/if}
 			{/box}
 		{foreachelse}
-			<div class="norecords">{tr}This gallery is empty{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}upload.php?gallery_id={$gContent->mGalleryId}">Upload pictures!</a></div>
+			<div class="norecords">This gallery is empty. <a href="{$smarty.const.FISHEYE_PKG_URL}upload.php?gallery_id={$gContent->mGalleryId}">Upload pictures!</a></div>
 		{/foreach}
 	</div>
-	{if $gBrowserInfo.browser eq 'ie'}
-		</td></tr></table>
-	{/if}
 	<div class="clear"></div>
 {elseif $gContent->getLayout() == 'simple_list'}
 	{assign var=thumbsize value='small'}
@@ -167,7 +161,7 @@
 			{/if}
 
 		{foreachelse}
-			<tr><td class="norecords">{tr}This gallery is empty{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}upload.php?gallery_id={$gContent->mGalleryId}">Upload pictures!</a></td></tr>
+			<tr><td class="norecords">This gallery is empty. <a href="{$smarty.const.FISHEYE_PKG_URL}upload.php?gallery_id={$gContent->mGalleryId}">Upload pictures!</a></td></tr>
 		{/foreach}
 
 		{if $imageCount % $cols_per_page != 0}</tr>{/if}

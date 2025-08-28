@@ -70,10 +70,10 @@
 							{formlabel label="Rotate Image"}
 							{forminput}
 {if function_exists('exif_read_data')}
-								<label class="radio-inline"><input type="radio" name="rotate_image" value="auto"/> {booticon iname="fa-chevron-up" iexplain="Auto Rotate"}</label>
+								<label class="radio-inline"><input type="radio" name="rotate_image" value="auto"/> {booticon iname="icon-chevron-sign-up" iexplain="Auto Rotate"}</label>
 {/if}
-								<label class="radio-inline"><input type="radio" name="rotate_image" value="-90"/> {booticon iname="fa-arrow-rotate-left" iexplain="Rotate Counter Clockwise"}</label>
-								<label class="radio-inline"><input type="radio" name="rotate_image" value="90"/> {booticon iname="fa-arrow-rotate-left" iexplain="Rotate Clockwise"}</label>
+								<label class="radio-inline"><input type="radio" name="rotate_image" value="-90"/> {booticon iname="icon-rotate-left" iexplain="Rotate Counter Clockwise"}</label>
+								<label class="radio-inline"><input type="radio" name="rotate_image" value="90"/> {booticon iname="icon-rotate-left" iexplain="Rotate Clockwise"}</label>
 								<label class="radio-inline"><input type="radio" name="rotate_image" value="" checked="checked"/> {tr}don't rotate{/tr}</label>
 							{/forminput}
 						</div>
@@ -81,6 +81,10 @@
 						<div class="form-group">
 							{include file="bitpackage:fisheye/resize_image_select.tpl"}
 						</div>
+
+						{include file="bitpackage:liberty/edit_services_inc.tpl" serviceFile="content_edit_mini_tpl"}
+				{/jstab}
+				{jstab title="Image Galleries"}
 
 						<div class="form-group">
 							{formlabel label="Add This Image to These Galleries"}
@@ -90,14 +94,13 @@
 										{$galleryTree}
 									</div>
 								{else}
-							<p class="norecords">
-								{tr}No Galleries Found{/tr}.<br />
-							</p>
-						{/if}
-					{/forminput}
+									<p class="norecords">
+										{tr}No Galleries Found{/tr}.<br />
+									</p>
+								{/if}
+							{/forminput}
 						</div>
 
-						{include file="bitpackage:liberty/edit_services_inc.tpl" serviceFile="content_edit_mini_tpl"}
 				{/jstab}
 
 				{include file="bitpackage:liberty/edit_services_inc.tpl" serviceFile="content_edit_tab_tpl"}

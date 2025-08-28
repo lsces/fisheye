@@ -7,7 +7,7 @@
 	<div class="form-group">
 		{formlabel label="Title" for="image-title"}
 		{forminput}
-			<input type="text" name="title" id="image-title" value="{$gContent->getTitle('',FALSE)|escape}" maxlength="160" size="40"/>
+			<input type="text" name="title" id="image-title" value="{$gContent->getTitle('',false)|escape}" maxlength="160" size="40"/>
 		{/forminput}
 	</div>
 

@@ -5,7 +5,7 @@
 	{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='body' serviceHash=$gContent->mInfo}
 	<div class="image">
 		{if $gBitSystem->isFeatureActive('fisheye_image_list_description') and $gContent->mInfo.data ne ''}
-			<p class="description">{$gContent->mInfo.parsed_data}</p>
+			<p class="description">{$gContent->mInfo.parsed_data|default:''}</p>
 		{/if}
 		</div>
 </div>	<!-- end .body -->

@@ -28,7 +28,7 @@
 			{/section}
 		</ul>
 		<div class="clear"></div>
-		{pagination}
+		{pagination gallery_id=$gContent->mGalleryId}
 	</div>	<!-- end .body -->
 </div>	<!-- end .fisheye -->
 {/if}

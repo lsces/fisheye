@@ -8,12 +8,13 @@
 /**
  * A specialized version of liberty/modules/mod_last_comments.php for fisheye
  */
-require_once( LIBERTY_PKG_CLASS_PATH.'LibertyComment.php' );
+use Bitweaver\Liberty\LibertyComment;
+
 global $gQueryUser, $gBitUser, $gLibertySystem, $moduleParams;
 $params = $moduleParams['module_params'];
 $moduleTitle = !empty($moduleParams['title'])? $moduleParams['title'] : 'Recent Image Comments';
 
-$userId = NULL;
+$userId = null;
 if( !empty( $gQueryUser->mUserId ) ) {
 	$userId = $gQueryUser->mUserId;
 }
@@ -24,7 +25,7 @@ $listHash = array(
 );
 
 if (!empty($params['full'])) {
-	$listHash['parse'] = TRUE;
+	$listHash['parse'] = true;
 }
 
 if (!empty($params['pigeonholes'])) {

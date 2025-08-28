@@ -45,7 +45,7 @@ function updateGalleryPagination() {
 						<div class="form-group">
 							{formlabel label="Description" for="gallery-desc"}
 							{forminput}
-								<textarea name="edit" id="gallery-desc" rows="4" cols="50">{$gContent->mInfo.data|escape}</textarea>
+								<textarea name="edit" id="gallery-desc" rows="4" cols="50">{$gContent->mInfo.data|default:''|escape}</textarea>
 							{/forminput}
 						</div>
 
@@ -117,7 +117,7 @@ function updateGalleryPagination() {
 
 						<div class="form-group">
 							{forminput label="checkbox"}
-								<input type="checkbox" name="allow_comments" id="allow_comments" value="y" {if !$gContent->isValid() || $gContent->getPreference('allow_comments') eq 'y'}checked="checked"{/if} />Image Comments
+								<input type="checkbox" name="allow_comments" id="allow_comments" value="y" {if !$gContent->isValid() or $gContent->getPreference('allow_comments') eq 'y'}checked="checked"{/if} />{tr}Image Comments{/tr}
 								{formhelp note="Allow posting comments for an image."}
 							{/forminput}
 						</div>
@@ -131,7 +131,7 @@ function updateGalleryPagination() {
 				{if $galleryTree}
 					{jstab title="Gallery Memberships"}
 						{legend legend="Gallery Memberships"}
-							{tr}If you would like this gallery to be a sub-gallery, check the parent gallery below. It is possible to belong to multiple galleries. If no parent is checked, this gallery will appear as a top-level gallery.{/tr}
+							If you would like this gallery to be a sub-gallery, check the parent gallery below. It is possible to belong to multiple galleries. If no parent is checked, this gallery will appear as a top-level gallery.
 							<div class="form-group">
 								{formlabel label=$gContent->getContentTypeName()|cat:" Belongs to These Galleries"}
 								{forminput}
@@ -141,7 +141,7 @@ function updateGalleryPagination() {
 										</div>
 									{else}
 										<p class="norecords">
-											{tr}No Galleries Found{/tr}.<br />
+											No Galleries Found.<br />
 										</p>
 									{/if}
 								{/forminput}

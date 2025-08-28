@@ -1,10 +1,10 @@
 {strip}
-{if !$liberty_preview}
+{if !empty($liberty_preview)}
 	{include file="bitpackage:fisheye/gallery_nav.tpl"}
 {/if}
 
 <div class="display fisheye">
-	{if !$liberty_preview}
+	{if empty($liberty_preview)}
 		<div class="floaticon">
 			{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='icon' serviceHash=$gContent->mInfo}
 			{if $gContent->hasUpdatePermission()}

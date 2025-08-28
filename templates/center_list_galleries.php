@@ -3,12 +3,14 @@ global $gQueryUser;
 if( !empty( $moduleParams ) ) {
 	extract( $moduleParams );
 }
+use Bitweaver\Fisheye\FisheyeGallery;
+use Bitweaver\BitBase;
 
 $gFisheyeGallery = new FisheyeGallery();
 
 /* Get a list of galleries which matches the imput paramters (default is to list every gallery in the system) */
-$listHash['root_only'] = TRUE;
-$listHash['get_thumbnails'] = TRUE;
+$listHash['root_only'] = true;
+$listHash['get_thumbnails'] = true;
 /*	Not supported in FisheyeGallery::getList
 if( !empty( $module_params['gallery_id'] ) && is_numeric( $module_params['gallery_id'] ) ) {
 	$listHash['gallery_id'] = $module_params['gallery_id'];
@@ -21,11 +23,9 @@ if ($gQueryUserId) {
 if( !empty( $module_params['contain_item'] ) && BitBase::verifyId( $module_params['contain_item'] ) ) {
 	$listHash['contain_item'] = $module_params['contain_item'];
 }
-if ( !empty( $module_params['sort_mode'] ) ) {
-	$listHash['sort_mode'] = $module_params['sort_mode'];
-} else {
-	$listHash['sort_mode'] = 'created_desc';
-}
+$listHash['sort_mode'] = !empty( $module_params['sort_mode'] )
+	? $module_params['sort_mode']
+	: 'created_desc';
 if( !empty( $module_params['nav_bar'] ) ){
 	$gBitSmarty->assign('navBar', $module_params['nav_bar']);
 }else{
@@ -38,24 +38,23 @@ if( !empty( $module_params['max_records'] ) ){
 
 $galleryList = $gFisheyeGallery->getList( $listHash );
 // support for div/ul/li listing of galleries
-$gBitSmarty->assignByRef( 'galleryList', $galleryList );
+$gBitSmarty->assign( 'galleryList', $galleryList );
 
 
 
 /* Process the input parameters this page accepts */
 if (!empty($gQueryUser) && $gQueryUser->isRegistered()) {
-	$gBitSmarty->assignByRef('gQueryUserId', $gQueryUser->mUserId);
+	$gBitSmarty->assign('gQueryUserId', $gQueryUser->mUserId);
 	$template = 'user_galleries.tpl';
 } else {
 	$template = 'list_galleries.tpl';
 }
 if (!empty($_REQUEST['offset']) && is_numeric($_REQUEST['offset'])) {
-	$gBitSmarty->assignByRef('iMaxRows', $iMaxRows);
+	$gBitSmarty->assign('iMaxRows', $iMaxRows);
 }
 if (!empty($_REQUEST['sort_mode'])) {
-	$gBitSmarty->assignByRef('iSortMode', $_REQUEST['sort_mode']);
+	$gBitSmarty->assign('iSortMode', $_REQUEST['sort_mode']);
 }
 if (!empty($_REQUEST['search'])) {
-	$gBitSmarty->assignByRef('iSearchString', $iSearchtring);
+	$gBitSmarty->assign('iSearchString', $iSearchtring);
 }
-?>
