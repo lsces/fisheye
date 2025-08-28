@@ -4,11 +4,14 @@
  * @subpackage functions
  */
 
+use \Bitweaver\HttpStatusCodes;
+use Bitweaver\KernelTools;
+
 if( !$gContent->isValid() ) {
-	$gBitSystem->fatalError( tra( "No image exists with the given ID" ) ,'error.tpl', '', HttpStatusCodes::HTTP_GONE );
+	$gBitSystem->fatalError( KernelTools::tra( "No image exists with the given ID" ) ,'error.tpl', '', HttpStatusCodes::HTTP_GONE );
 }
 
-$displayHash = array( 'perm_name' => 'p_fisheye_view' );
+$displayHash = [ 'perm_name' => 'p_fisheye_view' ];
 $gContent->invokeServices( 'content_display_function', $displayHash );
 
 // Get the proper thumbnail size to display on this page
@@ -20,6 +23,6 @@ $gBitSystem->setBrowserTitle( $gContent->getTitle() );
 if( $gBitThemes->isAjaxRequest() ) {
 	$gBitSmarty->display( $gContent->getRenderTemplate() );
 } else {
-	$gBitSystem->display( $gContent->getRenderTemplate() , NULL, array( 'display_mode' => 'display' ));
+	$gBitSystem->display( $gContent->getRenderTemplate() , null, [ 'display_mode' => 'display' ] );
 }
 

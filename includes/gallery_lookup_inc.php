@@ -5,13 +5,14 @@
  */
 
 global $gContent;
+use \Bitweaver\Fisheye\FisheyeGallery;
 
-$lookup = array();
+$lookup = [];
 
 if( !$gContent = FisheyeGallery::lookup( $_REQUEST ) ) {
 	$gContent = new FisheyeGallery();
-	$galleryId = NULL;
-}
+	$galleryId = null;
+} 
 
 if( !empty( $_REQUEST['gallery_path'] ) ) {
 	$gContent->setGalleryPath( $_REQUEST['gallery_path'] );
@@ -20,6 +21,6 @@ if( !empty( $_REQUEST['gallery_path'] ) ) {
 	$gContent->setGalleryPath( '/'.$gal['gallery_id'] );
 }
 
-$gBitSmarty->assignByRef('gContent', $gContent);
-$gBitSmarty->assignByRef('galleryId', $gContent->mGalleryId);
+$gBitSmarty->assign('gContent', $gContent);
+$gBitSmarty->assign('galleryId', $gContent->mGalleryId);
 

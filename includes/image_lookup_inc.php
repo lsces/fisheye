@@ -6,19 +6,20 @@
  */
 
 global $gContent, $gGallery;
-
-
+use \Bitweaver\Fisheye\FisheyeImage;
+use \Bitweaver\Fisheye\FisheyeGallery;
+;
 if( $gContent = FisheyeImage::lookup( $_REQUEST ) ) {
 	// nothing to do. ::lookup will do a full load
 } else {
 	$gContent = new FisheyeImage();
-	$imageId = NULL;
+	$imageId = null;
 }
 
 if( !empty( $_REQUEST['gallery_path'] ) ) {
 	$_REQUEST['gallery_path'] = rtrim( $_REQUEST['gallery_path'], '/' );
 	$gContent->setGalleryPath( $_REQUEST['gallery_path'] );
-	$matches = array();
+	$matches = [];
 	$tail = strrpos( $_REQUEST['gallery_path'], '/' );
 	$_REQUEST['gallery_id'] = substr( $_REQUEST['gallery_path'], $tail + 1 );
 }
@@ -32,15 +33,12 @@ if( empty( $_REQUEST['gallery_id'] ) ) {
 // the image is considered the primary content, however the gallery is useful
 if( !empty($_REQUEST['gallery_id']) && is_numeric($_REQUEST['gallery_id']) ) {
 	$gGallery = FisheyeGallery::lookup( $_REQUEST );
-	$gBitSmarty->assignByRef('gGallery', $gGallery);
-	$gBitSmarty->assignByRef('galleryId', $_REQUEST['gallery_id']);
+	$gBitSmarty->assign('gGallery', $gGallery);
+	$gBitSmarty->assign('galleryId', $_REQUEST['gallery_id']);
 }
 
 // This user does not own this gallery and they have not been granted the permission to edit this gallery
 $gContent->verifyViewPermission();
 
-$gBitSmarty->assignByRef('gContent', $gContent);
-$gBitSmarty->assignByRef('imageId', $gContent->mImageId );
-
-
-?>
+$gBitSmarty->assign('gContent', $gContent);
+$gBitSmarty->assign('imageId', $gContent->mImageId );

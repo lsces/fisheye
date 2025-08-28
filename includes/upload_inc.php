@@ -4,21 +4,24 @@
  * @subpackage functions
  */
 
-
+use Bitweaver\Fisheye\FisheyeImage;
+use Bitweaver\Fisheye\FisheyeGallery;
+use Bitweaver\BitBase;
+use Bitweaver\KernelTools;
 
 /**
  * fisheye_handle_upload
  */
-function fisheye_handle_upload( &$pFiles, &$pRequest ) {
+function fisheye_handle_upload( &$pFiles ) {
 	global $gBitUser, $gContent, $gBitSystem, $fisheyeErrors, $fisheyeWarnings, $fisheyeSuccess, $gFisheyeUploads;
 
 	// first of all set the execution time for this process to unlimited
 	set_time_limit(0);
 
-	$upImages = array();
-	$upArchives = array();
-	$upErrors = array();
-	$upData = array();
+	$upImages = [];
+	$upArchives = [];
+	$upErrors = [];
+	$upData = [];
 
 	$i = 0;
 	usort( $pFiles, 'fisheye_sort_uploads' );
@@ -26,40 +29,32 @@ function fisheye_handle_upload( &$pFiles, &$pRequest ) {
 	// No gallery was specified, let's try to find one or create one.
 	if( empty( $_REQUEST['gallery_additions'] ) ) {
 		if( $gBitUser->hasPermission( 'p_fisheye_create' )) {
-			$_REQUEST['gallery_additions'] = array( fisheye_get_default_gallery_id( $gBitUser->mUserId, $gBitUser->getDisplayName()."'s Gallery" ) );
+			$_REQUEST['gallery_additions'] = [ fisheye_get_default_gallery_id( $gBitUser->mUserId, $gBitUser->getDisplayName()."'s Gallery" ) ];
 		} else {
-			$gBitSystem->fatalError( tra( "You don't have permissions to create a new gallery. Please select an existing one to insert your images to." ));
+			$gBitSystem->fatalError( KernelTools::tra( "You don't have permissions to create a new gallery. Please select an existing one to insert your images to." ));
 		}
 	}
-
-	if( !is_object( $gContent ) || !$gContent->isValid() ) {
-		$gContent = new FisheyeGallery( $_REQUEST['gallery_additions'][0] );
-		if( !$gContent->load() ) {
-			unset( $gContent );
-			$_REQUEST['gallery_additions'] = array( fisheye_get_default_gallery_id( $gBitUser->mUserId, $gBitUser->getDisplayName()."'s Gallery" ) );
-		}
-	}
-
 
 	foreach( array_keys( $pFiles ) as $key ) {
-		$pFiles[$key]['type'] = $gBitSystem->verifyMimeType( $pFiles[$key]['tmp_name'] );
-		if( preg_match( '/(^image|pdf|vnd)/i', $pFiles[$key]['type'] ) ) {
-			$upImages[$key] = $pFiles[$key];
-			// clone the request data so edit service values are passed into store process
-			$upData[$key] = $_REQUEST;
-			// add the form data for each upload
-			if( !empty( $_REQUEST['imagedata'][$i] ) ) {
-				array_merge( $upData[$key], $_REQUEST['imagedata'][$i] );
+		if ( !empty($pFiles[$key]['name']) ) {
+			$pFiles[$key]['type'] = $gBitSystem->verifyMimeType( $pFiles[$key]['tmp_name'] );
+			if( preg_match( '/(^image|pdf|vnd)/i', $pFiles[$key]['type'] ?? '' ) ) {
+				$upImages[$key] = $pFiles[$key];
+				// clone the request data so edit service values are passed into store process
+				$upData[$key] = $_REQUEST;
+				// add the form data for each upload
+				if( !empty( $_REQUEST['imagedata'][$i] ) ) {
+					array_merge( $upData[$key], $_REQUEST['imagedata'][$i] );
+				}
+			} elseif( !empty( $pFiles[$key]['tmp_name'] ) && !empty( $pFiles[$key]['name'] ) ) {
+				$upArchives[$key] = $pFiles[$key];
 			}
-		} elseif( !empty( $pFiles[$key]['tmp_name'] ) && !empty( $pFiles[$key]['name'] ) ) {
-			$upArchives[$key] = $pFiles[$key];
+			$i++;
 		}
-
-		$i++;
 	}
 
 	foreach( array_keys( $upArchives ) as $key ) {
-		$upErrors = fisheye_process_archive( $upArchives[$key], $gContent, TRUE );
+		$upErrors = fisheye_process_archive( $upArchives[$key], $gContent, true );
 	}
 
 	foreach( array_keys( $upImages ) as $key ) {
@@ -70,11 +65,14 @@ function fisheye_handle_upload( &$pFiles, &$pRequest ) {
 		$upErrors = array_merge( $upErrors, fisheye_store_upload( $upImages[$key], $upData[$key], !empty( $_REQUEST['rotate_image'] )));
 	}
 
+	if( !is_object( $gContent ) || !$gContent->isValid() ) {
+		$gContent = new FisheyeGallery( $_REQUEST['gallery_additions'][0] );
+		$gContent->load();
+	}
+
 	if( !empty( $gFisheyeUploads ) ){
 		$_REQUEST['uploaded_objects'] = &$gFisheyeUploads;
-		if( is_a( $gContent, 'LibertyContent' ) ) {	
-			$gContent->invokeServices( "content_post_upload_function", $_REQUEST );
-		}
+		$gContent->invokeServices( "content_post_upload_function", $_REQUEST );
 	}
 
 	return $upErrors;
@@ -94,12 +92,12 @@ function fisheye_sort_uploads( $a, $b ) {
 function fisheye_get_default_gallery_id( $pUserId, $pNewName ) {
 	global $gBitUser;
 	$gal = new FisheyeGallery();
-	$getHash = array( 'user_id' => $pUserId, 'max_records' => 1, 'sort_mode' => 'created_desc', 'show_empty' => TRUE );
+	$getHash = [ 'user_id' => $pUserId, 'max_records' => 1, 'sort_mode' => 'created_desc', 'show_empty' => true ];
 	$upList = $gal->getList( $getHash );
 	if( !empty( $upList ) ) {
 		$ret = key( $upList );
 	} else { 
-		$galleryHash = array( 'title' => $pNewName );
+		$galleryHash = [ 'title' => $pNewName ];
 		if( $gal->store( $galleryHash ) ) {
 			$ret = $gal->mGalleryId;
 		}
@@ -116,9 +114,9 @@ function fisheye_get_default_gallery_id( $pUserId, $pNewName ) {
 /**
  * fisheye_store_upload
  */
-function fisheye_store_upload( &$pFileHash, $pImageData = array(), $pAutoRotate=TRUE ) {
+function fisheye_store_upload( &$pFileHash, $pImageData = [], $pAutoRotate=true ) {
 	global $gBitSystem, $gFisheyeUploads;
-	$ret = array();
+	$ret = [];
 
 	// verifyMimeType to make sure we are working with the proper file type assumptions
 	$pFileHash['type'] = $gBitSystem->verifyMimeType($pFileHash['tmp_name']);	
@@ -126,9 +124,9 @@ function fisheye_store_upload( &$pFileHash, $pImageData = array(), $pAutoRotate=
 		// make a copy for each image we need to store
 		$image = new FisheyeImage();
 		// Store/Update the image
-		$pImageData['_files_override'] = array( $pFileHash );
+		$pImageData['_files_override'] = [ $pFileHash ];
 		$pImageData['process_storage'] = STORAGE_IMAGE;
-		$pImageData['purge_from_galleries'] = TRUE;
+		$pImageData['purge_from_galleries'] = true;
 		// store the image
 		if( !$image->store( $pImageData ) ) {
 			$ret = $image->mErrors;
@@ -142,14 +140,14 @@ function fisheye_store_upload( &$pFileHash, $pImageData = array(), $pAutoRotate=
 			}
 			if( !($galleryAdditions = BitBase::getParameter( $pImageData, 'gallery_additions' )) ) {
 				global $gBitUser;
-				$galleryAdditions = array( fisheye_get_default_gallery_id( $gBitUser->mUserId, $gBitUser->getDisplayName()."'s Gallery" ) );
+				$galleryAdditions = [ fisheye_get_default_gallery_id( $gBitUser->mUserId, $gBitUser->getDisplayName()."'s Gallery" ) ];
 			}
 			$image->addToGalleries( $galleryAdditions );
 			$gFisheyeUploads[] = $image;
 		}
 
 		// when we're using xupload, we need to remove temp files manually
-		@unlink( $pFileHash['tmp_name'] );
+		if ( is_readable( $pFileHash['tmp_name'] ) ) @unlink( $pFileHash['tmp_name'] );
 	}
 	return $ret;
 }
@@ -157,14 +155,14 @@ function fisheye_store_upload( &$pFileHash, $pImageData = array(), $pAutoRotate=
 /**
  * Recursively builds a tree where each directory represents a gallery, and files are assumed to be images.
  */
-function fisheye_process_archive( &$pFileHash, &$pParentGallery, $pRoot=FALSE ) {
+function fisheye_process_archive( &$pFileHash, &$pParentGallery, $pRoot=false ) {
 	global $gBitSystem, $gBitUser;
-	$errors = array();
+	$errors = [];
 
-	if( ( $destDir = liberty_process_archive( $pFileHash ) ) && ( !empty( $_REQUEST['process_archive'] ) || !$gBitUser->hasPermission( 'p_fisheye_upload_nonimages' ) ) ) {
+	if( ( $destDir = \Bitweaver\Liberty\liberty_process_archive( $pFileHash ) ) && ( !empty( $_REQUEST['process_archive'] ) || !$gBitUser->hasPermission( 'p_fisheye_upload_nonimages' ) ) ) {
 		if( empty( $pParentGallery ) && !is_file( $pFileHash['tmp_name'] ) ) {
 			$pParentGallery = new FisheyeGallery();
-			$galleryHash = array( 'title' => basename( $destDir ) );
+			$galleryHash = [ 'title' => basename( $destDir ) ];
 			if( !$pParentGallery->store( $galleryHash ) ) {
 				$errors = array_merge( $errors, array_values( $pParentGallery->mErrors ) );
 			}
@@ -181,7 +179,7 @@ function fisheye_process_archive( &$pFileHash, &$pParentGallery, $pRoot=FALSE ) 
 		if( $gBitUser->hasPermission( 'p_fisheye_upload_nonimages' ) ) {
 			$errors = array_merge( $errors, fisheye_store_upload( $pFileHash ));
 		} else {
-			$errors['upload'] = tra( 'Your upload could not be processed because it was determined to be a non-image and you only have permission to upload images.' );
+			$errors['upload'] = KernelTools::tra( 'Your upload could not be processed because it was determined to be a non-image and you only have permission to upload images.' );
 		}
 	}
 	return $errors;
@@ -198,9 +196,9 @@ function fisheye_verify_upload_item( $pScanFile ) {
 /**
  * Recursively builds a tree where each directory represents a gallery, and files are assumed to be images.
  */
-function fisheye_process_directory( $pDestinationDir, &$pParentGallery, $pRoot=FALSE ) {
+function fisheye_process_directory( $pDestinationDir, &$pParentGallery, $pRoot=false ) {
 	global $gBitSystem, $gBitUser;
-	$errors = array();
+	$errors = [];
 	if( $archiveDir = opendir( $pDestinationDir ) ) {
 		$order = 100;
 		while( $fileName = readdir($archiveDir) ) {
@@ -213,12 +211,12 @@ function fisheye_process_directory( $pDestinationDir, &$pParentGallery, $pRoot=F
 			}
 			if( !preg_match( '/^\./', $fileName ) && ( $fileName != 'Thumbs.db' ) ) {
 				$mimeResults = $gBitSystem->verifyFileExtension( $pDestinationDir.'/'.$fileName );
-				$scanFile = array(
+				$scanFile = [
 					'type' => $mimeResults[1],
 					'name' => $fileName,
 					'size' => filesize( "$pDestinationDir/$fileName" ),
 					'tmp_name' => "$pDestinationDir/$fileName",
-				);
+				];
 
 				if( !empty( $_REQUEST['resize'] ) && is_numeric( $_REQUEST['resize'] ) ) {
 					$scanFile['max_height'] = $scanFile['max_width'] = $_REQUEST['resize'];
@@ -227,11 +225,11 @@ function fisheye_process_directory( $pDestinationDir, &$pParentGallery, $pRoot=F
 				if( is_dir( $pDestinationDir.'/'.$fileName ) ) {
 					if( $fileName == '__MACOSX' ) {
 						// Mac OS resources file
-						unlink_r( $pDestinationDir.'/'.$fileName );
+						KernelTools::unlink_r( $pDestinationDir.'/'.$fileName );
 					} else {
 						// We found a new Gallery!
 						$newGallery = new FisheyeGallery();
-						$galleryHash = array( 'title' => str_replace( '_', ' ', $fileName ) );
+						$galleryHash = [ 'title' => str_replace( '_', ' ', $fileName ) ];
 						if( $newGallery->store( $galleryHash ) ) {
 							if( $pRoot ) {
 								$newGallery->addToGalleries( $_REQUEST['gallery_additions'] );
@@ -250,7 +248,7 @@ function fisheye_process_directory( $pDestinationDir, &$pParentGallery, $pRoot=F
 					$errors = array_merge( $errors, fisheye_process_archive( $scanFile, $pParentGallery ) );
 				} elseif( fisheye_verify_upload_item( $scanFile ) ) {
 					$newImage = new FisheyeImage();
-					$imageHash = array( '_files_override' => array( $scanFile ) );
+					$imageHash = [ '_files_override' => [ $scanFile ] ];
 					if( $newImage->store( $imageHash ) ) {
 						if( $pRoot ) {
 							$newImage->addToGalleries( $_REQUEST['gallery_additions'] );
@@ -271,8 +269,8 @@ function fisheye_process_directory( $pDestinationDir, &$pParentGallery, $pRoot=F
 				$order += 10;
 			}
 		}
-		if ( !is_windows() ) {
-			unlink_r( $pDestinationDir );
+		if ( !KernelTools::is_windows() ) {
+			KernelTools::unlink_r( $pDestinationDir );
 		}
 	}
 	return $errors;
@@ -285,10 +283,10 @@ function fisheye_process_directory( $pDestinationDir, &$pParentGallery, $pRoot=F
 function fisheye_process_ftp_directory( $pProcessDir ) {
 	global $gBitSystem, $gBitUser;
 	if( empty( $_REQUEST['gallery_additions'] ) ) {
-		$_REQUEST['gallery_additions'] = array();
+		$_REQUEST['gallery_additions'] = [];
 	}
 
-	$errors = array();
+	$errors = [];
 	if( $archiveDir = opendir( $pProcessDir ) ) {
 		$order = 100;
 		while( $fileName = readdir($archiveDir) ) {
@@ -300,17 +298,17 @@ function fisheye_process_ftp_directory( $pProcessDir ) {
 
 		foreach( $sortedNames as $fileName ) {
 			if( !preg_match( '/^\./', $fileName ) && ( $fileName != 'Thumbs.db' ) ) {
-				$scanFile = array(
-					'type'     => $gBitSystem->lookupMimeType( substr( $fileName, ( strrpos( $fileName, '.' ) + 1 )  ) ),
+				$scanFile = [
+					'type'     => $gBitSystem->lookupMimeType( substr( $fileName, strrpos( $fileName, '.' ) + 1 )  ),
 					'name'     => $fileName,
 					'size'     => filesize( "$pProcessDir/$fileName" ),
 					'tmp_name' => "$pProcessDir/$fileName",
-				);
+				];
 
 				if( is_dir( $pProcessDir.'/'.$fileName ) ) {
 					// create a new gallery from directory
 					$dirGallery = new FisheyeGallery();
-					$galleryHash = array( 'title' => str_replace( '_', ' ', $fileName ) );
+					$galleryHash = [ 'title' => str_replace( '_', ' ', $fileName ) ];
 					if( $dirGallery->store( $galleryHash ) ) {
 						$dirGallery->addToGalleries( $_REQUEST['gallery_additions'] );
 						$errors = array_merge( $errors, fisheye_process_directory( $pProcessDir.'/'.$fileName, $dirGallery ) );
@@ -322,7 +320,7 @@ function fisheye_process_ftp_directory( $pProcessDir ) {
 					if( preg_match( '/(^image|pdf)/i', $scanFile['type'] ) ) {
 						// process image
 						$newImage = new FisheyeImage();
-						$imageHash = array( 'upload' => $scanFile );
+						$imageHash = [ 'upload' => $scanFile ];
 						if( $newImage->store( $imageHash ) ) {
 							$newImage->addToGalleries( $_REQUEST['gallery_additions'] );
 
@@ -335,7 +333,7 @@ function fisheye_process_ftp_directory( $pProcessDir ) {
 
 							if( @!is_object( $imageGallery ) ) {
 								global $gBitUser;
-								$galleryHash = array( 'title' => $gBitUser->getDisplayName()."'s Gallery" );
+								$galleryHash = [ 'title' => $gBitUser->getDisplayName()."'s Gallery" ];
 								$imageGallery = new FisheyeGallery();
 								if( $imageGallery->store( $galleryHash ) ) {
 									$imageGallery->load();
@@ -351,12 +349,12 @@ function fisheye_process_ftp_directory( $pProcessDir ) {
 					} else {
 						// create a new gallery from archive
 						$archiveGallery = new FisheyeGallery();
-						$galleryHash = array( 'title' => substr( $fileName, 0, ( str_replace( '_', ' ', strrpos( $fileName, '.' ) ) ) ) );
+						$galleryHash = [ 'title' => substr( $fileName, 0, str_replace( '_', ' ', strrpos( $fileName, '.' ) ) ) ];
 						if( !$archiveGallery->store( $galleryHash ) ) {
 							$errors = array_merge( $errors, array_values( $archiveGallery->mErrors ) );
 						}
 
-						$errors = fisheye_process_archive( $scanFile, $archiveGallery, TRUE );
+						$errors = fisheye_process_archive( $scanFile, $archiveGallery, true );
 						unset( $archiveGallery );
 					}
 				}
@@ -366,4 +364,3 @@ function fisheye_process_ftp_directory( $pProcessDir ) {
 	}
 	return $errors;
 }
-?>
