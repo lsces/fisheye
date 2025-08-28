@@ -7,29 +7,39 @@
  */
 
 /**
+ * required setup
+ */
+namespace Bitweaver\Liberty;
+use Bitweaver\Fisheye\FisheyeImage;
+use Bitweaver\BitBase;
+use Bitweaver\KernelTools;
+
+/**
  * definitions
  */
 define( 'PLUGIN_GUID_DATAIMAGE', 'dataimage' );
+
 global $gLibertySystem;
-$pluginParams = array (
+
+$pluginParams = [
 	'tag'           => 'image',
 	'title'         => 'Fisheye Image',
-	'description'   => tra( "Display an image in other content. This plugin only works with files that have been uploaded using fisheye." ),
+	'description'   => KernelTools::tra( "Display an image in other content. This plugin only works with files that have been uploaded using fisheye." ),
 	'help_page'     => 'DataPluginImage',
 
-	'auto_activate' => FALSE,
-	'requires_pair' => FALSE,
+	'auto_activate' => false,
+	'requires_pair' => false,
 	'syntax'        => '{image id= }',
 	'plugin_type'   => DATA_PLUGIN,
 
 	// display icon in quicktags bar
-	'booticon'       => '{booticon iname="fa-image-landscape" iexplain="Image"}',
+	'booticon'       => '{booticon iname="icon-picture" iexplain="Image"}',
 	'taginsert'     => '{image id= size= nolink=}',
 
 	// functions
 	'help_function' => 'data_image_help',
 	'load_function' => 'data_image',
-);
+];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAIMAGE, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAIMAGE );
 
@@ -40,9 +50,9 @@ function data_image( $pData, $pParams ) {
 
 	$imgStyle = '';
 
-	$wrapper = liberty_plugins_wrapper_style( $pParams );
+	$wrapper = \Bitweaver\Liberty\liberty_plugins_wrapper_style( $pParams );
 
-	$description = !isset( $wrapper['description'] ) ? $wrapper['description'] : NULL;
+	$description = !isset( $wrapper['description'] ) ? $wrapper['description'] : null;
 	foreach( $pParams as $key => $value ) {
 		if( !empty( $value ) ) {
 			switch( $key ) {
@@ -55,32 +65,30 @@ function data_image( $pData, $pParams ) {
 						$imgStyle .= $key.':'.$value.'px;';
 					}
 					// remove values from the hash that they don't get used in the div as well
-					$pParams[$key] = NULL;
+					$pParams[$key] = null;
 					break;
 			}
 		}
 	}
 
-	$wrapper = liberty_plugins_wrapper_style( $pParams );
+	$wrapper = \Bitweaver\Liberty\liberty_plugins_wrapper_style( $pParams );
 
 	if( !empty( $pParams['src'] ) ) {
 		$thumbUrl = $pParams['src'];
-	} elseif( @BitBase::verifyId( $pParams['id'] ) && $gBitSystem->isPackageActive( 'fisheye' )) {
-		require_once( FISHEYE_PKG_CLASS_PATH.'FisheyeImage.php' );
-		$gBitSmarty->loadPlugin( 'smarty_modifier_display_bytes' );
+	} elseif( BitBase::verifyId( $pParams['id'] ) && $gBitSystem->isPackageActive( 'fisheye' )) {
 
-		$item = new FisheyeImage( $pParams['id'], NULL );
+		$item = new FisheyeImage( $pParams['id'], null );
 
 		if( $item->load() ) {
 			// insert source url if we need the original file
 			if( !empty( $pParams['size'] ) && $pParams['size'] == 'original' ) {
 				$thumbUrl = $item->getDownloadUrl();
 			} elseif( $item->mInfo['thumbnail_url'] ) {
-				$thumbUrl = ( !empty( $pParams['size'] ) && !empty( $item->mInfo['thumbnail_url'][$pParams['size']] ) ? $item->mInfo['thumbnail_url'][$pParams['size']] : $item->mInfo['thumbnail_url']['medium'] );
+				$thumbUrl = !empty( $pParams['size'] ) && !empty( $item->mInfo['thumbnail_url'][$pParams['size']] ) ? $item->mInfo['thumbnail_url'][$pParams['size']] : $item->mInfo['thumbnail_url']['medium'];
 			}
 
 			if( empty( $description ) ) {
-				$description = !isset( $wrapper['description'] ) ? $wrapper['description'] : $item->getField( 'title', tra( 'Image' ) );
+				$description = !isset( $wrapper['description'] ) ? $wrapper['description'] : $item->getField( 'title', KernelTools::tra( 'Image' ) );
 			}
 		}
 	}
@@ -113,7 +121,7 @@ function data_image( $pData, $pParams ) {
 			$ret = '<'.$wrapper['wrapper'].' class="'.( !empty( $wrapper['class'] ) ? $wrapper['class'] : "img-plugin" ).'" style="'.$wrapper['style'].'">'.$ret.( !empty( $wrapper['description'] ) ? '<br />'.$wrapper['description'] : '' ).'</'.$wrapper['wrapper'].'>';
 		}
 	} else {
-		$ret = tra( "Unknown Image" );
+		$ret = KernelTools::tra( "Unknown Image" );
 	}
 
 	return $ret;
@@ -123,28 +131,27 @@ function data_image_help() {
 	$help =
 		'<table class="data help">'
 			.'<tr>'
-				.'<th>' . tra( "Key" ) . '</th>'
-				.'<th>' . tra( "Type" ) . '</th>'
-				.'<th>' . tra( "Comments" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Key" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Type" ) . '</th>'
+				.'<th>' . KernelTools::tra( "Comments" ) . '</th>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>id</td>'
-				.'<td>' . tra( "numeric") . '<br />' . tra("(required)") . '</td>'
-				.'<td>' . tra( "Image id number of Image to display inline.") . tra( "You can use either content_id or id." ).'</td>'
+				.'<td>' . KernelTools::tra( "numeric") . '<br />' . KernelTools::tra("(required)") . '</td>'
+				.'<td>' . KernelTools::tra( "Image id number of Image to display inline.") . KernelTools::tra( "You can use either content_id or id." ).'</td>'
 			.'</tr>'
 			.'<tr class="even">'
 				.'<td>size</td>'
-				.'<td>' . tra( "key-words") . '<br />' . tra("(optional)") . '</td>'
-				.'<td>' . tra( "If the File is an image, you can specify the size of the thumbnail displayed. Possible values are:") . ' <strong>avatar, small, medium, large, original</strong> '
-				. tra( "(Default = " ) . '<strong>medium</strong>)</td>'
+				.'<td>' . KernelTools::tra( "key-words") . '<br />' . KernelTools::tra("(optional)") . '</td>'
+				.'<td>' . KernelTools::tra( "If the File is an image, you can specify the size of the thumbnail displayed. Possible values are:") . ' <strong>avatar, small, medium, large, original</strong> '
+				. KernelTools::tra( "(Default = " ) . '<strong>medium</strong>)</td>'
 			.'</tr>'
 			.'<tr class="odd">'
 				.'<td>nolink</td>'
-				.'<td>' . tra( "key-words") . '<br />' . tra("(optional)") . '</td>'
-				.'<td>' . tra( "Remove hotlink from element. Used to display fixed copies of an image item.") . '</td>'
+				.'<td>' . KernelTools::tra( "key-words") . '<br />' . KernelTools::tra("(optional)") . '</td>'
+				.'<td>' . KernelTools::tra( "Remove hotlink from element. Used to display fixed copies of an image item.") . '</td>'
 			.'</tr>'
 		.'</table>'
-		. tra( "Example: ") . "{image id='13' size='small'}";
+		. KernelTools::tra( "Example: ") . "{image id='13' size='small'}";
 	return $help;
 }
-?>
