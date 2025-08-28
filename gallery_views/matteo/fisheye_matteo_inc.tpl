@@ -1,4 +1,4 @@
-<script type="text/javascript">/*<![CDATA[*/
+<script>/*<![CDATA[*/
 {literal}
 $(function(){
 		$("#g1").mbGallery( {

@@ -6,7 +6,6 @@
 	<nav>
 		{assign var=breadCrumbs value=$gContent->getBreadcrumbLinks(1)}
 		<ol class="breadcrumb">
-			<li>{displayname user=$gContent->mInfo.creator_user user_id=$gContent->mInfo.creator_user_id real_name=$gContent->mInfo.creator_real_name} :: <a href="{$smarty.const.FISHEYE_PKG_URL}?user_id={$gContent->mInfo.user_id}">{tr}Galleries{/tr}</a></li>
 			{if $breadCrumbs}
 				{foreach from=$breadCrumbs item=breadTitle key=breadId}
 					{if $breadId==$gContent->mGalleryId}<li class="active">{$breadTitle}</li>
@@ -25,12 +24,12 @@
 		<ul class="thumbs noscript">
 			{foreach from=$gContent->mItems item=galItem}
 			<li>
-				{if is_a($galItem, 'FisheyeImage')}
+				{if is_a($galItem, '\Bitweaver\Fisheye\FisheyeImage')}
 					<a class="thumb" name="{$galItem->mImageId}" href="{$galItem->mInfo.thumbnail_url.large}{*$smarty.const.FISHEYE_PKG_URL}view_image.php?image_id={$galItem->mImageId*}" title="{$galItem->mInfo.title|escape}">
 						<img src="{$galItem->mInfo.thumbnail_url.avatar}" alt="{$galItem->mInfo.title|escape}" />
 					</a>
 					<h2 class="heading">
-						<div class="image-heading">{booticon iname="fa-image-landscape" iexplain=$galItem->getContentTypeName()|escape}{$galItem->getDisplayLink()}</div>
+						<div class="image-heading">{booticon iname="icon-picture" isize="small" iexplain=$galItem->getContentTypeName()|escape}{$galItem->getDisplayLink( null )}</div>
 					</h2>
 					<div class="caption">
 						<div class="meta floatright">
@@ -48,17 +47,19 @@
 							</div>
 							{/if}
 						</div>
-						<div class="image-desc"><p>{$galItem->mInfo.description|escape}</p></div>
+						<div class="image-title"><p>{$galItem->mInfo.title|escape}</p></div>
+						<div class="image-desc"><p>{$galItem->mInfo.description|default:''}</p></div>
 					</div>
 				{elseif is_a($galItem, 'FisheyeGallery')}
 					<a class="thumb" name="{$galItem->mContentId}" href="{$galItem->mPreviewImage->mInfo.thumbnail_url.large}" title="{$galItem->mInfo.title|escape}">
 						<img src="{$galItem->mPreviewImage->mInfo.thumbnail_url.avatar}" alt="{$galItem->mInfo.title|escape}"/>
 					</a>
 					<div class="heading">
-						<h2>{booticon iname="fa-image-landscape" iexplain=$galItem->getContentTypeName()|escape}{$galItem->getDisplayLink()}</h2><span class="image-count">({$galItem->getImageCount()} {tr}Items{/tr})</span>
+						<h2>{booticon iname="icon-picture"   isize="small" iexplain=$galItem->getContentTypeName()|escape}{$galItem->getDisplayLink( null )}</h2><span class="image-count">({$galItem->getImageCount()} {tr}Items{/tr})</span>
 					</div>
 					<div class="caption">
-						<div class="image-desc">{$galItem->mInfo.description|escape}</div>
+						<div class="image-title"><p>{$galItem->mInfo.title|escape}</p></div>
+						<div class="image-desc">{$galItem->mInfo.description|default:''}</div>
 						<div class="download">
 							
 						</div>
@@ -89,7 +90,7 @@
 	<div id="caption" class="caption-container"></div>
 </div>
 
-<script type="text/javascript">/*<![CDATA[*/
+<script>/*<![CDATA[*/
 {literal}
 jQuery(document).ready(function($) {
 	// We only want these styles applied when javascript is enabled
@@ -121,9 +122,9 @@ jQuery(document).ready(function($) {
 		renderSSControls:          true,
 		renderNavControls:         true,
 		playLinkText:              '',
-		playLinkImage:             '{/literal}{booticon iname="fa-circle-play" class="fa-small" iexplain="Play Slideshow"}{literal}',
+		playLinkImage:             '{/literal}{booticon iname="icon-control-start" isize="small" iexplain="Play Slideshow"}{literal}',
 		pauseLinkText:             '',
-		pauseLinkImage:            '{/literal}{booticon iname="fa-circle-pause" class="fa-small" iexplain="Pause Slideshow"}{literal}',
+		pauseLinkImage:            '{/literal}{booticon iname="icon-control-pause" isize="small" iexplain="Pause Slideshow"}{literal}',
 		prevLinkText:              '&laquo;',
 		nextLinkText:              '&raquo;',
 		nextPageLinkText:          'Next &rsaquo;',
@@ -201,10 +202,10 @@ jQuery(document).ready(function($) {
 
 	// Initialize history plugin.
 	// The callback is called at once by present location.hash. 
-	$.historyInit(pageload, "advanced.html");
+	//$.historyInit(pageload, "advanced.html");
 
 	// set onlick event for buttons using the jQuery 1.3 live method
-	$("a[rel='history']").live('click', function(e) {
+/*	$("a[rel='history']").live('click', function(e) {
 		if (e.button != 0) return true;
 
 		var hash = this.href;
@@ -216,7 +217,7 @@ jQuery(document).ready(function($) {
 		$.historyLoad(hash);
 
 		return false;
-	});
+	}); */
 
 	/****************************************************************************************/
 });

@@ -1,12 +1,12 @@
 {strip}
-{include file="bitpackage:fisheye/gallery_nav.tpl"}
-<div class="display fisheye">
-	<div class="header">
+{* include file="bitpackage:fisheye/gallery_nav.tpl" *}
+<div class="display fisheye container">
+	<div class="header col-xs-12">
 		{include file="bitpackage:fisheye/gallery_icons_inc.tpl"}
 		<h1>{$gContent->getTitle()|escape}</h1>
 	</div>
 
-	<div class="body">
+	<div class="body col-xs-12">
 		{formfeedback success=$fisheyeSuccess error=$fisheyeErrors warning=$fisheyeWarnings}
 
 		{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='body' serviceHash=$gContent->mInfo}
@@ -14,34 +14,34 @@
 			<p>{$gContent->mInfo.data|escape}</p>
 		{/if}
 
-		{if $gBrowserInfo.browser eq 'ie'}
-			<!-- we need this friggin table for MSIE that images don't float outside of the designated area - once again a hack for our favourite browser - grrr -->
-			<table style="border:0;border-collapse:collapse;border-spacing:0; width:auto;"><tr><td>
-		{/if}
-		<div class="thumbnailblock">
-			{foreach from=$gContent->mItems item=galItem key=itemContentId}
-				{box class="box `$gContent->mInfo.thumbnail_size`-thmb `$galItem->mInfo.content_type_guid`"}
-					{include file=$gLibertySystem->getMimeTemplate('inline',$galItem->mInfo.attachment_plugin_guid) attachment=$galItem->mInfo.image_file}
-					{if $gBitSystem->isFeatureActive( 'fisheye_gallery_list_image_titles' )}
-						<h2>{$galItem->mInfo.title|escape}</h2>
-					{/if}
-					{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='body' serviceHash=$galItem->mInfo type=mini}
-					{if $gBitSystem->isFeatureActive( 'fisheye_gallery_list_image_descriptions' )}
-						<p>{$galItem->mInfo.data|escape}</p>
-					{/if}
-				{/box}
-			{foreachelse}
-				<div class="norecords">{tr}This gallery is empty{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}upload.php?gallery_id={$gContent->mGalleryId}">Upload pictures!</a></div>
-			{/foreach}
+		<div class="col-xs-12">
+		{counter assign="imageCount" start="0" print=false}
+		{assign var="max" value=100}
+		{foreach from=$gContent->mItems item=galItem key=itemContentId}
+			<div class="col-md-4 col-sm-6 col-xs-12"> <!-- Begin Image Cell -->
+				<div class="col-xs-12 gallery-box">
+					<a href="{$galItem->mInfo.source_url}">
+						<div class="col-xs-12 gallery-img table-cell">
+							<img class="col-xs-12 thumb" src="{$galItem->getThumbnailUri($gContent->getField('thumbnail_size'))}" alt="{$galItem->mInfo.title|escape|default:'image'}" />
+						</div>
+						<div class="col-xs-12 gallery-img-title table-cell center">
+							<h3>{$galItem->mInfo.title|escape}</h3>
+						</div>
+					</a>
+				</div>
+			</div> <!-- End Image Cell -->
+			{counter}
+			{if $imageCount % 2 == 0}<div class="hidden-xs hidden-md hidden-lg clear"></div>{/if}
+			{if $imageCount % 3 == 0}<div class="hidden-xs hidden-sm clear"></div>{/if}
+		{foreachelse}
+			<div class="norecords">{tr}This gallery is empty{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}upload.php?gallery_id={$gContent->mGalleryId}">Upload pictures!</a></div>
+		{/foreach}
 		</div>
-		{if $gBrowserInfo.browser eq 'ie'}
-			</td></tr></table>
-		{/if}
 		<div class="clear"></div>
 
 	</div>	<!-- end .body -->
 
-	{libertypagination numPages=$gContent->mInfo.num_pages gallery_id=$gContent->mGalleryId gallery_path=$gContent->mGalleryPath page=$pageCount}
+	{pagination gallery_id=$gContent->mGalleryId}
 
 	{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='view' serviceHash=$gContent->mInfo}
 

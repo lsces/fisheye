@@ -89,7 +89,7 @@
 	<div id="caption" class="caption-container"></div>
 </div>
 
-<script type="text/javascript">/*<![CDATA[*/
+<script>/*<![CDATA[*/
 {literal}
 jQuery(document).ready(function($) {
 	// We only want these styles applied when javascript is enabled
