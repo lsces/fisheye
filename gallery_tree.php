@@ -8,12 +8,8 @@
 /**
  * required setup
  */
-require_once( '../kernel/includes/setup_inc.php' );
+require_once '../kernel/includes/setup_inc.php';
 
-require_once( FISHEYE_PKG_CLASS_PATH.'FisheyeGallery.php');
-require_once( FISHEYE_PKG_CLASS_PATH.'FisheyeImage.php');
-global $gBitSystem, $gBitSmarty;
+global $gBitSystem;
 
-$gBitSystem->display("bitpackage:fisheye/gallery_tree.tpl", NULL, array( 'display_mode' => 'display' ));
-
-?>
+$gBitSystem->display("bitpackage:fisheye/gallery_tree.tpl", null, [ 'display_mode' => 'display' ] );

@@ -8,35 +8,39 @@
 /**
  * Initialization
  */
-require_once( "../kernel/includes/setup_inc.php" );
+namespace Bitweaver\Fisheye;
+use Bitweaver\KernelTools;
+use Bitweaver\BitBase;
+use Bitweaver\Rss\FeedItem;
+
+require_once "../kernel/includes/setup_inc.php";
 
 $gBitSystem->verifyPackage( 'fisheye' );
 $gBitSystem->verifyPackage( 'rss' );
 $gBitSystem->verifyFeature( 'fisheye_rss' );
 
-require_once( FISHEYE_PKG_CLASS_PATH.'FisheyeImage.php' );
-require_once( RSS_PKG_INCLUDE_PATH.'rss_inc.php' );
+require_once RSS_PKG_INCLUDE_PATH.'rss_inc.php';
 
-$rss->title = $gBitSystem->getConfig( 'fisheye_rss_title', $gBitSystem->getConfig( 'site_title' ).' - '.tra( 'Image Galleries' ) );
-$rss->description = $gBitSystem->getConfig( 'fisheye_rss_description', $gBitSystem->getConfig( 'site_title' ).' - '.tra( 'RSS Feed' ) );
+$rss->title = $gBitSystem->getConfig( 'fisheye_rss_title', $gBitSystem->getConfig( 'site_title' ).' - '.KernelTools::tra( 'Image Galleries' ) );
+$rss->description = $gBitSystem->getConfig( 'fisheye_rss_description', $gBitSystem->getConfig( 'site_title' ).' - '.KernelTools::tra( 'RSS Feed' ) );
 
 // check permission to view fisheye images
 if( !$gBitUser->hasPermission( 'p_fisheye_view' ) ) {
-	require_once( RSS_PKG_PATH."rss_error.php" );
+	require_once RSS_PKG_PATH."rss_error.php";
 } else {
-	$listHash = array(
+	$listHash = [
 		'max_records' => $gBitSystem->getConfig( 'fisheye_rss_max_records', 10 ),
 		'sort_mode'   => 'last_modified_desc',
-		'gallery_id'  => !empty( $_REQUEST['gallery_id'] ) ? $_REQUEST['gallery_id'] : NULL,
-		'user_id'     => !empty( $_REQUEST['user_id'] ) ? $_REQUEST['user_id'] : NULL,
-	);
+		'gallery_id'  => !empty( $_REQUEST['gallery_id'] ) ? $_REQUEST['gallery_id'] : null,
+		'user_id'     => !empty( $_REQUEST['user_id'] ) ? $_REQUEST['user_id'] : null,
+	];
 
 	// check if we want to use the cache file
 	$cacheFile = TEMP_PKG_PATH.RSS_PKG_NAME.'/'.FISHEYE_PKG_NAME.'/'."g{$listHash['gallery_id']}u{$listHash['user_id']}".$cacheFileTail;
 	$rss->useCached( $rss_version_name, $cacheFile, $gBitSystem->getConfig( 'rssfeed_cache_time' ));
 
 	// if we have a gallery we can work with - load it
-	if( @BitBase::verifyId( $_REQUEST['gallery_id'] ) ) {
+	if( BitBase::verifyId( $_REQUEST['gallery_id'] ?? 0 ) ) {
 		$gallery = new FisheyeGallery( $_REQUEST['gallery_id'] );
 		$gallery->load();
 		$rss->title .= " - {$gallery->getTitle()}";
@@ -59,10 +63,10 @@ if( !$gBitUser->hasPermission( 'p_fisheye_view' ) ) {
 
 		$item->date         = ( int )$feed['last_modified'];
 		$item->source       = 'http://'.$_SERVER['HTTP_HOST'].BIT_ROOT_URL;
-		$item->author       = $gBitUser->getDisplayName( FALSE, $feed );
+		$item->author       = $gBitUser->getDisplayName( false, $feed );
 
 		$item->descriptionTruncSize = $gBitSystem->getConfig( 'rssfeed_truncate', 5000 );
-		$item->descriptionHtmlSyndicated = FALSE;
+		$item->descriptionHtmlSyndicated = false;
 
 		// pass the item on to the rss feed creator
 		$rss->addItem( $item );
@@ -71,4 +75,3 @@ if( !$gBitUser->hasPermission( 'p_fisheye_view' ) ) {
 	// finally we are ready to serve the data
 	echo $rss->saveFeed( $rss_version_name, $cacheFile );
 }
-?>

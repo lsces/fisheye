@@ -7,33 +7,33 @@
 /**
  * required setup
  */
-require_once( '../kernel/includes/setup_inc.php' );
+namespace Bitweaver\Fisheye;
+use Bitweaver\KernelTools;
 
-require_once( FISHEYE_PKG_CLASS_PATH.'FisheyeGallery.php');
-require_once( FISHEYE_PKG_CLASS_PATH.'FisheyeImage.php');
+require_once '../kernel/includes/setup_inc.php';
 
 global $gBitSystem;
 
-include_once( FISHEYE_PKG_INCLUDE_PATH.'image_lookup_inc.php' );
+include_once FISHEYE_PKG_INCLUDE_PATH.'image_lookup_inc.php';
 
 if( $gContent->isValid() ) {
 	$gContent->verifyUpdatePermission();
 } else {
-	bit_redirect( FISHEYE_PKG_URL.'?user_id='.$gBitUser->mUserId );
+	KernelTools::bit_redirect( FISHEYE_PKG_URL.'?user_id='.$gBitUser->mUserId );
 }
 
 //Utility function, maybe should be moved for use elsewhere. Seems like it has a multitude of possible hook points
 function convertSmartQuotes($string)
 {
 //UTF-8
-$search = array("\xe2\x80\x98", "\xe2\x80\x99", "\xe2\x80\x9c", "\xe2\x80\x9d", "\xe2\x80\x93", "\xe2\x80\x94", "\xe2\x80\xa6");
-$replace= array("'", "'", '"', '"', '-', '--', '...');
+$search = ["\xe2\x80\x98", "\xe2\x80\x99", "\xe2\x80\x9c", "\xe2\x80\x9d", "\xe2\x80\x93", "\xe2\x80\x94", "\xe2\x80\xa6" ];
+$replace= ["'", "'", '"', '"', '-', '--', '...' ];
 
 $string = str_replace($search, $replace, $string);
 
 //Windows
-$search = array(chr(145), chr(146), chr(147), chr(148), chr(150), chr(151), chr(133));
-$replace=  array("'", "'", '"', '"', '-', '--', '...');
+$search = [chr(145), chr(146), chr(147), chr(148), chr(150), chr(151), chr(133) ];
+$replace=  ["'", "'", '"', '"', '-', '--', '...' ];
 
 $string = str_replace($search, $replace, $string);
 
@@ -48,14 +48,14 @@ if( !empty($_REQUEST['saveImage']) || !empty($_REQUEST['regenerateThumbnails'] )
 
 	if (empty($_REQUEST['gallery_id']) && empty($_REQUEST['image_id'])) {
 		// We have no way to know what gallery to add an image to or what image to edit!
-		$gBitSmarty->assign( 'msg', tra( "No gallery or image was specified" ) );
-		$gBitSystem->display( "error.tpl" , NULL, array( 'display_mode' => 'edit' ));
+		$gBitSmarty->assign( 'msg', KernelTools::tra( "No gallery or image was specified" ) );
+		$gBitSystem->display( "error.tpl" , null, [ 'display_mode' => 'edit' ]);
 		die;
 	}
 
 	// Store/Update the image
 	if (isset($_FILES['imageFile']) && is_uploaded_file($_FILES['imageFile']['tmp_name'])) {
-		$_REQUEST['_files_override'] = array( $_FILES['imageFile'] );
+		$_REQUEST['_files_override'] = [ $_FILES['imageFile'] ];
 		$_REQUEST['_files_override']['process_storage'] = STORAGE_IMAGE;
 		$replaceOriginal=$gContent->getSourceFile();
 		if( file_exists( dirname( $replaceOriginal ).'/original.jpg' ) ) {
@@ -63,7 +63,7 @@ if( !empty($_REQUEST['saveImage']) || !empty($_REQUEST['regenerateThumbnails'] )
 		}
 	}
 
-	$_REQUEST['purge_from_galleries'] = TRUE;
+	$_REQUEST['purge_from_galleries'] = true;
 	if( $gContent->store($_REQUEST) ) {
 		// refresh all hashes
 		$gContent->load();
@@ -100,40 +100,40 @@ if( !empty($_REQUEST['saveImage']) || !empty($_REQUEST['regenerateThumbnails'] )
 	}
 } elseif( !empty($_REQUEST['ajax_edit']) ) {
 	if( !empty( $_REQUEST['rotate_image'] ) ) {
-		$gContent->rotateImage( $_REQUEST['rotate_image'], TRUE );
+		$gContent->rotateImage( $_REQUEST['rotate_image'], true );
 	}
 } elseif( !empty($_REQUEST['delete']) ) {
-	$gContent->verifyUserPermission( tra( "You do not have permission to delete this image." ) );
+	$gContent->verifyUserPermission( KernelTools::tra( "You do not have permission to delete this image." ) );
 
 	if( !empty( $_REQUEST['cancel'] ) ) {
 		// user cancelled - just continue on, doing nothing
 	} elseif( empty( $_REQUEST['confirm'] ) ) {
-		$formHash['delete'] = TRUE;
+		$formHash['delete'] = true;
 		$formHash['image_id'] = $gContent->mImageId;
 		$gBitSystem->confirmDialog( $formHash,
-			array(
-				'warning' => tra('Are you sure you want to delete this image?') . ' (' . $gContent->getTitle() . ') ' . tra('It will be removed from all galleries to which it belongs.'),
-				'error' => tra('This cannot be undone!'),
-			)
+			[
+				'warning' => KernelTools::tra('Are you sure you want to delete this image?') . ' (' . $gContent->getTitle() . ') ' . KernelTools::tra('It will be removed from all galleries to which it belongs.'),
+				'error' => KernelTools::tra('This cannot be undone!'),
+			]
 		);
 	} else {
 		if( $gContent->expunge() ) {
-			$url = ( is_object( $gGallery ) ? $gGallery->getDisplayUrl() : FISHEYE_PKG_URL );
+			$url = '/'; //  is_object( $gGallery ) ? $gGallery->getDisplayUrl() : FISHEYE_PKG_URL;
 			header( "Location: $url" );
 		}
 	}
 }
 
 $errors = $gContent->mErrors;
-$gBitSmarty->assignByRef('errors', $errors);
+$gBitSmarty->assign('errors', $errors);
 
 $gContent->loadParentGalleries();
 
 // Get a list of all existing galleries
 $gFisheyeGallery = new FisheyeGallery();
-$getHash = array(
+$getHash = [
 	'user_id'       => $gBitUser->mUserId,
-);
+];
 if( $gContent->mContentId ) {
 	$getHash['contain_item'] = $gContent->mContentId;
 }
@@ -141,18 +141,17 @@ if( $gContent->mContentId ) {
 if( $gBitSystem->isFeatureActive( 'fisheye_show_all_to_admins' ) && $gBitUser->hasPermission( 'p_fisheye_admin' ) ) {
 	unset( $getHash['user_id'] );
 } elseif( $gBitSystem->isFeatureActive( 'fisheye_show_public_on_upload' ) ) {
-//	$getHash['show_public'] = TRUE;
+//	$getHash['show_public'] = true;
 }
-$galleryTree = $gFisheyeGallery->generateList( $getHash,  array( 'name' => "gallery_id", 'id' => "gallerylist", 'item_attributes' => array( 'class'=>'listingtitle'), 'radio_checkbox' => TRUE, ), true );
-$gBitSmarty->assignByRef( 'galleryTree', $galleryTree );
+$galleryTree = $gFisheyeGallery->generateList( $getHash,  [ 'name' => "gallery_id", 'id' => "gallerylist", 'item_attributes' => [ 'class'=>'listingtitle' ], 'radio_checkbox' => true, ], true );
+$gBitSmarty->assign( 'galleryTree', $galleryTree );
 
-$gBitSmarty->assign('requested_gallery', !empty($_REQUEST['gallery_id']) ? $_REQUEST['gallery_id'] : NULL);
+$gBitSmarty->assign('requested_gallery', !empty($_REQUEST['gallery_id']) ? $_REQUEST['gallery_id'] : null);
 
 $gContent->invokeServices( 'content_edit_function' );
 
 if( !empty( $_REQUEST['ajax'] ) ) {
-	echo $gBitSmarty->fetch( 'bitpackage:fisheye/edit_image_inc.tpl', tra('Edit Image: ').$gContent->getTitle() );
+	echo $gBitSmarty->fetch( 'bitpackage:fisheye/edit_image_inc.tpl', KernelTools::tra('Edit Image: ').$gContent->getTitle() );
 } else {
-	$gBitSystem->display( 'bitpackage:fisheye/edit_image.tpl', tra('Edit Image: ').$gContent->getTitle() , array( 'display_mode' => 'edit' ));
+	$gBitSystem->display( 'bitpackage:fisheye/edit_image.tpl', KernelTools::tra('Edit Image: ').$gContent->getTitle() , [ 'display_mode' => 'edit' ]);
 }
-?>

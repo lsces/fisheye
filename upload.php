@@ -7,23 +7,22 @@
 /**
  * required setup
  */
-require_once( '../kernel/includes/setup_inc.php' );
-
-require_once( FISHEYE_PKG_CLASS_PATH.'FisheyeGallery.php');
-require_once( FISHEYE_PKG_CLASS_PATH.'FisheyeImage.php');
+namespace Bitweaver\Fisheye;
+require_once '../kernel/includes/setup_inc.php';
+use Bitweaver\KernelTools;
 
 global $gBitSystem;
 global $fisheyeErrors, $fisheyeWarnings, $fisheyeSuccess, $gFisheyeUploads;
 
-include_once( FISHEYE_PKG_INCLUDE_PATH.'gallery_lookup_inc.php' );
-require_once( FISHEYE_PKG_INCLUDE_PATH.'upload_inc.php');
+include_once FISHEYE_PKG_INCLUDE_PATH.'gallery_lookup_inc.php';
+require_once FISHEYE_PKG_INCLUDE_PATH.'upload_inc.php';
 
 $gBitSystem->verifyPermission( 'p_fisheye_upload' );
 
 if( !empty( $_FILES ) ) {
-	$upErrors = fisheye_handle_upload( $_FILES, $_REQUEST );
+	$upErrors = fisheye_handle_upload( $_FILES );
 	if( empty( $upErrors ) ) {
-		bit_redirect( $gContent->getDisplayUrl() );
+		KernelTools::bit_redirect( $gContent->getDisplayUrl() );
 	} else {
 		$gBitSmarty->assign( 'errors', $upErrors );
 	}
@@ -36,30 +35,30 @@ if ( !empty($_REQUEST['on_complete'])){
 
 }
 
-require_once( LIBERTY_PKG_INCLUDE_PATH.'calculate_max_upload_inc.php' );
+require_once LIBERTY_PKG_INCLUDE_PATH.'calculate_max_upload_inc.php';
 
 $gContent->invokeServices( 'content_edit_function' );
 
 // Get a list of all existing galleries
 $gFisheyeGallery = new FisheyeGallery();
-$getHash = array(
+$getHash = [
 	'user_id'       => $gBitUser->mUserId,
-);
+];
 // modify listHash according to global preferences
 if( $gBitSystem->isFeatureActive( 'fisheye_show_all_to_admins' ) && $gBitUser->hasPermission( 'p_fisheye_admin' ) ) {
 	unset( $getHash['user_id'] );
 } elseif( $gBitSystem->isFeatureActive( 'fisheye_show_public_on_upload' ) ) {
-//	$getHash['show_public'] = TRUE; THis should be handled with a content_status, disabled for now
+//	$getHash['show_public'] = true; THis should be handled with a content_status, disabled for now
 }
 
-$galleryTree = $gContent->generateList( $getHash,  array( 'name' => "gallery_id", 'id' => "gallerylist", 'item_attributes' => array( 'class'=>'listingtitle'), 'radio_checkbox' => TRUE, ), true );
+$galleryTree = $gContent->generateList( $getHash,  [ 'name' => "gallery_id", 'id' => "gallerylist", 'item_attributes' => [ 'class'=>'listingtitle' ], 'radio_checkbox' => true, ], true );
 
-$gBitSmarty->assignByRef( 'galleryTree', $galleryTree );
+$gBitSmarty->assign( 'galleryTree', $galleryTree );
 
 if( $gLibertySystem->hasService( 'upload' ) ) {
 	$gContent->invokeServices( "content_pre_upload_function", $_REQUEST );
 } else {
-	$gBitThemes->loadJavascript( UTIL_PKG_PATH.'javascript/multifile.js', TRUE );
+	$gBitThemes->loadJavascript( UTIL_PKG_PATH.'javascript/multifile.js', true );
 }
 
 if( $gBitThemes->isAjaxRequest() ) {
@@ -68,7 +67,5 @@ if( $gBitThemes->isAjaxRequest() ) {
 	}
 } else {
 	$displayMode = !empty($_REQUEST['display_mode']) ? $_REQUEST['display_mode'] : 'edit';
-	$gBitSystem->display( 'bitpackage:fisheye/upload_fisheye.tpl', 'Upload Images' , array( 'display_mode' => $displayMode ));
+	$gBitSystem->display( 'bitpackage:fisheye/upload_fisheye.tpl', 'Upload Images' , [ 'display_mode' => $displayMode ] );
 }
-
-?>

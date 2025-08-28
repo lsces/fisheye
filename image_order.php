@@ -8,14 +8,14 @@
 /**
  * required setup
  */
-require_once( '../kernel/includes/setup_inc.php' );
-
-require_once( FISHEYE_PKG_CLASS_PATH.'FisheyeGallery.php');
-require_once( FISHEYE_PKG_CLASS_PATH.'FisheyeImage.php');
+namespace Bitweaver\Fisheye;
+require_once '../kernel/includes/setup_inc.php';
+use Bitweaver\KernelTools;
+use Bitweaver\Liberty\LibertyBase;
 
 global $gBitSystem;
 
-include_once( FISHEYE_PKG_INCLUDE_PATH.'gallery_lookup_inc.php' );
+include_once FISHEYE_PKG_INCLUDE_PATH.'gallery_lookup_inc.php';
 
 if( $gBitSystem->isPackageActive( 'gatekeeper' ) ) {
 	global $gGatekeeper;
@@ -34,7 +34,7 @@ if (!empty($_REQUEST['cancel'])) {
 		$batchCon = array_flip( $_REQUEST['batch'] );
 		// increment the first element from 0 to 1 (element 0 index before flip) so any conditional tests will pass, particularly in the .tpl
 		$batchCon[key($batchCon)]++;
-		$gBitSmarty->assignByRef( 'batchEdit', $batchCon );
+		$gBitSmarty->assign( 'batchEdit', $batchCon );
 	}
 
 	if( !empty( $_REQUEST['is_favorite'] ) ) {
@@ -46,7 +46,7 @@ if (!empty($_REQUEST['cancel'])) {
 
 	$gContent->loadImages();
 
-	$feedback = NULL;
+	$feedback = null;
 
 	if( !empty( $_REQUEST['reorder_gallery'] ) ) {
 		switch( $_REQUEST['reorder_gallery'] ){
@@ -104,7 +104,7 @@ if (!empty($_REQUEST['cancel'])) {
 					switch( $batchCommand ) {
 						case 'delete':
 							$galleryItem->expunge();
-							$galleryItem = NULL;
+							$galleryItem = null;
 							break;
 						case 'remove':
 							$parents = $galleryItem->getParentGalleries();
@@ -113,28 +113,28 @@ if (!empty($_REQUEST['cancel'])) {
 							} else {
 								$galleryItem->expunge();
 							}
-							$galleryItem = NULL;
+							$galleryItem = null;
 							break;
 						case 'rotate':
 							if( is_a( $galleryItem, 'FisheyeImage' ) ) {
 								$galleryItem->rotateImage( $batchParam );
-								$feedback['success'] = tra( "Images rotated" );
+								$feedback['success'] = KernelTools::tra( "Images rotated" );
 							}
 							break;
 						case 'thumbnail':
-							$galleryItem->generateThumbnails();
-							$feedback['success'] = tra( "Thumbnail regeneration queued" );
+							$galleryItem->generateGalleryThumbnails();
+							$feedback['success'] = KernelTools::tra( "Thumbnail regeneration queued" );
 							break;
 						case 'grayscale':
 							$galleryItem->convertColorspace( 'grayscale' );
 							break;
 						case 'security':
 							$storageHash['security_id'] = $batchParam;
-							$feedback['success'] = tra( "Items security assigned" );
+							$feedback['success'] = KernelTools::tra( "Items security assigned" );
 							break;
 						case 'gallerymove':
 							if( empty( $destGallery ) ) {
-								$destGallery = new FisheyeGallery( NULL, $batchParam );
+								$destGallery = new FisheyeGallery( null, $batchParam );
 								$destGallery->load();
 							}
 							if( $batchParam != $contentId ) {
@@ -142,19 +142,19 @@ if (!empty($_REQUEST['cancel'])) {
 							}
 						case 'gallerycopy':
 							if( empty( $destGallery ) ) {
-								$destGallery = new FisheyeGallery( NULL, $batchParam );
+								$destGallery = new FisheyeGallery( null, $batchParam );
 								$destGallery->load();
 							}
 							if( $destGallery->addItem( $contentId ) ) {
-								$feedback['success'][] = $galleryItem->getTitle().' '.tra( "added to" ).' '.$destGallery->getTitle();
+								$feedback['success'][] = $galleryItem->getTitle().' '.KernelTools::tra( "added to" ).' '.$destGallery->getTitle();
 							} else {
-								$feedback['error'][] = $galleryItem->getTitle().' '.tra( "could not be added to" ).' '.$destGallery->getTitle();
+								$feedback['error'][] = $galleryItem->getTitle().' '.KernelTools::tra( "could not be added to" ).' '.$destGallery->getTitle();
 							}
 							break;
 						case 'filenametoimagename':
-							$renameHash = array();
+							$renameHash = [];
 							if( !empty( $galleryItem->mInfo['filename'] ) ) {
-								$renameHash['title'] = file_name_to_title( $galleryItem->mInfo['filename'] );
+								$renameHash['title'] = KernelTools::file_name_to_title( $galleryItem->mInfo['filename'] );
 								$galleryItem->store( $renameHash );
 								// update to prevent renaming value in text input
 								$_REQUEST['image_title'][$contentId] = $renameHash['title'];
@@ -167,10 +167,10 @@ if (!empty($_REQUEST['cancel'])) {
 				if( !empty( $_REQUEST['batch_security_id'] ) ) {
 				}
 				// if we are reordered, that takes precident
-				$newPos = preg_replace( '/[^\d\.]/', '', (!empty( $newOrder[$contentId] ) ? $newOrder[$contentId] : $newPos) );
+				$newPos = preg_replace( '/[^\d\.]/', '', !empty( $newOrder[$contentId] ) ? $newOrder[$contentId] : $newPos);
 
 				if ($galleryItem->mInfo['title'] != $_REQUEST['image_title'][$contentId]) {
-					$storageHash = array('title' => $_REQUEST['image_title'][$contentId]);
+					$storageHash = [ 'title' => $_REQUEST['image_title'][$contentId] ];
 					// make sure we don't delete the 'data' field on en masse title updating
 					$storageHash['edit'] = $galleryItem->getField( 'data' );
 				}
@@ -190,7 +190,7 @@ if (!empty($_REQUEST['cancel'])) {
 	$_SESSION['image_order_feedback'] = $feedback;
 
 	// Redirect so reload does not cause double-batch processing
-	bit_redirect( FISHEYE_PKG_URL.'image_order.php?gallery_id='.$gContent->getField( 'gallery_id' ) );
+	KernelTools::bit_redirect( FISHEYE_PKG_URL.'image_order.php?gallery_id='.$gContent->getField( 'gallery_id' ) );
 }
 
 if( !empty( $_SESSION['image_order_feedback'] ) ) {
@@ -199,25 +199,26 @@ if( !empty( $_SESSION['image_order_feedback'] ) ) {
 }
 
 // Get a list of usable galleries
-$listHash = array(
+$listHash = [
 	'user_id'       => $gBitUser->mUserId,
+	'page'			=> -1,
 	'max_records'   => -1,
-	'no_thumbnails' => TRUE,
+	'no_thumbnails' => true,
 	'sort_mode'     => 'title_asc',
-	'show_empty'    => TRUE
-);
+	'show_empty'    => true
+];
 // modify listHash according to global preferences
 if( $gBitSystem->isFeatureActive( 'fisheye_show_all_to_admins' ) && $gBitUser->hasPermission( 'p_fisheye_admin' ) ) {
 	unset( $listHash['user_id'] );
 } elseif( $gBitSystem->isFeatureActive( 'fisheye_show_public_on_upload' ) ) {
-//	$listHash['show_public'] = TRUE;
+//	$listHash['show_public'] = true;
 }
 $galleryList = $gContent->getList( $listHash );
-$gBitSmarty->assignByRef( 'galleryList', $galleryList );
-$gContent->loadImages();
+$gBitSmarty->assign( 'galleryList', $galleryList );
+$gContent->loadImages( $listHash );
+if ( !empty( $feedback ) ) {
+	$gBitSmarty->assign('formfeedback', $feedback);
+}
 
-$gBitSmarty->assignByRef('formfeedback', $feedback);
-
-$gBitThemes->loadAjax( 'mochikit' );
-$gBitSystem->display( 'bitpackage:fisheye/image_order.tpl', tra( 'Edit Gallery Images' ).': '.$gContent->getTitle() , array( 'display_mode' => 'display' ));
-?>
+// $gBitThemes->loadAjax( 'mochikit' );
+$gBitSystem->display( 'bitpackage:fisheye/image_order.tpl', KernelTools::tra( 'Edit Gallery Images' ).': '.$gContent->getTitle() , [ 'display_mode' => 'display' ] );

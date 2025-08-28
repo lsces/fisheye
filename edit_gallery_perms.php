@@ -8,30 +8,29 @@
 /**
  * required setup
  */
-require_once( '../kernel/includes/setup_inc.php' );
-
-require_once( FISHEYE_PKG_CLASS_PATH.'FisheyeGallery.php');
-require_once( FISHEYE_PKG_CLASS_PATH.'FisheyeImage.php');
+namespace Bitweaver\Fisheye;
+require_once '../kernel/includes/setup_inc.php';
+use Bitweaver\KernelTools;
 
 global $gBitSystem, $fisheyePermNameMap;
 
 // Make sure an gallery has been specified
 if (empty($_REQUEST['gallery_id'])) {
-	$gBitSmarty->assign('msg', tra("No gallery specified"));
-	$gBitSystem->display( "error.tpl" , NULL, array( 'display_mode' => 'edit' ));
+	$gBitSmarty->assign('msg', KernelTools::tra("No gallery specified") );
+	$gBitSystem->display( "error.tpl" , null, [ 'display_mode' => 'edit' ] );
 	die;
 }
 
-include_once( FISHEYE_PKG_INCLUDE_PATH.'gallery_lookup_inc.php' );
+include_once FISHEYE_PKG_INCLUDE_PATH.'gallery_lookup_inc.php';
 
 if (empty($gContent->mContentId)) {
-	$gBitSmarty->assign( 'msg', tra( "The specified gallery does not exist" ));
-	$gBitSystem->display("error.tpl", NULL, array( 'display_mode' => 'edit' ));
+	$gBitSmarty->assign( 'msg', KernelTools::tra( "The specified gallery does not exist" ));
+	$gBitSystem->display("error.tpl", null, [ 'display_mode' => 'edit' ] );
 	die;
 } elseif ($gContent->mInfo['user_id'] != $gBitUser->mUserId && $gContent->mInfo['perm_level'] < FISHEYE_PERM_ADMIN) {
 	// This user does not own this gallery and they have not been granted the permission to edit user permissions for this gallery
-	$gBitSmarty->assign( 'msg', tra( "You cannot edit this image gallery" ) );
-	$gBitSystem->display( "error.tpl" , NULL, array( 'display_mode' => 'edit' ));
+	$gBitSmarty->assign( 'msg', KernelTools::tra( "You cannot edit this image gallery" ) );
+	$gBitSystem->display( "error.tpl" , null, [ 'display_mode' => 'edit' ]);
 	die;
 }
 
@@ -40,11 +39,11 @@ if (!empty($_REQUEST['submitNewPermissions'])) {
 	$fisheyeSuccess[] = $_REQUEST['found_username']." given ".$fisheyePermNameMap[$_REQUEST['name_perm_level']]." permissions";
 }elseif (!empty($_REQUEST['remove_perm_user_id'])) {
 	$gContent->revokeUserPermission($_REQUEST['remove_perm_user_id']);
-	$fisheyeSuccess[] = tra("User permissions successfully revoked");
+	$fisheyeSuccess[] = KernelTools::tra("User permissions successfully revoked");
 }
 
 $userPerms = $gContent->loadPermissions();
-$gBitSmarty->assignByRef('userPerms', $gContent->mPerms);
+$gBitSmarty->assign('userPerms', $gContent->mPerms);
 
 if (!empty($_REQUEST['submitUpdatePerms'])) {
 	$existingPerms = $_REQUEST['existingPerms'];
@@ -58,6 +57,4 @@ if (!empty($_REQUEST['submitUpdatePerms'])) {
 	$userPerms = $gContent->getAllUserPermissions();
 }
 
-$gBitSystem->display('bitpackage:fisheye/edit_gallery_perms.tpl', NULL, array( 'display_mode' => 'edit' ));
-
-?>
+$gBitSystem->display('bitpackage:fisheye/edit_gallery_perms.tpl', null, [ 'display_mode' => 'edit' ] );

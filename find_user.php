@@ -8,7 +8,7 @@
 /**
  * required setup
  */
-include_once( "../kernel/includes/setup_inc.php" );
+include_once "../kernel/includes/setup_inc.php";
 
 if (empty($gBitThemes->mStyles['styleSheet'])) {
 	$gBitThemes->mStyles['styleSheet'] = $gBitThemes->getStyleCss();
@@ -18,13 +18,13 @@ if( !defined( 'THEMES_STYLE_URL' ) ) {
 }
 
 if (!empty($_REQUEST['submitUserSearch'])) {
-	$searchParams = array('find' => $_REQUEST['find']);
+	$searchParams = [ 'find' => $_REQUEST['find'] ];
 	$gBitUser->getList($searchParams);	
 	$foundUsers = $searchParams['data'];
 } else {
-	$foundUsers = NULL;
+	$foundUsers = null;
 }
-$gBitSmarty->assignByRef('foundUsers', $foundUsers);
+$gBitSmarty->assign('foundUsers', $foundUsers);
 
 $gBitSmarty->display('bitpackage:fisheye/find_user.tpl');
-?>
+
