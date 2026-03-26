@@ -243,10 +243,10 @@ class FisheyeGallery extends FisheyeBase {
 					}
 				} elseif( $this->getLayout() == FISHEYE_PAGINATION_FIXED_GRID ) {
 					$rowCount = ($pListHash['rows_per_page'] ?? 3) * ($pListHash['cols_per_page'] ?? 3);
-					$offset = $rowCount * ($pListHash['page'] - 1);
+					$offset = $rowCount * ( (int) $pListHash['page'] - 1);
 				} else {
 					$rowCount = $pListHash['max_records'];
-					$offset = $rowCount * ($pListHash['page'] - 1);
+					$offset = $rowCount * ( (int) $pListHash['page'] - 1);
 				}
 			}
 			if( empty($rowCount) ) $rowCount = $pListHash['max_records'] ?? 10;
@@ -1071,6 +1071,7 @@ class FisheyeGallery extends FisheyeBase {
 			$zip = new \ZipArchive();
 
 			$filename = tempnam(TEMP_PKG_PATH,"galleryzip");
+			chmod($filename, 0666);
 			$path = '/';
 
 			if( $zip->open ($filename, \ZIPARCHIVE::OVERWRITE) !== true ){
@@ -1081,7 +1082,7 @@ class FisheyeGallery extends FisheyeBase {
 			$zip->close();
 
 			//escape backslashes
-			$outputFileTitle = str_replace("\\",'\\\\',$this->getTitle());
+			$outputFileTitle = str_replace("\\",'\\\\',$this->getTitle() ?? '');
 			//escape double quotes
 			$outputFileTitle = str_replace('"','\\"',$outputFileTitle);
 
@@ -1092,7 +1093,8 @@ class FisheyeGallery extends FisheyeBase {
 			header('Expires: 0');
 			header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
 			header('Pragma: public');
-			Header ("Content-Length: ".filesize( $filename ) );
+			$filesize = filesize($filename);
+			Header ("Content-Length: ".$filesize );
 			ob_end_flush();
 			readfile($filename);
 			unlink($filename);
