@@ -1,5 +1,5 @@
 {strip}
-{if $gBitSystem->isPackageActive( 'fisheye' ) && $modImages}
+{if $gBitSystem->isPackageActive( 'fisheye' ) and $modImages}
 	{bitmodule title="$moduleTitle" name="fisheye_images"}
 		<ul class="list-unstyled">
 			{foreach from=$modImages item=modImg}

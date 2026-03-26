@@ -38,10 +38,10 @@
 								{$galItem->mInfo.event_time|bit_short_date}
 							</div>
 							{/if}
-							{if ($galItem->hasUpdatePermission() || $gContent->getPreference('link_original_images')) && $galItem->getDownloadUrl()}
+							{if ($galItem->hasUpdatePermission() or $gContent->getPreference('link_original_images')) and $galItem->getDownloadUrl()}
 							<div class="download">
 								<a href="{$galItem->getDownloadUrl()}">{tr}Download Original{/tr}</a>
-								{if $galItem->mInfo.width && $galItem->mInfo.height}
+								{if $galItem->mInfo.width and $galItem->mInfo.height}
 								<div class="photo-date">{$galItem->mInfo.width}x{$galItem->mInfo.height} {tr}pixels{/tr}</div>
 								{/if}
 							</div>
@@ -50,7 +50,7 @@
 						<div class="image-title"><p>{$galItem->mInfo.title|escape}</p></div>
 						<div class="image-desc"><p>{$galItem->mInfo.description|default:''}</p></div>
 					</div>
-				{elseif is_a($galItem, 'FisheyeGallery')}
+				{elseif is_a($galItem, '\Bitweaver\Fisheye\FisheyeGallery')}
 					<a class="thumb" name="{$galItem->mContentId}" href="{$galItem->mPreviewImage->mInfo.thumbnail_url.large}" title="{$galItem->mInfo.title|escape}">
 						<img src="{$galItem->mPreviewImage->mInfo.thumbnail_url.avatar}" alt="{$galItem->mInfo.title|escape}"/>
 					</a>

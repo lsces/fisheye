@@ -23,7 +23,7 @@
 									<br />
 									<small>
 										<a href="{$gContent->getDownloadUrl()}">{tr}Full size{/tr}</a>
-										{if $gContent->mInfo.width && $gContent->mInfo.height}
+										{if $gContent->mInfo.width and $gContent->mInfo.height}
 											: {$gContent->mInfo.width} x {$gContent->mInfo.height}
 										{/if}
 									</small>

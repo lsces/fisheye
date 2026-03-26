@@ -6,7 +6,7 @@
 	<nav>
 		{assign var=breadCrumbs value=$gContent->getBreadcrumbLinks(1)}
 		<ol class="breadcrumb">
-			<li>{displayname user=$gContent->mInfo.creator_user user_id=$gContent->mInfo.creator_user_id real_name=$gContent->mInfo.creator_real_name} :: <a href="{$smarty.const.FISHEYE_PKG_URL}?user_id={$gContent->mInfo.user_id}">{tr}Galleries{/tr}</a></li>
+			<li>{displayname user=$gContent->mInfo.creator_user user_id=$gContent->mInfo.creator_user_id|default:0 real_name=$gContent->mInfo.creator_real_name} :: <a href="{$smarty.const.FISHEYE_PKG_URL}?user_id={$gContent->mInfo.user_id}">{tr}Galleries{/tr}</a></li>
 			{if $breadCrumbs}
 				{foreach from=$breadCrumbs item=breadTitle key=breadId}
 					{if $breadId==$gContent->mGalleryId}<li class="active">{$breadTitle}</li>
@@ -25,7 +25,7 @@
 		<ul class="thumbs noscript">
 			{foreach from=$gContent->mItems item=galItem}
 			<li>
-				{if is_a($galItem, 'FisheyeImage')}
+				{if is_a($galItem, '\Bitweaver\Fisheye\FisheyeImage')}
 					<a class="thumb" name="{$galItem->mImageId}" href="{$galItem->mInfo.thumbnail_url.large}{*$smarty.const.FISHEYE_PKG_URL}view_image.php?image_id={$galItem->mImageId*}" title="{$galItem->mInfo.title|escape}">
 						<img src="{$galItem->mInfo.thumbnail_url.avatar}" alt="{$galItem->mInfo.title|escape}" />
 					</a>
@@ -39,10 +39,10 @@
 								{$galItem->mInfo.event_time|bit_short_date}
 							</div>
 							{/if}
-							{if ($galItem->hasUpdatePermission() || $gContent->getPreference('link_original_images')) && $galItem->getDownloadUrl()}
+							{if ($galItem->hasUpdatePermission() or $gContent->getPreference('link_original_images')) and $galItem->getDownloadUrl()}
 							<div class="download">
 								<a href="{$galItem->getDownloadUrl()}">{tr}Download Original{/tr}</a>
-								{if $galItem->mInfo.width && $galItem->mInfo.height}
+								{if $galItem->mInfo.width and $galItem->mInfo.height}
 								<div class="photo-date">{$galItem->mInfo.width}x{$galItem->mInfo.height} {tr}pixels{/tr}</div>
 								{/if}
 							</div>
@@ -50,7 +50,7 @@
 						</div>
 						<div class="image-desc"><p>{$galItem->mInfo.description|escape}</p></div>
 					</div>
-				{elseif is_a($galItem, 'FisheyeGallery')}
+				{elseif is_a($galItem, '\Bitweaver\Fisheye\FisheyeGallery')}
 					<a class="thumb" name="{$galItem->mContentId}" href="{$galItem->mPreviewImage->mInfo.thumbnail_url.large}" title="{$galItem->mInfo.title|escape}">
 						<img src="{$galItem->mPreviewImage->mInfo.thumbnail_url.avatar}" alt="{$galItem->mInfo.title|escape}"/>
 					</a>

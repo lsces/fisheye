@@ -1,5 +1,5 @@
 {strip}
-{if $gBitSystem->isPackageActive( 'fisheye' ) && $modImages}
+{if $gBitSystem->isPackageActive( 'fisheye' ) and $modImages}
 	<ul id="specials">
 			{foreach from=$modImages item=modImg}
 				<li>

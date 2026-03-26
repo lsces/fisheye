@@ -29,7 +29,7 @@
 			<th style="width:60%">
 				{smartlink ititle=Name isort=title icontrol=$galInfo}
 			</th>
-			{if $gBitSystem->isFeatureActive( 'fisheye_item_list_date' ) || $gBitSystem->isFeatureActive( 'fisheye_item_list_creator' )}
+			{if $gBitSystem->isFeatureActive( 'fisheye_item_list_date' ) or $gBitSystem->isFeatureActive( 'fisheye_item_list_creator' )}
 				<th style="width:10%">
 					{smartlink ititle=Uploaded isort=created iorder=desc idefault=1 icontrol=$galInfo}
 				</th>
@@ -50,7 +50,7 @@
 					<td style="text-align:center;">
 						{if $galItem->mInfo.content_type_guid != 'fisheyegallery' }
 							{if $gBitSystem->isFeatureActive( 'site_fancy_zoom' )}
-								{if $gContent->hasUpdatePermission() || $gGallery && $gGallery->getPreference( 'link_original_images' )}
+								{if $gContent->hasUpdatePermission() or $gGallery and $gGallery->getPreference( 'link_original_images' )}
 									<a href="{$galItem->getDownloadUrl()|escape}">
 								{else}
 									<a href="{$galItem->mInfo.thumbnail_url.large}">
@@ -69,7 +69,7 @@
 				{/if}
 				<td>
 					<h3><a href="{$galItem->getDisplayUrl()}">{$galItem->getTitle()|escape}</a></h3>
-					{if $gBitSystem->isFeatureActive( 'fisheye_item_list_desc' ) && $galItem->mInfo.data}
+					{if $gBitSystem->isFeatureActive( 'fisheye_item_list_desc' ) and $galItem->mInfo.data}
 						{$galItem->mInfo.parsed_data}
 					{/if}
 					{if $gBitSystem->isFeatureActive( 'fisheye_item_list_attid' )}
@@ -87,7 +87,7 @@
 						{/if}
 					{/if}
 				</td>
-				{if $gBitSystem->isFeatureActive( 'fisheye_item_list_date' ) || $gBitSystem->isFeatureActive( 'fisheye_item_list_creator' )}
+				{if $gBitSystem->isFeatureActive( 'fisheye_item_list_date' ) or $gBitSystem->isFeatureActive( 'fisheye_item_list_creator' )}
 					<td>
 						{if $gBitSystem->isFeatureActive( 'fisheye_item_list_date' )}
 							{$galItem->mInfo.created|bit_short_date}<br />
@@ -114,13 +114,13 @@
 				{/if}
 				<td class="actionicon">
 					{if $galItem->mInfo.content_type_guid != 'fisheyegallery' }
-						{if $gBitUser->hasPermission( 'p_treasury_download_item' ) && $galItem->mInfo.download_url}
+						{if $gBitUser->hasPermission( 'p_treasury_download_item' ) and $galItem->mInfo.download_url}
 							<a href="{$galItem->mInfo.download_url}">{biticon ipackage="icons" iname="emblem-downloads" iexplain="Download File"}</a>
 						{/if}
 						{if $gBitUser->hasPermission( 'p_treasury_view_item' )}
 							<a href="{$galItem->getDisplayUrl()}">{booticon iname="fa-folder-open" iexplain="View File"}</a>
 						{/if}
-						{if $gContent->isOwner( $galItem->mInfo ) || $gBitUser->isAdmin()}
+						{if $gContent->isOwner( $galItem->mInfo ) or $gBitUser->isAdmin()}
 							<a href="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?content_id={$galItem->mInfo.content_id}&amp;action=edit">{booticon iname="fa-pen-to-square" iexplain="Edit File"}</a>
 							<a href="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?content_id={$galItem->mInfo.content_id}&amp;delete=1">{booticon iname="fa-trash" iexplain="Remove File"}</a>
 						{/if}
