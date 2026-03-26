@@ -658,7 +658,7 @@ class FisheyeImage extends FisheyeBase {
     /**
     * Function that returns link to display an image
     * Used to display thumbnails for navigation bar
-    * @param array pImageId id of image to link
+    * @param integer pImageId id of image to link
     * @return string the url to display the image.
     */
 	public function getImageUrl( $pImageId ) {
@@ -674,7 +674,7 @@ class FisheyeImage extends FisheyeBase {
 	 * @param	array	Not used
 	 * @return	string	Fully formatted html link for use by Liberty
 	 */
-	public static function getDisplayLinkFromHash( &$pParamHash, $pTitle=null, $pAnchor=null ) {
+	public static function getDisplayLinkFromHash( &$pParamHash, $pTitle='', $pAnchor=null ) {
 		global $gBitSystem;
 
 		$pTitle = trim( $pTitle );
@@ -691,20 +691,23 @@ class FisheyeImage extends FisheyeBase {
 	}
 
 	public static function getTitleFromHash( &$pHash, $pDefault=true ) {
-		$ret = trim( parent::getTitleFromHash( $pHash, $pDefault ) );
-		if( empty( $ret ) && $pDefault ) {
-			$storage = []; // !empty( $this ) && !empty( $this->mStorage ) ? current( $this->mStorage ) : null;
-			if( !empty( $storage['file_name'] ) ) {
-				$ret = $storage['file_name'];
-			} else {
-				global $gLibertySystem;
-				$ret = $gLibertySystem->getContentTypeName( $pHash['content_type_guid'] );
-				if( !empty( $pHash['image_id'] ) ) {
-					$ret .= " ".$pHash['image_id'];
+		if (!empty( $pHash )) {
+			$ret = trim( parent::getTitleFromHash( $pHash, $pDefault ) );
+			if( empty( $ret ) && $pDefault ) {
+				$storage = []; // !empty( $this ) && !empty( $this->mStorage ) ? current( $this->mStorage ) : null;
+				if( !empty( $storage['file_name'] ) ) {
+					$ret = $storage['file_name'];
+				} else {
+					global $gLibertySystem;
+					$ret = $gLibertySystem->getContentTypeName( $pHash['content_type_guid'] ?? 'empty' );
+					if( !empty( $pHash['image_id'] ) ) {
+						$ret .= " ".$pHash['image_id'];
+					}
 				}
 			}
+			return $ret;
 		}
-		return $ret;
+		return 'empty_file';
 	}
 
 	public function getTitle() {
