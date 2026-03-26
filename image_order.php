@@ -116,7 +116,7 @@ if (!empty($_REQUEST['cancel'])) {
 							$galleryItem = null;
 							break;
 						case 'rotate':
-							if( is_a( $galleryItem, 'FisheyeImage' ) ) {
+							if( is_a( $galleryItem, '\Bitweaver\Fisheye\FisheyeImage' ) ) {
 								$galleryItem->rotateImage( $batchParam );
 								$feedback['success'] = KernelTools::tra( "Images rotated" );
 							}

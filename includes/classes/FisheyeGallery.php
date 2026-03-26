@@ -479,7 +479,7 @@ class FisheyeGallery extends FisheyeBase {
 
 		if( @$this->verifyId( $pThumbnailContentId ) ) {
 			$ret = parent::getLibertyObject( $pThumbnailContentId, $pThumbnailContentType, $this->isCacheableObject() );
-			if( is_a( $ret, 'FisheyeGallery' ) ) {
+			if( is_a( $ret, '\Bitweaver\Fisheye\FisheyeGallery' ) ) {
 				//recurse down in to find the first image
 				if( $ret = $ret->getThumbnailImage() ) {
 					$this->mInfo['thumbnail_content_id'] = $ret->getField( 'content_id' );
@@ -585,7 +585,7 @@ class FisheyeGallery extends FisheyeBase {
 //					if( !empty($pRecursiveDelete) ) {
 //						$this->mItems[$key]->expunge( $pRecursiveDelete );
 //					} else
-					if( is_a( $this->mItems[$key], 'FisheyeImage' ) ) {
+					if( is_a( $this->mItems[$key], '\Bitweaver\Fisheye\FisheyeGallery' ) ) {
 						// make sure we have a valid content_id before we exec
 						if( is_numeric( $this->mItems[$key]->mContentId ) ) {
 							$query = "SELECT COUNT(`item_content_id`) AS `other_gallery`
@@ -819,7 +819,7 @@ class FisheyeGallery extends FisheyeBase {
 					FisheyeGallery::getTreeSort( $pTree[$k]['children'] );
 				}
 			}
-			uasort( $pTree, [ 'FisheyeGallery', 'getTreeSortCmp' ] );
+			uasort( $pTree, [ '\Bitweaver\Fisheye\FisheyeGallery', 'getTreeSortCmp' ] );
 		}
 	}
 
@@ -1115,11 +1115,11 @@ function addGalleryRecursive( $pGalleryId, &$pZip, $pPath = '/' ){
 		$gallery->loadImages();
 		$pPath .= $gallery->getTitle().'/';
 		foreach ( $gallery->mItems as $item ){
-			if( is_a( $item , 'FisheyeImage' ) ){
+			if( is_a( $item , '\Bitweaver\Fisheye\FisheyeImage' ) ){
 				$sourcePath = $item->getSourceFile();
 				$title = $item->getTitle();
 				$pZip->addFile($sourcePath, $pPath.$title.substr($sourcePath,strrpos($sourcePath,'.')) );
-			} elseif ( is_a( $item , 'FisheyeGallery' ) ) {
+			} elseif ( is_a( $item , '\Bitweaver\Fisheye\FisheyeGallery' ) ) {
 			    addGalleryRecursive( $item->mGalleryId, $pZip ,$pPath );
 			}
 		}

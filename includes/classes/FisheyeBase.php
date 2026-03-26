@@ -198,7 +198,7 @@ not ready for primetime
 			}
 		}
 
-		if( $this->isValid() && $pIncludeSelf && is_a( $this, 'FisheyeGallery' ) ) {
+		if( $this->isValid() && $pIncludeSelf && is_a( $this, '\Bitweaver\Fisheye\FisheyeGallery' ) ) {
 			$ret[$this->mGalleryId] = $this->getTitle();
 		}
 
