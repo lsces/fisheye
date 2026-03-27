@@ -117,7 +117,7 @@ function updateGalleryPagination() {
 
 						<div class="form-group">
 							{forminput label="checkbox"}
-								<input type="checkbox" name="allow_comments" id="allow_comments" value="y" {if !$gContent->isValid() or $gContent->getPreference('allow_comments') eq 'y'}checked="checked"{/if} />{tr}Image Comments{/tr}
+								<input type="checkbox" name="allow_comments" id="allow_comments" value="y" {if !$gContent->isValid() || $gContent->getPreference('allow_comments') eq 'y'}checked="checked"{/if} />{tr}Image Comments{/tr}
 								{formhelp note="Allow posting comments for an image."}
 							{/forminput}
 						</div>

@@ -34,7 +34,7 @@
 				{foreach from=$galleryList key=galleryId item=gal}
 				<div class="col-xs-6 col-sm-4 col-md-3 ">
 					<div class="{$gal.content_type_guid} thumbnail">
-						{if $gBitSystem->isFeatureActive('fisheye_list_thumbnail') and $gal.display_url}
+						{if $gBitSystem->isFeatureActive('fisheye_list_thumbnail') && $gal.display_url}
 							{assign var=thumbnailUri value=$gBitSystem->getParameter( $gal, 'thumbnail_uri', "`$smarty.const.FISHEYE_PKG_URL`image/no_image.png")}
 							<a href="{$gal.display_url}"><div class="square" style="background-image:url('{$thumbnailUri}');"alt="{$gal.title|escape}" 
 								title="{$gal.title|truncate:50|escape}" 
@@ -49,7 +49,7 @@
 							{/if}
 							</a>
 							</h3><div class="security" style="position:absolute; top:5%;right:5%;color:#fff;">
-							{if $gal.is_hidden=='y' or $gal.is_private=='y' or $gal.access_answer}
+							{if $gal.is_hidden=='y' || $gal.is_private=='y' || $gal.access_answer}
 								{booticon iname="fa-lock" iexplain="Security" label=true}
 							{/if}
 							{if $gal.is_hidden=='y'}
@@ -72,7 +72,7 @@
 							{booticon iname="fa-lock" iexplain="Protected"}
 						{/if *}
 
-						{if $gBitSystem->isFeatureActive('fisheye_list_created' ) or $gBitSystem->isFeatureActive('fisheye_list_lastmodif' )}
+						{if $gBitSystem->isFeatureActive('fisheye_list_created' ) || $gBitSystem->isFeatureActive('fisheye_list_lastmodif' )}
 							<div class="date">
 								{if $gBitSystem->isFeatureActive('fisheye_list_created' ) }
 									<strong>{tr}Created{/tr}:</strong> {$gal.created|bit_short_date}<br />

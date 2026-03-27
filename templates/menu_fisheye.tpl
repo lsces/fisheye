@@ -14,10 +14,10 @@
 	{* if $gBitUser->hasPermission('p_fisheye_view')}
 		<li><a class="item" href="{$smarty.const.FISHEYE_PKG_URL}gallery_tree.php">{booticon iname="icon-sitemap" iexplain="growser gallery tree" ilocation=menu} Browse Gallery Tree</a></li>
 	{/if *}
-	{if $gBitUser->isRegistered() and $gBitSystem->isPackageActive('quota')}
+	{if $gBitUser->isRegistered() && $gBitSystem->isPackageActive('quota')}
 		<li><a class="item" href="{$smarty.const.QUOTA_PKG_URL}">{booticon iname="icon-hdd" iexplain="Usage" ilocation=menu}</a></li>
 	{/if}
-	{if $gBitUser->isRegistered() and $gBitSystem->isPackageActive('gatekeeper')}
+	{if $gBitUser->isRegistered() && $gBitSystem->isPackageActive('gatekeeper')}
 		<li><a class="item" href="{$smarty.const.GATEKEEPER_PKG_URL}">{booticon iname="fa-lock" iexplain="Security" ilocation=menu}</a></li>
 	{/if}
 	{*if $gBitUser->hasPermission('p_fisheye_admin')}

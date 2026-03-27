@@ -9,7 +9,7 @@
 	{pagination gallery_id=$gContent->mGalleryId}
 
 	<div class="body">
-		{if !empty($fisheyeSuccess) or !empty($fisheyeErrors) or !empty($fisheyeWarnings) }
+		{if !empty($fisheyeSuccess) || !empty($fisheyeErrors) || !empty($fisheyeWarnings) }
 			{formfeedback success=$fisheyeSuccess error=$fisheyeErrors warning=$fisheyeWarnings}
 		{/if}
 
@@ -21,7 +21,7 @@
 		<table class="thumbnailblock">
 		{counter assign="imageCount" start="0" print=false}
 		{assign var="max" value=100}
-		{if !empty($cols_per_page) and $cols_per_page > 0}{assign var="tdWidth" value="`$max/$cols_per_page`"}{else}{assign var="tdWidth" value="25"}{assign var="cols_per_page" value="1"}{/if}
+		{if !empty($cols_per_page) && $cols_per_page > 0}{assign var="tdWidth" value="`$max/$cols_per_page`"}{else}{assign var="tdWidth" value="25"}{assign var="cols_per_page" value="1"}{/if}
 		{foreach from=$gContent->mItems item=galItem key=itemContentId}
 			{if $imageCount % $cols_per_page == 0}
 				<tr > <!-- Begin Image Row -->

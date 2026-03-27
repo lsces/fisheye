@@ -25,7 +25,7 @@
 				<img src="{$gContent->mInfo.thumbnail_url.medium}" alt="{$gContent->getTitle()|escape}" />
 				<br />
 				<small>
-					{if $gContent->mInfo.width and $gContent->mInfo.height}
+					{if $gContent->mInfo.width && $gContent->mInfo.height}
 						{tr}Full size{/tr} - <a href="{$gContent->getDownloadUrl()}">{$gContent->mInfo.width} x {$gContent->mInfo.height}</a>
 					{elseif $gContent->getDownloadUrl()}
 						<a href="{$gContent->getDownloadUrl()}">{tr}Full size{/tr}</a>

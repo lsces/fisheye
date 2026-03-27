@@ -24,7 +24,7 @@
 		{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='body' serviceHash=$gContent->mInfo}
 		<div class="image">
 			{include file=$gLibertySystem->getMimeTemplate('view',$gContent->mInfo.attachment_plugin_guid) attachment=$gContent->mInfo.image_file}
-			{if $gBitSystem->isFeatureActive('fisheye_image_list_description') and $gContent->mInfo.data ne ''}
+			{if $gBitSystem->isFeatureActive('fisheye_image_list_description') && $gContent->mInfo.data ne ''}
 				<p class="description">{$gContent->mInfo.parsed_data}</p>
 			{/if}
 			</div>
@@ -32,7 +32,7 @@
 
 	{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='view' serviceHash=$gContent->mInfo}
 
-	{if $gGallery and $gGallery->isCommentable()}
+	{if $gGallery && $gGallery->isCommentable()}
 		{include file="bitpackage:liberty/comments.tpl"}
 	{/if}
 

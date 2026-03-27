@@ -38,10 +38,10 @@
 								{$galItem->mInfo.event_time|bit_short_date}
 							</div>
 							{/if}
-							{if ($galItem->hasUpdatePermission() or $gContent->getPreference('link_original_images')) and $galItem->getDownloadUrl()}
+							{if ($galItem->hasUpdatePermission() || $gContent->getPreference('link_original_images')) && $galItem->getDownloadUrl()}
 							<div class="download">
 								<a href="{$galItem->getDownloadUrl()}">{tr}Download Original{/tr}</a>
-								{if $galItem->mInfo.width and $galItem->mInfo.height}
+								{if $galItem->mInfo.width && $galItem->mInfo.height}
 								<div class="photo-date">{$galItem->mInfo.width}x{$galItem->mInfo.height} {tr}pixels{/tr}</div>
 								{/if}
 							</div>
