@@ -13,13 +13,13 @@ use Bitweaver\KernelTools;
 use Bitweaver\Users\RoleUser;
 global $gQueryUserId, $gContent, $moduleParams;
 // makes things in older modules easier
-extract( $moduleParams );
+// extract( $moduleParams );
 
 $image = new FisheyeImage();
 
 $display = true;
 
-$listHash = $module_params;
+$listHash = $moduleParams->value;
 
 if( !empty( $gContent ) && $gContent->getField( 'content_type_guid' ) == FISHEYEGALLERY_CONTENT_TYPE_GUID ) {
 	$displayCount = empty( $gContent->mItems ) ? 0 : count( $gContent->mItems );
@@ -30,20 +30,20 @@ if( !empty( $gContent ) && $gContent->getField( 'content_type_guid' ) == FISHEYE
 
 
 if( $display ) {
-	$listHash['max_records'] = $module_rows;
+	$listHash['max_records'] = $module_rows ?? 3;
 	if( $gQueryUserId ) {
 		$listHash['user_id'] = $gQueryUserId;
 	} elseif( !empty( $_REQUEST['user_id'] ) ) {
 		$gBitSmarty->assign( 'userGallery', $_REQUEST['user_id'] );
 		$listHash['user_id'] = $_REQUEST['user_id'];
-	} elseif( !empty( $module_params['recent_users'] ) ) {
+	} elseif( !empty( $listHash['recent_users'] ) ) {
 		$listHash['recent_users'] = true;
 	}
 
 	// this is needed to avoid wrong sort_modes entered resulting in db errors
-	$sort_options = array( 'hits', 'created' );
-	$sort_mode = !empty( $module_params['sort_mode'] ) && in_array( $module_params['sort_mode'], $sort_options )
-		? $module_params['sort_mode'].'_desc' : 'random';
+	$sort_options = [ 'hits', 'created' ];
+	$sort_mode = !empty( $listHash['sort_mode'] ) && in_array( $listHash['sort_mode'], $sort_options )
+		? $listHash['sort_mode'].'_desc' : 'random';
 
 	$listHash['sort_mode'] = $sort_mode;
 
@@ -51,12 +51,12 @@ if( $display ) {
 
 	if( empty( $title ) && $images ) {
 		$moduleTitle = '';
-		if( !empty( $module_params['sort_mode'] ) ) {
-			if( $module_params['sort_mode'] == 'random' ) {
+		if( !empty( $listHash['sort_mode'] ) ) {
+			if( $listHash['sort_mode'] == 'random' ) {
 				$moduleTitle = 'Random';
-			} elseif( $module_params['sort_mode'] == 'created' ) {
+			} elseif( $listHash['sort_mode'] == 'created' ) {
 				$moduleTitle = 'Recent';
-			} elseif( $module_params['sort_mode'] == 'hits' ) {
+			} elseif( $listHash['sort_mode'] == 'hits' ) {
 				$moduleTitle = 'Popular';
 			}
 		} else {
@@ -80,7 +80,7 @@ if( $display ) {
 
 	$gBitSmarty->assign( 'imageSort', $sort_mode );
 	$gBitSmarty->assign( 'modImages', $images );
-	$gBitSmarty->assign( 'module_params', $module_params );
-	$gBitSmarty->assign( 'maxlen', isset( $module_params["maxlen"] ) );
-	$gBitSmarty->assign( 'maxlendesc', isset( $module_params["maxlendesc"] ) );
+	$gBitSmarty->assign( 'module_params', $listHash );
+	$gBitSmarty->assign( 'maxlen', isset( $listHash["maxlen"] ) );
+	$gBitSmarty->assign( 'maxlendesc', isset( $listHash["maxlendesc"] ) );
 }

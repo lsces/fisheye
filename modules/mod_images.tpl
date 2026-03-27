@@ -4,10 +4,10 @@
 		<ul class="list-unstyled">
 			{foreach from=$modImages item=modImg}
 				<li class="{cycle values='odd,even'} item">
-					<a href="{$modImg.display_url}" title="{$modImg.title|escape} - {$modImg.last_modified|bit_short_datetime}, by {displayname user=$modImg.modifier_user real_name=$modImg.modifier_real_name nolink=1}{if (strlen($modImg.title) > $maxlen) && ($maxlen > 0)}, {$modImg.title|escape}{/if}">
+					<a href="{$modImg.display_url}" title="{$modImg.title|escape} - {$modImg.last_modified|bit_short_datetime}, by {displayname user=$modImg.modifier_user ?? '' real_name=$modImg.modifier_real_name ?? '' nolink=1}{if (strlen($modImg.title) > $maxlen) && ($maxlen > 0)}, {$modImg.title|escape}{/if}">
 						<img src="{$modImg.thumbnail_url}" title="{$modImg.title|escape}" alt="{$modImg.title|escape}" />
 
-						{if !$modImg.has_machine_name}
+						{if !empty($modImg.has_machine_name)}
 							<br />
 							{if $maxlen gt 0}
 								{$modImg.title|escape|truncate:$maxlen:"...":true}
@@ -17,7 +17,7 @@
 						{/if}
 					</a>
 
-					{if $module_params.description}
+					{if !empty($module_params.description)}
 						<br />
 						{if $maxlendesc gt 0}
 							{$modImg.data|escape|truncate:$maxlendesc:"...":true}
