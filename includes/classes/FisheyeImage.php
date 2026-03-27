@@ -852,7 +852,7 @@ class FisheyeImage extends FisheyeBase {
 					LEFT OUTER JOIN `".BIT_DB_PREFIX."fisheye_gallery_image_map` tfgim2 ON(tfgim2.`item_content_id`=lc.`content_id`)
 					LEFT OUTER JOIN `".BIT_DB_PREFIX."fisheye_gallery` fg ON(fg.`content_id`=tfgim2.`gallery_content_id`)
 				$whereSql $orderby";
-		if( $rows = $this->mDb->getAssoc( $query, $bindVars, $pListHash['max_records'], $pListHash['offset'], $pListHash['query_cache_time'] ) ) {
+		if( $rows = $this->mDb->query( $query, $bindVars, $pListHash['max_records'], $pListHash['offset'], $pListHash['query_cache_time'] ) ) {
 			foreach( $rows as $row ) {
 				// legacy table data was named storage_path and included a partial path. strip out any path just in case
 				$row['hash_key'] = $row['image_id'];
