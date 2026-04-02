@@ -22,6 +22,9 @@ if( !empty( $_REQUEST['size'] ) ) {
 if( !empty( $_REQUEST['refresh'] ) ) {
 	$gBitSmarty->assign( 'refresh', '?refresh='.time() );
 }
+if( !empty( $_REQUEST['highlight'] ) ) {
+	$gBitSmarty->assign( 'highlight', $_REQUEST['highlight'] );
+}
 
 include_once FISHEYE_PKG_INCLUDE_PATH.'image_lookup_inc.php';
 
