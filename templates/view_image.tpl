@@ -1,5 +1,5 @@
 {strip}
-{if !empty($liberty_preview)}
+{if empty($liberty_preview)}
 	{include file="bitpackage:fisheye/gallery_nav.tpl"}
 {/if}
 
@@ -25,7 +25,7 @@
 		<div class="image">
 			{include file=$gLibertySystem->getMimeTemplate('view',$gContent->mInfo.attachment_plugin_guid) attachment=$gContent->mInfo.image_file}
 			{if $gBitSystem->isFeatureActive('fisheye_image_list_description') && $gContent->mInfo.data ne ''}
-				<p class="description">{$gContent->mInfo.parsed_data}</p>
+				<p class="description">{$gContent->mInfo.parsed_data|truncate:250:"..."}</p>
 			{/if}
 			</div>
 	</div>	<!-- end .body -->
