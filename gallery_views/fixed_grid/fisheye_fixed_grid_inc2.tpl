@@ -6,7 +6,7 @@
 		<h1>{$gContent->getTitle()|escape}</h1>
 	</div>
 
-	{pagination gallery_id=$gContent->mGalleryId}
+	{pagination gallery_id=$gContent->mGalleryId ?? 0}
 
 	<div class="body">
 		{if !empty($fisheyeSuccess) || !empty($fisheyeErrors) || !empty($fisheyeWarnings) }
@@ -37,7 +37,7 @@
 					{/if}
 				{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='body' serviceHash=$galItem->mInfo type=mini}
 					{if $gBitSystem->isFeatureActive( 'fisheye_gallery_list_image_descriptions' )}
-						<p>{$galItem->mInfo.data|escape}</p>
+						<p>{$galItem->mInfo.data|truncate:200:"..."|escape}</p>
 					{/if}
 				{/box}
 			</td> <!-- End Image Cell -->
@@ -48,7 +48,7 @@
 			{/if}
 
 		{foreachelse}
-				<tr><td class="norecords">{tr}This gallery is empty{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}upload.php?gallery_id={$gGallery->mGalleryId}">Upload pictures!</a></td></tr>
+				<tr><td class="norecords">{tr}This gallery is empty{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}upload.php?gallery_id={$gGallery->mGalleryId ?? 0}">Upload pictures!</a></td></tr>
 		{/foreach}
 
 		{if $imageCount % $cols_per_page != 0}</tr>{/if}
