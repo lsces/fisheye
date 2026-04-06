@@ -52,7 +52,7 @@ class FisheyeGallery extends FisheyeBase {
 				'handler_class' => 'FisheyeGallery',
 				'handler_package' => 'fisheye',
 				'handler_file' => 'FisheyeGallery.php',
-				'maintainer_url' => 'http://www.bitweaver.org'
+				'maintainer_url' => 'https://www.bitweaver.org'
 		] );
 
 		// Permission setup

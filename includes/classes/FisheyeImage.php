@@ -35,7 +35,7 @@ class FisheyeImage extends FisheyeBase {
 				'handler_class' => 'FisheyeImage',
 				'handler_package' => 'fisheye',
 				'handler_file' => 'FisheyeImage.php',
-				'maintainer_url' => 'http://www.bitweaver.org'
+				'maintainer_url' => 'https://www.bitweaver.org'
 		] );
 
 		// Permission setup
