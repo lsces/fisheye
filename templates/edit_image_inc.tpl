@@ -51,6 +51,8 @@
 		{include file="bitpackage:fisheye/resize_image_select.tpl"}
 	</div>
 
+	{include file="bitpackage:liberty/edit_services_inc.tpl" serviceFile="content_edit_mini_tpl"}
+
 	<div class="form-group submit">
 		<input type="submit" class="btn btn-default" name="saveImage" value="Save Image"/>
 	</div>

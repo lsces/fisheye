@@ -20,8 +20,8 @@
 		{foreach from=$gContent->mItems item=galItem key=itemContentId}
 			<div class="col-lg-3 col-md-4 col-sm-6 col-xs-12"> <!-- Begin Image Cell -->
 				<div class="col-xs-12 gallery-box">
-					<a href="{if empty($galItem->mInfo.source_url)}/fisheye/gallery/{$galItem->mInfo.gallery_id}
-							{else}{$galItem->mInfo.source_url}{/if}">
+					<a href="{if empty($galItem->mInfo.display_url)}/fisheye/gallery/{$galItem->mInfo.gallery_id}
+							{else}{$galItem->mInfo.display_url}{/if}">
 						<div class="col-xs-12 gallery-img table-cell">
 							<img class="col-xs-12 thumb" src="{$galItem->getThumbnailUri($gContent->getField('thumbnail_size'))}" alt="{$galItem->mInfo.title|escape|default:'image'}" />
 						</div>
@@ -39,14 +39,14 @@
 			{/if}
 			{if $imageCount % 3 == 0}<div class="hidden-xs hidden-sm hidden-lg clear"></div>{/if}
 		{foreachelse}
-			<div class="norecords">{tr}This gallery is empty{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}upload.php?gallery_id={$gContent->mGalleryId}">Upload pictures!</a></div>
+			<div class="norecords">{tr}This gallery is empty{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}upload.php?gallery_id={$galleryId}">Upload pictures!</a></div>
 		{/foreach}
 		</div>
 		<div class="clear"></div>
 
 	</div>	<!-- end .body -->
 
-	{pagination gallery_id=$gContent->mGalleryId}
+	{pagination gallery_id=$galleryId}
 
 	{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='view' serviceHash=$gContent->mInfo}
 

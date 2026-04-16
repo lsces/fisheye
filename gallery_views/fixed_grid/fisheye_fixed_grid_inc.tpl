@@ -45,6 +45,8 @@
 		{else}
 			{tr}No gallery for this contact{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}create.php?title={$gContent->mInfo.organisation}&contact={$gContent->mInfo.content_id}">Create Contact Gallery!</a>
 		{/if}
+
+		{pagination gallery_id=$galleryId}
 	</div>	<!-- end .body -->
 </div>	<!-- end .fisheye -->
 {/strip}	

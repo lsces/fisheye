@@ -17,9 +17,9 @@
 	<table class="thumbnailblock">
 		{counter assign="imageCount" start="0" print=false}
 		{assign var="max" value=100}
-		{assign var="tdWidth" value="`$max/$cols_per_page`"}
+		{assign var="tdWidth" value="`$max/$gContent->mInfo.cols_per_page`"}
 		{foreach from=$gContent->mItems item=galItem key=itemContentId}
-			{if $imageCount % $cols_per_page == 0}
+			{if $imageCount % $gContent->mInfo.cols_per_page == 0}
 				<tr > <!-- Begin Image Row -->
 			{/if}
 
@@ -39,20 +39,20 @@
 			</td> <!-- End Image Cell -->
 			{counter}
 
-			{if $imageCount % $cols_per_page == 0}
+			{if $imageCount % $gContent->mInfo.cols_per_page == 0}
 				</tr> <!-- End Image Row -->
 			{/if}
 
 		{foreachelse}
-			<tr><td class="norecords">{tr}This gallery is empty{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}upload.php?gallery_id={$gContent->mGalleryId}">{tr}Upload pictures{/tr}!</a></td></tr>
+			<tr><td class="norecords">{tr}This gallery is empty{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}upload.php?gallery_id={$galleryId}">{tr}Upload pictures{/tr}!</a></td></tr>
 		{/foreach}
 
-		{if $imageCount % $cols_per_page != 0}</tr>{/if}
+		{if $imageCount % $gContent->mInfo.cols_per_page != 0}</tr>{/if}
 	</table>
 
 	</div>	<!-- end .body -->
 
-	{pagination numPages=$gContent->mInfo.num_pages gallery_id=$gContent->mGalleryId gallery_path=$gContent->mGalleryPath page=$pageCount}
+	{pagination gallery_id=$galleryId gallery_path=$gContent->mGalleryPath}
 
 	{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='view' serviceHash=$gContent->mInfo}
 
