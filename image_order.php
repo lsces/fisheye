@@ -205,7 +205,8 @@ $listHash = [
 	'max_records'   => -1,
 	'no_thumbnails' => true,
 	'sort_mode'     => 'title_asc',
-	'show_empty'    => true
+	'show_empty'    => true,
+	'offset'		=> 0
 ];
 // modify listHash according to global preferences
 if( $gBitSystem->isFeatureActive( 'fisheye_show_all_to_admins' ) && $gBitUser->hasPermission( 'p_fisheye_admin' ) ) {
