@@ -242,7 +242,7 @@ class FisheyeGallery extends FisheyeBase {
 						array_push( $bindVars, $mantissa );
 					}
 				} elseif( $this->getLayout() == FISHEYE_PAGINATION_FIXED_GRID ) {
-					$rowCount = ($pListHash['rows_per_page'] ?? 3) * ($pListHash['cols_per_page'] ?? 3);
+					$rowCount = ($this->mInfo['rows_per_page'] ?? 3) * ($this->mInfo['cols_per_page'] ?? 3);
 					$offset = $rowCount * ( (int) $pListHash['page'] - 1);
 				} else {
 					$rowCount = $pListHash['max_records'];
@@ -279,7 +279,7 @@ class FisheyeGallery extends FisheyeBase {
 
 		LibertyContent::postGetList( $pListHash );
 
-        return count ( $this->mItems ) > 0;
+        return \count ( $this->mItems ) > 0;
 	}
 
 	public function getImageList() {
