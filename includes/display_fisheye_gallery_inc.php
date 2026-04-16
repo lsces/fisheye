@@ -10,7 +10,7 @@ $displayHash = [ 'perm_name' => 'p_fisheye_view' ];
 $gContent->invokeServices( 'content_display_function', $displayHash );
 
 $listHash = $_REQUEST;
-$listHash['max_records'] = 12;
+$listHash['max_records'] = $gContent->mInfo["images_per_page"] ?? $max_records;
 
 switch( $gContent->getLayout() ) {
 	case 'auto_flow':
