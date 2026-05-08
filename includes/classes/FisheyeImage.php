@@ -772,6 +772,17 @@ class FisheyeImage extends FisheyeBase {
 		return @$this->verifyId( $this->mImageId ) || @$this->verifyId( $this->mContentId );
 	}
 
+	public function isLocked(): bool {
+		$ret = false;
+		if( $this->verifyId( $this->mImageId ) ) {
+			if( empty( $this->mInfo ) ) {
+				$this->load();
+			}
+			$ret = $this->getField( 'flag', false );
+		}
+		return $ret;
+	}
+
 	public function imageExistsInDatabase() {
 		$ret = false;
 		if( $this->isValid() && $this->mImageId ) {
