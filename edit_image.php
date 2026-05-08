@@ -112,6 +112,8 @@ if( !empty($_REQUEST['saveImage']) || !empty($_REQUEST['regenerateThumbnails'] )
 		$formHash['image_id'] = $gContent->mImageId;
 		$gBitSystem->confirmDialog( $formHash,
 			[
+				// 'label'=> $gContent->mInfo['title'],
+				'confirm_item'=> $gContent->mInfo['file_name'],
 				'warning' => KernelTools::tra('Are you sure you want to delete this image?') . ' (' . $gContent->getTitle() . ') ' . KernelTools::tra('It will be removed from all galleries to which it belongs.'),
 				'error' => KernelTools::tra('This cannot be undone!'),
 			]
