@@ -9,6 +9,7 @@
  * required setup
  */
 namespace Bitweaver\Fisheye;
+
 use Bitweaver\KernelTools;
 global $gQueryUserId, $gContent, $moduleParams;
 
@@ -30,10 +31,10 @@ if( $display ) {
 
 	$moduleTitle = 'Specials';
 	$moduleTitle = KernelTools::tra( $moduleTitle );
-	
+
 	$gBitSmarty->assign( 'moduleTitle', $moduleTitle );
 	$gBitSmarty->assign( 'modImages', $images );
 	$gBitSmarty->assign( 'module_params', $module_params );
-	$gBitSmarty->assign( 'maxlen', isset( $module_params["maxlen"] ) ? $module_params["maxlen"] : 0 );
-	$gBitSmarty->assign( 'maxlendesc', isset( $module_params["maxlendesc"] ) ? $module_params["maxlendesc"] : 0 );
+	$gBitSmarty->assign( 'maxlen', $module_params["maxlen"] ?? 0 );
+	$gBitSmarty->assign( 'maxlendesc', $module_params["maxlendesc"] ?? 0 );
 }

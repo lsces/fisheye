@@ -10,6 +10,7 @@
  * required setup
  */
 namespace Bitweaver\Liberty;
+
 use Bitweaver\Fisheye\FisheyeImage;
 use Bitweaver\BitBase;
 use Bitweaver\KernelTools;
@@ -42,7 +43,6 @@ $pluginParams = [
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAIMAGE, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAIMAGE );
-
 
 function data_image( $pData, $pParams ) {
 	global $gBitSystem, $gBitSmarty;
@@ -114,7 +114,7 @@ function data_image( $pData, $pParams ) {
 				$ret = '<a href="'.trim( $item->getDownloadUrl() ).'">'.$ret.'</a>';
 			} else if ( !empty( $item->mInfo['media_url'] ) ) {
 				$ret = '<a href="'.trim( $item->mInfo['media_url'] ).'">'.$ret.'</a>';
-			} 
+			}
 		}
 
 		if( !empty( $wrapper['style'] ) || !empty( $class ) || !empty( $wrapper['description'] ) ) {

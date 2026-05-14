@@ -43,13 +43,13 @@ $gBitInstaller->registerSchemaIndexes( FISHEYE_PKG_NAME, $indices );
 
 $gBitInstaller->registerPackageInfo( FISHEYE_PKG_NAME, [
 	'description' => "FishEye is a package for creating image galleries",
-	'license' => '<a href="http://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>'
+	'license' => '<a href="http://www.gnu.org/licenses/licenses.html#LGPL">LGPL</a>',
 ] );
 
 // ### Sequences
 $sequences = [
 	'fisheye_gallery_id_seq' => [ 'start' => 1 ],
-	'fisheye_image_id_seq' => [ 'start' => 1 ]
+	'fisheye_image_id_seq' => [ 'start' => 1 ],
 ];
 $gBitInstaller->registerSchemaSequences( FISHEYE_PKG_NAME, $sequences );
 
@@ -73,7 +73,7 @@ $gBitInstaller->registerPreferences( FISHEYE_PKG_NAME, [
 	[ FISHEYE_PKG_NAME, 'fisheye_menu_text','Image Galleries'],
 	// more intuitive if we can see all galleries we can upload images to
 	[ FISHEYE_PKG_NAME, 'fisheye_show_public_on_upload','n'],
-    [ FISHEYE_PKG_NAME, 'fisheye_show_all_to_admins','n'],
+	[ FISHEYE_PKG_NAME, 'fisheye_show_all_to_admins','n'],
 ] );
 
 // ### Default User Permissions
@@ -87,7 +87,7 @@ $gBitInstaller->registerUserPermissions( FISHEYE_PKG_NAME, [
 	['p_fisheye_upload_nonimages', 'Can upload non_image files', 'editors', FISHEYE_PKG_NAME],
 	['p_fisheye_change_thumb_size', 'Can set the thumbnail size for a gallery', 'editors', FISHEYE_PKG_NAME],
 	['p_fisheye_create_public_gal', 'Can create public galleries any user can load images into', 'editors', FISHEYE_PKG_NAME],
-	['p_fisheye_download_gallery_arc',' Can download an archived copy of Fisheye gallery', 'registered', FISHEYE_PKG_NAME]
+	['p_fisheye_download_gallery_arc',' Can download an archived copy of Fisheye gallery', 'registered', FISHEYE_PKG_NAME],
 ] );
 
 if( defined( 'RSS_PKG_NAME' )) {
@@ -97,13 +97,13 @@ if( defined( 'RSS_PKG_NAME' )) {
 }
 
 // ### Register content types
-$gBitInstaller->registerContentObjects( FISHEYE_PKG_NAME, [ 
+$gBitInstaller->registerContentObjects( FISHEYE_PKG_NAME, [
 	'FisheyeGallery'=>FISHEYE_PKG_CLASS_PATH.'FisheyeGallery.php',
 	'FisheyeImage'=>FISHEYE_PKG_CLASS_PATH.'FisheyeImage.php',
 ] );
 
 // Requirements
 $gBitInstaller->registerRequirements( FISHEYE_PKG_NAME, [
-    'liberty' => [ 'min' => '5.0.0' ],
+	'liberty' => [ 'min' => '5.0.0' ],
 ]);
 

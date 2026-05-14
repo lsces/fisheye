@@ -9,6 +9,7 @@
  * required setup
  */
 namespace Bitweaver\Fisheye;
+
 require_once '../kernel/includes/setup_inc.php';
 use Bitweaver\KernelTools;
 use Bitweaver\Liberty\LibertyBase;
@@ -206,7 +207,7 @@ $listHash = [
 	'no_thumbnails' => true,
 	'sort_mode'     => 'title_asc',
 	'show_empty'    => true,
-	'offset'		=> 0
+	'offset'		=> 0,
 ];
 // modify listHash according to global preferences
 if( $gBitSystem->isFeatureActive( 'fisheye_show_all_to_admins' ) && $gBitUser->hasPermission( 'p_fisheye_admin' ) ) {

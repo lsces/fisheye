@@ -35,12 +35,9 @@ if( !empty( $module_params['max_records'] ) ){
 	$listHash['max_records'] = $module_params['max_records'];
 }
 
-
 $galleryList = $gFisheyeGallery->getList( $listHash );
 // support for div/ul/li listing of galleries
 $gBitSmarty->assign( 'galleryList', $galleryList );
-
-
 
 /* Process the input parameters this page accepts */
 if (!empty($gQueryUser) && $gQueryUser->isRegistered()) {

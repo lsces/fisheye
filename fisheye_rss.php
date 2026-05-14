@@ -9,6 +9,7 @@
  * Initialization
  */
 namespace Bitweaver\Fisheye;
+
 use Bitweaver\KernelTools;
 use Bitweaver\BitBase;
 use Bitweaver\Rss\FeedItem;

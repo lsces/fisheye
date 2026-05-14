@@ -9,6 +9,7 @@
  * required setup
  */
 namespace Bitweaver\Fisheye;
+
 require_once '../kernel/includes/setup_inc.php';
 
 global $gBitSystem, $gBitSmarty;

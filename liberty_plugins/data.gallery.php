@@ -10,6 +10,7 @@
  * required setup
  */
 namespace Bitweaver\Liberty;
+
 use Bitweaver\Fisheye\FisheyeImage;
 use Bitweaver\BitBase;
 use Bitweaver\KernelTools;
@@ -42,7 +43,6 @@ $pluginParams = [
 ];
 $gLibertySystem->registerPlugin( PLUGIN_GUID_DATAGALLERY, $pluginParams );
 $gLibertySystem->registerDataTag( $pluginParams['tag'], PLUGIN_GUID_DATAGALLERY );
-
 
 function data_gallery( $pData, $pParams ) {
 	global $gBitSystem, $gBitSmarty;
@@ -87,7 +87,7 @@ function data_gallery( $pData, $pParams ) {
 			$images = $gallery->getList( $listHash );
 $out = '<div>';
   foreach( $images as $image ) {
-  		// insert source url if we need the original file
+		// insert source url if we need the original file
 			if( !empty( $pParams['size'] ) && $pParams['size'] == 'original' ) {
 				$thumbUrl = $image['source_url'];
 			} elseif( $image['thumbnail_url'] ) {
@@ -107,7 +107,7 @@ $out = '<div>';
 				' src="'  .$thumbUrl.'"'.
 				' style="float:left; '.$imgStyle.'"'.
 				' />';
-	
+
 			if( !empty( $pParams['nolink'] ) ) {
 			} elseif( !empty( $wrapper['link'] ) ) {
 				// if this image is linking to something, wrap the image with the <a>
@@ -115,9 +115,9 @@ $out = '<div>';
 			} elseif ( empty( $pParams['size'] ) || $pParams['size'] != 'original' ) {
 				if ( $image['source_url'] ) {
 					$ret = '<a href="'.trim( $image['source_url'] ).'">'.$ret.'</a>';
-				} 
+				}
 			}
-	
+
 			if( !empty( $wrapper['style'] ) || !empty( $class ) || !empty( $wrapper['description'] ) ) {
 				$ret = '<'.$wrapper['wrapper'].' class="'.( !empty( $wrapper['class'] ) ? $wrapper['class'] : "img-responsive" ).'" style="'.$wrapper['style'].'">'.$ret.( !empty( $wrapper['description'] ) ? '<br />'.$wrapper['description'] : '' ).'</'.$wrapper['wrapper'].'>';
 			}
@@ -158,7 +158,7 @@ function data_gallery_help() {
 			.'<tr class="even">'
 				.'<td>num</td>'
 				.'<td>' . KernelTools::tra( "key-words") . '<br />' . KernelTools::tra("(optional)") . '</td>'
-				.'<td>' . KernelTools::tra( "Number of images to display from the gallery") 
+				.'<td>' . KernelTools::tra( "Number of images to display from the gallery")
 				. KernelTools::tra( "(Default = " ) . '<strong>3</strong>)</td>'
 			.'</tr>'
 		.'</table>'

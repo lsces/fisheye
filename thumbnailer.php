@@ -15,6 +15,7 @@
  */
 
 namespace Bitweaver\Fisheye;
+
 use Bitweaver\KernelTools;
 
 	global $gBitSystem, $gBitDb, $_SERVER;
@@ -36,7 +37,7 @@ use Bitweaver\KernelTools;
 	// running from cron can cause us not to be in the right dir.
 	chdir( dirname( __FILE__ ) );
 	require_once '../kernel/includes/setup_inc.php';
-	
+
 	// add some protection for arbitrary thumbail execution.
 	// if argc is present, we will trust it was exec'ed command line.
 	if( empty( $argc ) && !$gBitUser->isAdmin() ) {
@@ -58,7 +59,7 @@ use Bitweaver\KernelTools;
 		$processContent[$row['content_id']] = $row;
 		$processContent[$row['content_id']]['parameters'] = unserialize( $row['processor_parameters'] );
 		$sql2 = "UPDATE `".BIT_DB_PREFIX."liberty_process_queue` SET `begin_date`=? WHERE `content_id`=?";
-		$rs2 = $gBitSystem->mDb->getOne( $sql2, array( date( 'U' ), $row['content_id'] ) );
+		$rs2 = $gBitSystem->mDb->getOne( $sql2, [ date( 'U' ), $row['content_id'] ] );
 	}
 	$gBitDb->CompleteTrans();
 
@@ -73,7 +74,7 @@ use Bitweaver\KernelTools;
 		if( $image->renderThumbnails() ) {
 			$log[$contentId]['message'] = 'SUCCESS: Thumbnails created';
 			$sql3 = "UPDATE `".BIT_DB_PREFIX."liberty_process_queue` SET `begin_date`=?, `end_date`=? WHERE `content_id`=?";
-			$rs3 = $gBitSystem->mDb->getOne( $sql3, array( $begin, $gBitSystem->getUTCTime(), $contentId ) );
+			$rs3 = $gBitSystem->mDb->getOne( $sql3, [ $begin, $gBitSystem->getUTCTime(), $contentId ] );
 		} else {
 			$log[$contentId]['message'] = ' ERROR: '.$image->mErrors['thumbnail'];
 		}

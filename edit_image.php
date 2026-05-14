@@ -8,6 +8,7 @@
  * required setup
  */
 namespace Bitweaver\Fisheye;
+
 use Bitweaver\KernelTools;
 
 require_once '../kernel/includes/setup_inc.php';
@@ -116,7 +117,7 @@ if( !empty($_REQUEST['saveImage']) || !empty($_REQUEST['regenerateThumbnails'] )
 				'confirm_item'=> $gContent->mInfo['file_name'],
 				'warning' => KernelTools::tra('Are you sure you want to delete this image?') . ' (' . $gContent->getTitle() . ') ' . KernelTools::tra('It will be removed from all galleries to which it belongs.'),
 				'error' => KernelTools::tra('This cannot be undone!'),
-			]
+			],
 		);
 	} else {
 		if( $gContent->expunge() ) {

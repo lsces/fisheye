@@ -19,7 +19,7 @@ if( !defined( 'THEMES_STYLE_URL' ) ) {
 
 if (!empty($_REQUEST['submitUserSearch'])) {
 	$searchParams = [ 'find' => $_REQUEST['find'] ];
-	$gBitUser->getList($searchParams);	
+	$gBitUser->getList($searchParams);
 	$foundUsers = $searchParams['data'];
 } else {
 	$foundUsers = null;

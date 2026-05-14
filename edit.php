@@ -8,6 +8,7 @@
  * required setup
  */
 namespace Bitweaver\Fisheye;
+
 require_once '../kernel/includes/setup_inc.php';
 use Bitweaver\KernelTools;
 
@@ -64,21 +65,21 @@ if( !empty( $_REQUEST['savegallery'] ) ) {
 	} elseif( empty( $_REQUEST['confirm'] ) ) {
 		$formHash['delete'] = true;
 		$formHash['gallery_id'] = $gContent->mGalleryId;
-		$formHash['input'] = array(
+		$formHash['input'] = [
 			'<label><input name="recurse" value="" type="radio" checked="checked" /> '.KernelTools::tra( 'Delete only images in this gallery. Sub-galleries will not be removed.' ).'</label>',
 			'<label><input name="recurse" value="all" type="radio" /> '.KernelTools::tra( 'Permanently delete all contents, even if they appear in other galleries.' ).'</label>',
-		);
+		];
 		$gBitSystem->confirmDialog( $formHash,
-			array(
+			[
 				'warning' => KernelTools::tra('Are you sure you want to delete this gallery?') . ' ' . $gContent->getTitle(),
 				'error' => KernelTools::tra('This cannot be undone!'),
-			)
+			],
 		);
 	} else {
 		$userId = $gContent->getField( 'user_id' );
 
 		$gContent->pRecursiveDelete = !empty( $_REQUEST['recurse'] ) && ($_REQUEST['recurse'] == 'all');
-		
+
 		if( $gContent->expunge() ) {
 			header( "Location: ".FISHEYE_PKG_URL.'?user_id='.$userId );
 		}
@@ -97,13 +98,13 @@ $gBitSystem->setOnloadScript( 'updateGalleryPagination();' );
 
 $gallery = $gContent->getParentGalleries();
 $gBitSmarty->assign( 'parentGalleries', $gallery );
-$getHash = array(
+$getHash = [
 	'user_id'       => $gBitUser->mUserId,
 //	'max_records'   => -1,
 //	'no_thumbnails' => true,
 //	'sort_mode'     => 'title_asc',
 //	'show_empty'    => true,
-);
+];
 if( $gContent->mContentId ) {
 	$getHash['contain_item'] = $gContent->mContentId;
 }
@@ -113,9 +114,9 @@ if( $gBitSystem->isFeatureActive( 'fisheye_show_all_to_admins' ) && $gBitUser->h
 } elseif( $gBitSystem->isFeatureActive( 'fisheye_show_public_on_upload' ) ) {
 //	$getHash['show_public'] = true;
 }
-$galleryTree = $gContent->generateList( $getHash,  array( 'name' => "gallery_id", 'id' => "gallerylist", 'item_attributes' => array( 'class'=>'listingtitle'), 'radio_checkbox' => true, ) );
+$galleryTree = $gContent->generateList( $getHash,  [ 'name' => "gallery_id", 'id' => "gallerylist", 'item_attributes' => [ 'class'=>'listingtitle'], 'radio_checkbox' => true, ] );
 $gBitSmarty->assign( 'galleryTree', $galleryTree );
 
 $gContent->invokeServices( 'content_edit_function' );
 
-$gBitSystem->display( 'bitpackage:fisheye/edit_gallery.tpl', KernelTools::tra('Edit Gallery: ').$gContent->getTitle() , array( 'display_mode' => 'edit' ));
+$gBitSystem->display( 'bitpackage:fisheye/edit_gallery.tpl', KernelTools::tra('Edit Gallery: ').$gContent->getTitle() , [ 'display_mode' => 'edit' ]);

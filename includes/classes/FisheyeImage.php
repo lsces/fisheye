@@ -7,6 +7,7 @@
  * required setup
  */
 namespace Bitweaver\Fisheye;
+
 use Bitweaver\Liberty\LibertyContent;
 use Bitweaver\Liberty\LibertyMime;
 use Bitweaver\BitBase;
@@ -35,8 +36,8 @@ class FisheyeImage extends FisheyeBase {
 				'handler_class' => 'FisheyeImage',
 				'handler_package' => 'fisheye',
 				'handler_file' => 'FisheyeImage.php',
-				'maintainer_url' => 'https://www.bitweaver.org'
-		] );
+				'maintainer_url' => 'https://www.bitweaver.org',
+		], );
 
 		// Permission setup
 		$this->mViewContentPerm  = 'p_fisheye_view';
@@ -103,8 +104,8 @@ class FisheyeImage extends FisheyeBase {
 				$this->mImageId = $this->mInfo['image_id'];
 				$this->mContentId = $this->mInfo['content_id'];
 
-				$this->mInfo['creator'] = isset( $this->mInfo['creator_real_name'] ) ? $this->mInfo['creator_real_name'] : $this->mInfo['creator_user'];
-				$this->mInfo['editor'] = isset( $this->mInfo['modifier_real_name'] ) ? $this->mInfo['modifier_real_name'] : $this->mInfo['modifier_user'];
+				$this->mInfo['creator'] = $this->mInfo['creator_real_name'] ?? $this->mInfo['creator_user'];
+				$this->mInfo['editor'] = $this->mInfo['modifier_real_name'] ?? $this->mInfo['modifier_user'];
 
 				if( $gBitSystem->isPackageActive( 'gatekeeper' ) && !@$this->verifyId( $this->mInfo['security_id'] ) ) {
 					// check to see if this image is in a protected gallery
@@ -363,7 +364,7 @@ class FisheyeImage extends FisheyeBase {
 			$fileHash['size'] = filesize( $fileHash['source_file'] );
 			$fileHash['dest_branch'] = dirname( $this->getSourceFile() ).'/';
 			$fileHash['name'] = $this->getField( 'file_name' );
-            if( $pDegrees == 'auto' ) {
+			if( $pDegrees == 'auto' ) {
 				if( $exifOrientation = $this->getExifField( 'orientation' ) ) {
 					switch( $exifOrientation ) {
 						 case 1: //) transform="";;
@@ -397,7 +398,7 @@ class FisheyeImage extends FisheyeBase {
 			}
 			if( is_numeric( $pDegrees ) ) {
 				$fileHash['degrees'] = $pDegrees;
-				
+
 				if( ($rotateFunc = \Bitweaver\Liberty\liberty_get_function( 'rotate' )) && $rotateFunc( $fileHash ) ) {
 					\Bitweaver\Liberty\liberty_clear_thumbnails( $fileHash );
 					$this->mDb->getOne( "UPDATE `".BIT_DB_PREFIX."fisheye_image` SET `width`=`height`, `height`=`width` WHERE `content_id`=?", [ $this->mContentId ] );
@@ -412,7 +413,6 @@ class FisheyeImage extends FisheyeBase {
 		}
 		return count($this->mErrors) == 0;
 	}
-
 
 	/**
 	 * convertColorspace
@@ -442,7 +442,6 @@ class FisheyeImage extends FisheyeBase {
 		}
 		return $ret;
 	}
-
 
 	public function resizeOriginal( $pResizeOriginal ) {
 		global $gBitSystem;
@@ -492,7 +491,6 @@ class FisheyeImage extends FisheyeBase {
 		return count($this->mErrors) == 0;
 	}
 
-
 	public function generateThumbnails( $pResizeOriginal=null, $pImmediateRender=false ) {
 		global $gBitSystem;
 		$ret = false;
@@ -509,7 +507,6 @@ class FisheyeImage extends FisheyeBase {
 		}
 		return $ret;
 	}
-
 
 	public function renderThumbnails( $pThumbSizes=null ) {
 		global $gBitSystem;
@@ -594,27 +591,27 @@ class FisheyeImage extends FisheyeBase {
 		return $this->getField('height');
 	}
 
-    /**
-    * Returns include file that will setup vars for display
-    * @return string the fully specified path to file to be included
-    */
+	/**
+	* Returns include file that will setup vars for display
+	* @return string the fully specified path to file to be included
+	*/
 	public function getRenderFile() {
 		return FISHEYE_PKG_INCLUDE_PATH.'display_fisheye_image_inc.php';
 	}
 
-    /**
-    * Returns template file used for display
-    * @return string the fully specified path to file to be included
-    */
+	/**
+	* Returns template file used for display
+	* @return string the fully specified path to file to be included
+	*/
 	public function getRenderTemplate() {
 		return 'bitpackage:fisheye/view_image.tpl';
 	}
 
-    /**
-    * Function that returns link to display a piece of content
-    * @param array pParamHash if a string, it is assumed to be the size, if an array, it is assumed to be a mInfo hash
-    * @return string the url to display the gallery.
-    */
+	/**
+	* Function that returns link to display a piece of content
+	* @param array pParamHash if a string, it is assumed to be the size, if an array, it is assumed to be a mInfo hash
+	* @return string the url to display the gallery.
+	*/
 	public static function getDisplayUrlFromHash( &$pParamHash ) {
 		$ret = '';
 		$size = (!empty( $pParamHash['size'] ) && is_string( $pParamHash['size'] ) && isset( $pParamHash['thumbnail_url'][$pParamHash['size']] ) ) ? $pParamHash['size'] : null ;
@@ -644,10 +641,10 @@ class FisheyeImage extends FisheyeBase {
 		return $ret;
 	}
 
-    /**
-    * Function that returns link to display an image
-    * @return string the url to display the gallery.
-    */
+	/**
+	* Function that returns link to display an image
+	* @return string the url to display the gallery.
+	*/
 	public function getDisplayUrl() {
 		$info = &$this->mInfo;
 		$info['image_id'] = $this->mImageId;
@@ -655,12 +652,12 @@ class FisheyeImage extends FisheyeBase {
 		return FisheyeImage::getDisplayUrlFromHash( $info );
 	}
 
-    /**
-    * Function that returns link to display an image
-    * Used to display thumbnails for navigation bar
-    * @param integer pImageId id of image to link
-    * @return string the url to display the image.
-    */
+	/**
+	* Function that returns link to display an image
+	* Used to display thumbnails for navigation bar
+	* @param integer pImageId id of image to link
+	* @return string the url to display the image.
+	*/
 	public function getImageUrl( $pImageId ) {
 		$info = [ 'image_id' => $pImageId ];
 		return FisheyeImage::getDisplayUrlFromHash( $info );
@@ -717,7 +714,6 @@ class FisheyeImage extends FisheyeBase {
 		}
 		return $ret;
 	}
-
 
 	public function getThumbnailContentId() {
 		return $this->mContentId;
@@ -799,7 +795,6 @@ class FisheyeImage extends FisheyeBase {
 		}
 		return $ret;
 	}
-
 
 	public function getList( &$pListHash ) {
 		global $gBitUser,$gBitSystem;

@@ -78,7 +78,6 @@ function fisheye_handle_upload( &$pFiles ) {
 	return $upErrors;
 }
 
-
 /**
  * fisheye_sort_upload
  */
@@ -96,7 +95,7 @@ function fisheye_get_default_gallery_id( $pUserId, $pNewName ) {
 	$upList = $gal->getList( $getHash );
 	if( !empty( $upList ) ) {
 		$ret = key( $upList );
-	} else { 
+	} else {
 		$galleryHash = [ 'title' => $pNewName ];
 		if( $gal->store( $galleryHash ) ) {
 			$ret = $gal->mGalleryId;
@@ -119,7 +118,7 @@ function fisheye_store_upload( &$pFileHash, $pImageData = [], $pAutoRotate=true 
 	$ret = [];
 
 	// verifyMimeType to make sure we are working with the proper file type assumptions
-	$pFileHash['type'] = $gBitSystem->verifyMimeType($pFileHash['tmp_name']);	
+	$pFileHash['type'] = $gBitSystem->verifyMimeType($pFileHash['tmp_name']);
 	if( !empty( $pFileHash ) && ( $pFileHash['size'] > 0 ) && is_file( $pFileHash['tmp_name'] ) && fisheye_verify_upload_item(  $pFileHash ) ) {
 		// make a copy for each image we need to store
 		$image = new FisheyeImage();
@@ -275,7 +274,6 @@ function fisheye_process_directory( $pDestinationDir, &$pParentGallery, $pRoot=f
 	}
 	return $errors;
 }
-
 
 // this function will process a directory and all it's sub directories without
 // making any assumptions. hierarchy of sub directories is maintained and

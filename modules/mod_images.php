@@ -9,6 +9,7 @@
  * required setup
  */
 namespace Bitweaver\Fisheye;
+
 use Bitweaver\KernelTools;
 use Bitweaver\Users\RoleUser;
 global $gQueryUserId, $gContent, $moduleParams;
@@ -27,7 +28,6 @@ if( !empty( $gContent ) && $gContent->getField( 'content_type_guid' ) == FISHEYE
 	$listHash['gallery_id'] = $gContent->mGalleryId;
 	$display = $displayCount >= $thumbCount;
 }
-
 
 if( $display ) {
 	$listHash['max_records'] = $module_rows ?? 3;

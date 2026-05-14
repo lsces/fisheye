@@ -12,7 +12,7 @@ $lookup = [];
 if( !$gContent = FisheyeGallery::lookup( $_REQUEST ) ) {
 	$gContent = new FisheyeGallery();
 	$galleryId = null;
-} 
+}
 
 if( !empty( $_REQUEST['gallery_path'] ) ) {
 	$gContent->setGalleryPath( $_REQUEST['gallery_path'] );

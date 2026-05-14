@@ -24,6 +24,7 @@
  * Setup
  */
 namespace Bitweaver\Fisheye;
+
 chdir( dirname( __FILE__ ) );
 require_once '../kernel/includes/setup_inc.php';
 use Bitweaver\KernelTools;
@@ -33,7 +34,7 @@ $gFisheyeRemote = new FisheyeRemote();
 
 // Fisheye allows directories to below to multiple parents - not in gallery. This confuses some clients
 // We pad with a random number for uniqueness
-foreach( array( 'g2_itemId', 'set_albumName' ) as $key ) {
+foreach( [ 'g2_itemId', 'set_albumName' ] as $key ) {
 	if( !empty( $_POST['g2_form'][$key] ) && $_POST['g2_form'][$key] > 1 ) {
 		$_POST['g2_form'][$key] = substr( $_POST['g2_form'][$key], 0, strlen( $_POST['g2_form'][$key] ) - 2 );
 	}
@@ -50,6 +51,6 @@ if( !empty( $_REQUEST['g2_form'] ) ){
 } elseif( !empty( $_REQUEST['g2_itemId'] ) ) {
 	//If we don't have g2_form, they must be asking the gallery to be opened upon export completion
 	$gallery = new FisheyeGallery();
-	$gallery = $gallery->lookup(array('content_id' => $_REQUEST['g2_itemId'] ));
+	$gallery = $gallery->lookup(['content_id' => $_REQUEST['g2_itemId'] ]);
 	KernelTools::bit_redirect( $gallery->getDisplayUrl() );
 }

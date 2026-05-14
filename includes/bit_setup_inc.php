@@ -11,9 +11,9 @@ $pRegisterHash = [
 define( 'FISHEYE_PKG_NAME', $pRegisterHash['package_name'] );
 define( 'FISHEYE_PKG_URL', BIT_ROOT_URL . basename( $pRegisterHash['package_path'] ) . '/' );
 define( 'FISHEYE_PKG_PATH', BIT_ROOT_PATH . basename( $pRegisterHash['package_path'] ) . '/' );
-define( 'FISHEYE_PKG_INCLUDE_PATH', BIT_ROOT_PATH . basename( $pRegisterHash['package_path'] ) . '/includes/'); 
+define( 'FISHEYE_PKG_INCLUDE_PATH', BIT_ROOT_PATH . basename( $pRegisterHash['package_path'] ) . '/includes/');
 define( 'FISHEYE_PKG_CLASS_PATH', BIT_ROOT_PATH . basename( $pRegisterHash['package_path'] ) . '/includes/classes/');
-define( 'FISHEYE_PKG_ADMIN_PATH', BIT_ROOT_PATH . basename( $pRegisterHash['package_path'] ) . '/admin/'); 
+define( 'FISHEYE_PKG_ADMIN_PATH', BIT_ROOT_PATH . basename( $pRegisterHash['package_path'] ) . '/admin/');
 
 $gBitSystem->registerPackage( $pRegisterHash );
 
@@ -33,15 +33,15 @@ if( $gBitSystem->isPackageActive( 'fisheye' ) ) { // && $gBitUser->hasPermission
 
 	define( 'LIBERTY_SERVICE_PHOTOSHARING', 'photosharing');
 
-	$gLibertySystem->registerService( LIBERTY_SERVICE_PHOTOSHARING, FISHEYE_PKG_NAME, array(
+	$gLibertySystem->registerService( LIBERTY_SERVICE_PHOTOSHARING, FISHEYE_PKG_NAME, [
 		'users_expunge_function' => 'fisheye_expunge_user',
-	) );
+	] );
 
 	function fisheye_expunge_user( $pObject ) {
 		global $gBitDb;
 		if( !empty( $pObject->mUserId ) ) {
 			$query = "SELECT fg.`content_id` FROM `".BIT_DB_PREFIX."fisheye_gallery` fg INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON(fg.`content_id`=lc.`content_id`) WHERE lc.`user_id`=?";
-			if( $galleries = $gBitDb->getCol( $query, array( $pObject->mUserId ) ) ) {
+			if( $galleries = $gBitDb->getCol( $query, [ $pObject->mUserId ] ) ) {
 				foreach( $galleries as $contentId ) {
 					$delGallery = new FisheyeGallery( null, $contentId );
 					if( $delGallery->load() ) {

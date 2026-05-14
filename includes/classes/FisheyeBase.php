@@ -7,6 +7,7 @@
  * required setup
  */
 namespace Bitweaver\Fisheye;
+
 use Bitweaver\Liberty\LibertyMime;		// FisheyeGallery base class
 use Bitweaver\Liberty\LibertyContent;
 
@@ -37,9 +38,9 @@ abstract class FisheyeBase extends LibertyMime
 	public function isMachineName( $pString ) {
 		if ( !empty($pString) ) {
 			return preg_match( '/(^[0-9][-0-9 ]*$)|(^[-0-9 ]*(img|dsc|dscn|pict|htg|dscf|p)[-0-9 ][-0-9 ]*.*$)/i', trim( $pString ) );
-		} else {
-			return '';
 		}
+			return '';
+
 	}
 
 	// Gets a list of galleries which this item is attached to
@@ -205,7 +206,6 @@ not ready for primetime
 		return $ret;
 	}
 
-
 	public function addToGalleries( $pGalleryArray ) {
 		global $gBitSystem;
 		if( $this->isValid() ) {
@@ -219,7 +219,7 @@ not ready for primetime
 							case 'newest':
 								$galleryId = $this->mDb->getAssoc( "SELECT `gallery_id` FROM `".BIT_DB_PREFIX."fisheye_gallery` fg INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON (fg.`content_id`=lg.`content_id`) WHERE `user_id` = ? ORDER BY gallery_id DESC", [ $this->getField( 'user_id' ) ] );
 								break;
-												
+
 						}
 					}
 					if( empty( $inGalleries[$galleryId] ) ) {

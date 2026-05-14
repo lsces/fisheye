@@ -7,8 +7,8 @@
  * required setup
  */
 namespace Bitweaver\Fisheye;
+
 use Bitweaver\BitBase;
-use Bitweaver\KernelTools;
 use Bitweaver\Liberty\LibertyContent;
 
 define( 'FISHEYE_PAGINATION_FIXED_GRID', 'fixed_grid' );
@@ -52,8 +52,8 @@ class FisheyeGallery extends FisheyeBase {
 				'handler_class' => 'FisheyeGallery',
 				'handler_package' => 'fisheye',
 				'handler_file' => 'FisheyeGallery.php',
-				'maintainer_url' => 'https://www.bitweaver.org'
-		] );
+				'maintainer_url' => 'https://www.bitweaver.org',
+		], );
 
 		// Permission setup
 		$this->mViewContentPerm  = 'p_fisheye_view';
@@ -81,7 +81,7 @@ class FisheyeGallery extends FisheyeBase {
 		$lookupContentId = null;
 		if (!empty($pLookupHash['gallery_id']) && is_numeric($pLookupHash['gallery_id'])) {
 			if( $lookup = $gBitDb->getRow( "SELECT lc.`content_id`, lc.`content_type_guid` FROM `".BIT_DB_PREFIX."fisheye_gallery` fg INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON(lc.`content_id`=fg.`content_id`) WHERE `gallery_id`=?", [ $pLookupHash['gallery_id'] ] ) ) {
-			    $lookupContentId = $lookup['content_id'];
+				$lookupContentId = $lookup['content_id'];
 				$lookupContentGuid = $lookup['content_type_guid'];
 			}
 		} elseif (!empty($pLookupHash['content_id']) && is_numeric($pLookupHash['content_id'])) {
@@ -100,7 +100,7 @@ class FisheyeGallery extends FisheyeBase {
 		global $gBitSystem;
 		$bindVars = [];
 		$selectSql = $joinSql = $whereSql = '';
-		
+
 		if( $this->verifyId( $this->mGalleryId ) ) {
 			$whereSql = " WHERE fg.`gallery_id` = ?";
 			$bindVars = [ $this->mGalleryId ];
@@ -124,16 +124,16 @@ class FisheyeGallery extends FisheyeBase {
 					$whereSql";
 					$rs = $this->mDb->getRow($query, $bindVars);
 			if( !empty($rs) ) {
-                $this->mInfo = $rs;
-                $this->mContentId = $rs['content_id'];
+				$this->mInfo = $rs;
+				$this->mContentId = $rs['content_id'];
 				LibertyContent::load();
 				if( @$this->verifyId($this->mInfo['gallery_id'] ) ) {
 
 					$this->mGalleryId = $this->mInfo['gallery_id'];
 					$this->mContentId = $this->mInfo['content_id'];
 
-					$this->mInfo['creator'] = isset( $rs['creator_real_name'] ) ? $rs['creator_real_name'] : $rs['creator_user'];
-					$this->mInfo['editor'] = isset( $rs['modifier_real_name'] ) ? $rs['modifier_real_name'] : $rs['modifier_user'];
+					$this->mInfo['creator'] = $rs['creator_real_name'] ?? $rs['creator_user'];
+					$this->mInfo['editor'] = $rs['modifier_real_name'] ?? $rs['modifier_user'];
 
 					// Set some basic defaults for how to display a gallery if they're not already set
 					if (empty($this->mInfo['thumbnail_size'])) {
@@ -227,7 +227,7 @@ class FisheyeGallery extends FisheyeBase {
 			$orderSql = $gBitSystem->isFeatureActive( 'fisheye_gallery_default_sort_mode' )
 				? ", ".$this->mDb->convertSortmode( $gBitSystem->getConfig( 'fisheye_gallery_default_sort_mode' ) )
 				: ", fgim.`item_content_id`";
-			
+
 			// load for just a single page
 			if( $pListHash['page'] != -1 ) {
 				if( $this->getLayout() == FISHEYE_PAGINATION_POSITION_NUMBER ) {
@@ -236,7 +236,7 @@ class FisheyeGallery extends FisheyeBase {
 							  WHERE gallery_content_id=?
 							  ORDER BY floor(item_position)";
 					$mantissa = $this->mDb->getOne( $query, [ $this->mContentId ], 1, $pListHash['page'] - 1 );
-                    // gallery image order with no positions set will have null mantissa, and all images will be shown
+					// gallery image order with no positions set will have null mantissa, and all images will be shown
 					if( !is_null( $mantissa ) ) {
 						$whereSql .= " AND floor(item_position)=? ";
 						array_push( $bindVars, $mantissa );
@@ -261,7 +261,7 @@ class FisheyeGallery extends FisheyeBase {
 					WHERE fgim.`gallery_content_id` = ? $whereSql
 					ORDER BY fgim.`item_position` $orderSql";
 			$rows = $this->mDb->query($query, $bindVars, $rowCount, $offset);
-            foreach ($rows as $row) {
+			foreach ($rows as $row) {
 				$pass = true;
 				if( $gBitSystem->isPackageActive( 'gatekeeper' ) ) {
 					$pass = $gBitUser->hasPermission( 'p_fisheye_admin' ) || !@$this->verifyId( $row['security_id'] ) || ( $row['user_id'] == $gBitUser->mUserId ) || @$this->verifyId( $_SESSION['gatekeeper_security'][$row['security_id']] );
@@ -279,7 +279,7 @@ class FisheyeGallery extends FisheyeBase {
 
 		LibertyContent::postGetList( $pListHash );
 
-        return \count ( $this->mItems ) > 0;
+		return \count ( $this->mItems ) > 0;
 	}
 
 	public function getImageList() {
@@ -393,7 +393,6 @@ class FisheyeGallery extends FisheyeBase {
 		return count($this->mErrors) == 0;
 	}
 
-
 	public function generateGalleryThumbnails(): void {
 		if( $this->isValid() ) {
 			if( $this->loadImages() ) {
@@ -403,7 +402,6 @@ class FisheyeGallery extends FisheyeBase {
 			}
 		}
 	}
-
 
 	public function getThumbnailContentId() {
 		if( !$this->getField( 'thumbnail_content_id' ) ) {
@@ -422,7 +420,6 @@ class FisheyeGallery extends FisheyeBase {
 		}
 	}
 
-
 	public function getThumbnailUrl( string $pSize = 'small', ?array $pInfoHash = null, ?int $pSecondaryId = null, ?int $pDefault = null ): string|null {
 		if( empty( $this->mInfo['preview_content'] ) ) {
 			$this->loadThumbnail();
@@ -433,7 +430,6 @@ class FisheyeGallery extends FisheyeBase {
 		}
 		return '';
 	}
-
 
 	public function getThumbnailImage( $pContentId=null, $pThumbnailContentId=null, $pThumbnailContentType=null ) {
 		global $gLibertySystem, $gBitUser;
@@ -491,14 +487,12 @@ class FisheyeGallery extends FisheyeBase {
 		return $ret;
 	}
 
-
 	public function loadThumbnail( $pSize='small', $pContentId=null ) {
 		if( $this->mPreviewImage = $this->getThumbnailImage( $pContentId ) ) {
 			$this->mInfo['preview_content'] = &$this->mPreviewImage;
 			$this->mInfo['image_file'] = &$this->mPreviewImage->mInfo['image_file'];
 		}
 	}
-
 
 	public function storeGalleryThumbnail($pContentId = null) {
 		$ret = false;
@@ -557,11 +551,11 @@ class FisheyeGallery extends FisheyeBase {
 		return $ret;
 	}
 
-    /**
-    * Adds a new item (image or gallery) to this gallery. We check to make sure we are not a member
+	/**
+	* Adds a new item (image or gallery) to this gallery. We check to make sure we are not a member
 	* of this gallery and this gallery is not a member of the new item to avoid infinite recursion scenarios
-    * @return bool wheter or not the item was added
-    */
+	* @return bool wheter or not the item was added
+	*/
 	public function addItem( $pContentId, $pPosition=null ) {
 		global $gBitSystem;
 		$ret = false;
@@ -615,7 +609,6 @@ class FisheyeGallery extends FisheyeBase {
 		return true;
 	}
 
-
 	public function galleryExistsInDatabase() {
 		$ret = false;
 
@@ -631,10 +624,10 @@ class FisheyeGallery extends FisheyeBase {
 		return $ret;
 	}
 
-    /**
-    * Returns the layout of the gallery accounting for various defaults
-    * @return string the layout string preference
-    */
+	/**
+	* Returns the layout of the gallery accounting for various defaults
+	* @return string the layout string preference
+	*/
 	public function getLayout() {
 		global $gBitSystem;
 		return $this->getPreference( 'gallery_pagination', $gBitSystem->getConfig( 'default_gallery_pagination', FISHEYE_PAGINATION_GALLERIFFIC ) );
@@ -651,30 +644,30 @@ class FisheyeGallery extends FisheyeBase {
 		];
 	}
 
-    /**
-    * Returns include file that will setup the object for rendering
-    * @return string the fully specified path to file to be included
-    */
+	/**
+	* Returns include file that will setup the object for rendering
+	* @return string the fully specified path to file to be included
+	*/
 	public function getRenderFile() {
 		return FISHEYE_PKG_INCLUDE_PATH.'display_fisheye_gallery_inc.php';
 	}
 
-    /**
-    * Returns template file used for display
-    * @return string the fully specified path to file to be included
-    */
+	/**
+	* Returns template file used for display
+	* @return string the fully specified path to file to be included
+	*/
 	public function getRenderTemplate() {
 		return 'bitpackage:fisheye/view_gallery.tpl';
 	}
 
-    /**
-    * Function that returns link to display a piece of content
-    * @param array pGalleryId id of gallery to link
-    * @return string the url to display the gallery.
-    */
+	/**
+	* Function that returns link to display a piece of content
+	* @param array pGalleryId id of gallery to link
+	* @return string the url to display the gallery.
+	*/
 	public static function getDisplayUrlFromHash( &$pParamHash ) {
 		$path = null;
-        $ret = '';
+		$ret = '';
 		if( BitBase::verifyIdParameter( $pParamHash, 'gallery_id' ) ) {
 			$ret = FISHEYE_PKG_URL;
 			global $gBitSystem;
@@ -789,8 +782,6 @@ class FisheyeGallery extends FisheyeBase {
 							$joinSql
 							WHERE lc.`content_type_guid` = 'fisheyegallery' $whereSql
 						  ORDER BY T.BRANCH, fgimo.`item_position`";
-
-
 
 			if( !empty( $bindVars ) ) {
 				FisheyeGallery::splitConnectByTree( $ret, $gBitDb->GetAssoc( $query, $bindVars ) );
@@ -910,7 +901,6 @@ class FisheyeGallery extends FisheyeBase {
 		}
 		return $ret;
 	}
-
 
 	// Generate a select drop menu of listed galleries
 	public function generateMenu( $pListHash, $pOptions, $pLocate=null ) {
@@ -1036,7 +1026,7 @@ class FisheyeGallery extends FisheyeBase {
 			if( empty( $pListHash['no_thumbnails'] ) ) {
 				$thumbsize = !empty( $pListHash['thumbnail_size'] ) ? $pListHash['thumbnail_size'] : 'small';
 				foreach( array_keys( $data ) as $galleryId ) {
-                $data[$galleryId]['display_url'] = static::getDisplayUrlFromHash( $data[$galleryId] );
+				$data[$galleryId]['display_url'] = static::getDisplayUrlFromHash( $data[$galleryId] );
 					$data[$galleryId]['display_uri'] = static::getDisplayUriFromHash( $data[$galleryId] );
 					if( $thumbImage = $this->getThumbnailImage( $data[$galleryId]['content_id'], $data[$galleryId]['preview_content_id'], $data[$galleryId]['preview_content_type_guid'] ) ) {
 						$data[$galleryId]['thumbnail_url'] = $thumbImage->getThumbnailUrl( $thumbsize );
@@ -1077,7 +1067,7 @@ class FisheyeGallery extends FisheyeBase {
 			if( $zip->open ($filename, \ZIPARCHIVE::OVERWRITE) !== true ){
 				$this->mErrors['download'] = "Unable to create zip file";
 			}else{
-			    addGalleryRecursive( $this->mGalleryId, $zip, $path);
+				addGalleryRecursive( $this->mGalleryId, $zip, $path);
 			}
 			$zip->close();
 
@@ -1122,7 +1112,7 @@ function addGalleryRecursive( $pGalleryId, &$pZip, $pPath = '/' ){
 				$title = $item->getTitle();
 				$pZip->addFile($sourcePath, $pPath.$title.substr($sourcePath,strrpos($sourcePath,'.')) );
 			} elseif ( is_a( $item , '\Bitweaver\Fisheye\FisheyeGallery' ) ) {
-			    addGalleryRecursive( $item->mGalleryId, $pZip ,$pPath );
+				addGalleryRecursive( $item->mGalleryId, $pZip ,$pPath );
 			}
 		}
 	}

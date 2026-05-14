@@ -51,7 +51,7 @@
 								<strong>{tr}Edit Image{/tr}</strong>: <a href="javascript:void(0);" onclick="BitBase.updater( 'imgedit', '{$smarty.const.FISHEYE_PKG_URL}edit_image.php', 'ajax=true&amp;content_id={$galItem->mInfo.content_id}&amp;gallery_id={$gContent->mGalleryId}' );">{booticon iname="fa-pen-to-square" iexplain="Edit Details"}</a>
 								<noscript><div><a href="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?content_id={$galItem->mInfo.content_id}">{booticon iname="fa-pen-to-square" iexplain="Edit Image"}</a></div></noscript>
 {*								jspopup href="`$smarty.const.FISHEYE_PKG_URL`edit_image.php?content_id=$galItem->mInfo.content_id" title="edit image" *}
-{*								<a target="_new" href="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?content_id={$galItem->mInfo.content_id}">{booticon iname="fa-pen-to-square" iexplain="Edit Image"}</a> *}
+								<a target="_new" href="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?content_id={$galItem->mInfo.content_id}">{booticon iname="fa-pen-to-square" iexplain="Edit Image"}</a>
 								<br />
 								{/if}
 							{/if}

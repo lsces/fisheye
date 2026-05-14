@@ -19,10 +19,10 @@ if( !empty( $gQueryUser->mUserId ) ) {
 	$userId = $gQueryUser->mUserId;
 }
 
-$listHash = array(
+$listHash = [
 	'user_id' => $userId,
 	'max_records' => $moduleParams['module_rows'],
-);
+];
 
 if (!empty($params['full'])) {
 	$listHash['parse'] = true;
@@ -39,7 +39,7 @@ if( !empty( $params['root_content_type_guid'] ) ) {
 	$listHash['root_content_type_guid'] = $params['root_content_type_guid'];
 } else {
 	// default to base image types
-	$listHash['root_content_type_guid'] = array('fisheyeimage','fisheyegallery');
+	$listHash['root_content_type_guid'] = ['fisheyeimage','fisheyegallery'];
 }
 $gBitSmarty->assign( 'moduleTitle', $moduleTitle );
 
