@@ -9,6 +9,7 @@
  * A specialized version of liberty/modules/mod_last_comments.php for fisheye
  */
 use Bitweaver\Liberty\LibertyComment;
+use Bitweaver\KernelTools;
 
 global $gQueryUser, $gBitUser, $gLibertySystem, $moduleParams;
 $params = $moduleParams['module_params'];
@@ -34,7 +35,7 @@ if (!empty($params['pigeonholes'])) {
 
 if( !empty( $params['root_content_type_guid'] ) ) {
 	if( empty($moduleTitle) && is_string( $params['root_content_type_guid'] ) ) {
-		$moduleTitle = $gLibertySystem->getContentTypeName( $params['root_content_type_guid'] ).' '.tra( 'Comments' );
+		$moduleTitle = $gLibertySystem->getContentTypeName( $params['root_content_type_guid'] ).' '.KernelTools::tra( 'Comments' );
 	}
 	$listHash['root_content_type_guid'] = $params['root_content_type_guid'];
 } else {
