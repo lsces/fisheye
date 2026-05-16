@@ -7,8 +7,6 @@
 	<div class="body">
 		<p class="formhelp">{tr}Here you can re-arrange the order of the images in this gallery and quickly change their titles. The image position does not have to be in an exact sequence. In fact, we recommend you count by tens so you can easily insert or re-order images at a later date. If you need to add a detailed description to an image, click the <strong>Edit Details</strong> link next to the desired image.<br />Using the <strong>Gallery Image</strong> radio button you can specify what image is used to identify this particular gallery.{/tr}</p>
 
-		<div id="imgedit"></div>
-
 		{form id="batch_order" legend="Gallery Images"}
 			<input type="hidden" name="gallery_id" value="{$gContent->mGalleryId}"/>
 
@@ -48,7 +46,7 @@
 							<strong>{tr}Uploaded{/tr}</strong>: {$galItem->mInfo.created|bit_short_datetime}<br />
 							<strong>{tr}File name{/tr}</strong>: {$galItem->mInfo.filename|default:''} <br />
 								{if $galItem->mInfo.user_id == $gBitUser->mUserId || $gBitUser->isAdmin()}
-								<strong>{tr}Edit Image{/tr}</strong>: <a href="javascript:void(0);" onclick="$('#imgedit').load('{$smarty.const.FISHEYE_PKG_URL}edit_image.php?ajax=true&amp;content_id={$galItem->mInfo.content_id}&amp;gallery_id={$gContent->mGalleryId}', function(){ document.getElementById('imgedit').scrollIntoView(); });">{booticon iname="fa-pen-to-square" iexplain="Edit Details"}</a>
+								<strong>{tr}Edit Image{/tr}</strong>: <a href="javascript:void(0);" data-toggle="modal" data-target="#imageEditModal" data-fetch-url="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?ajax=true&amp;content_id={$galItem->mInfo.content_id}&amp;gallery_id={$gContent->mGalleryId}">{booticon iname="fa-pen-to-square" iexplain="Edit Details"}</a>
 								<noscript><div><a href="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?content_id={$galItem->mInfo.content_id}">{booticon iname="fa-pen-to-square" iexplain="Edit Image"}</a></div></noscript>
 {*								jspopup href="`$smarty.const.FISHEYE_PKG_URL`edit_image.php?content_id=$galItem->mInfo.content_id" title="edit image" *}
 								<a target="_new" href="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?content_id={$galItem->mInfo.content_id}">{booticon iname="fa-pen-to-square" iexplain="Edit Image"}</a>
@@ -151,3 +149,28 @@
 	</div><!-- end .body -->
 </div><!-- end .fisheye -->
 {/strip}
+
+<div class="modal fade" id="imageEditModal" tabindex="-1" role="dialog">
+	<div class="modal-dialog modal-lg" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+				<h4 class="modal-title">{tr}Edit Image{/tr}</h4>
+			</div>
+			<div class="modal-body" style="max-height:calc(100vh - 200px);overflow-y:auto;">
+				<p class="text-center"><i class="fa fa-spinner fa-spin fa-2x"></i></p>
+			</div>
+		</div>
+	</div>
+</div>
+<script>
+$('#imageEditModal').on('show.bs.modal', function(e) {
+	var url = $(e.relatedTarget).data('fetchUrl');
+	var body = $(this).find('.modal-body');
+	body.html('<p class="text-center"><i class="fa fa-spinner fa-spin fa-2x"></i></p>');
+	$.get(url, function(html) { body.html(html); });
+});
+$('#imageEditModal').on('hidden.bs.modal', function() {
+	$(this).find('.modal-body').html('<p class="text-center"><i class="fa fa-spinner fa-spin fa-2x"></i></p>');
+});
+</script>
