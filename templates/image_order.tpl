@@ -24,7 +24,7 @@
 				{counter name=imageCount start=0 assign=imageCount}
 				{counter name=pageCount start=1 assign=pageCount}
 				{foreach from=$gContent->mItems item=galItem key=itemContentId}
-					{assign var=thisMantissa value=$galItem->getField('item_position')|floor}
+					{assign var=thisMantissa value=$galItem->getField('item_position')|default:0|floor}
 					{if ($gContent->getPreference('gallery_pagination')==$smarty.const.FISHEYE_PAGINATION_POSITION_NUMBER && $lastMantissa != $thisMantissa) || ($gContent->mInfo.images_per_page && $imageCount % $gContent->mInfo.images_per_page == 0)}
 					<tr class="{cycle values='even,odd' assign='pageClass'}">
 						<th colspan="3" class="pagebreak">
@@ -48,7 +48,7 @@
 							<strong>{tr}Uploaded{/tr}</strong>: {$galItem->mInfo.created|bit_short_datetime}<br />
 							<strong>{tr}File name{/tr}</strong>: {$galItem->mInfo.filename|default:''} <br />
 								{if $galItem->mInfo.user_id == $gBitUser->mUserId || $gBitUser->isAdmin()}
-								<strong>{tr}Edit Image{/tr}</strong>: <a href="javascript:void(0);" onclick="BitBase.updater( 'imgedit', '{$smarty.const.FISHEYE_PKG_URL}edit_image.php', 'ajax=true&amp;content_id={$galItem->mInfo.content_id}&amp;gallery_id={$gContent->mGalleryId}' );">{booticon iname="fa-pen-to-square" iexplain="Edit Details"}</a>
+								<strong>{tr}Edit Image{/tr}</strong>: <a href="javascript:void(0);" onclick="$('#imgedit').load('{$smarty.const.FISHEYE_PKG_URL}edit_image.php?ajax=true&amp;content_id={$galItem->mInfo.content_id}&amp;gallery_id={$gContent->mGalleryId}', function(){ document.getElementById('imgedit').scrollIntoView(); });">{booticon iname="fa-pen-to-square" iexplain="Edit Details"}</a>
 								<noscript><div><a href="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?content_id={$galItem->mInfo.content_id}">{booticon iname="fa-pen-to-square" iexplain="Edit Image"}</a></div></noscript>
 {*								jspopup href="`$smarty.const.FISHEYE_PKG_URL`edit_image.php?content_id=$galItem->mInfo.content_id" title="edit image" *}
 								<a target="_new" href="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?content_id={$galItem->mInfo.content_id}">{booticon iname="fa-pen-to-square" iexplain="Edit Image"}</a>
@@ -65,7 +65,7 @@
 							<label>{tr}Position{/tr}</label>: <input type="text" size="5" style="text-align:right;" maxlength="15" name="imagePosition[{$galItem->mContentId}]" id="imagePosition-{$galItem->mContentId}" value="{$galItem->mInfo.item_position}"/>
 						</td>
 					</tr>
-					{assign var=lastMantissa value=$galItem->getField('item_position')|floor}
+					{assign var=lastMantissa value=$galItem->getField('item_position')|default:0|floor}
 				{/foreach}
 				<tr>
 					<td colspan="4" align="right">
