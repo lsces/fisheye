@@ -222,5 +222,4 @@ if ( !empty( $feedback ) ) {
 	$gBitSmarty->assign('formfeedback', $feedback);
 }
 
-// $gBitThemes->loadAjax( 'mochikit' );
 $gBitSystem->display( 'bitpackage:fisheye/image_order.tpl', KernelTools::tra( 'Edit Gallery Images' ).': '.$gContent->getTitle() , [ 'display_mode' => 'display' ] );
