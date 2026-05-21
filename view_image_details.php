@@ -17,6 +17,7 @@ global $gBitSystem, $gDebug;
 include_once FISHEYE_PKG_INCLUDE_PATH.'image_lookup_inc.php';
 
 $gContent->invokeServices( 'content_display_function', $displayHash );
+$gContent->addHit();
 
 if( is_object( $gGallery ) && $gGallery->isCommentable() ) {
 	$commentsParentId = $gContent->mContentId;
