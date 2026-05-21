@@ -160,35 +160,25 @@ not ready for primetime
 		if( !$this->getField( 'gallery_path' ) ) {
 			if( $this->isValid() ) {
 				$ancestors = [];
-				$pathIds = [];
 				$currentContentId = $this->mContentId;
 				for( $depth = 0; $depth < 10; $depth++ ) {
-					$parents = $this->getParentGalleries( $currentContentId );
-					if( !$parents ) break;
-					$found = false;
-					foreach( $parents as $galleryId => $galleryData ) {
-						if( is_numeric( $galleryId ) && is_array( $galleryData ) ) {
-							$ancestors[] = (int)$galleryId;
-							array_unshift( $pathIds, $galleryId );
-							$currentContentId = $this->mDb->getOne(
-								"SELECT fg.`content_id` FROM `".BIT_DB_PREFIX."fisheye_gallery` fg WHERE fg.`gallery_id`=?",
-								[(int)$galleryId]
-							);
-							$found = true;
-							break;
-						}
-					}
-					if( !$found ) break;
+					$parent = $this->mDb->getRow(
+						"SELECT fg.gallery_id AS gid, fg.content_id AS cid, lc.title AS gtitle
+						 FROM ".BIT_DB_PREFIX."fisheye_gallery fg
+						 INNER JOIN ".BIT_DB_PREFIX."liberty_content lc ON (lc.content_id=fg.content_id)
+						 INNER JOIN ".BIT_DB_PREFIX."fisheye_gallery_image_map fgim ON (fgim.gallery_content_id=fg.content_id)
+						 WHERE fgim.item_content_id=?",
+						[$currentContentId]
+					);
+					if( !$parent ) break;
+					array_unshift( $ancestors, $parent );
+					$currentContentId = $parent['cid'];
 				}
-				if( $pathIds ) {
+				if( $ancestors ) {
+					$pathIds = array_column( $ancestors, 'gid' );
 					$this->setGalleryPath( '/'.implode( '/', $pathIds ) );
-					foreach( array_reverse( $ancestors ) as $gid ) {
-						$ret[$gid] = $this->mDb->getOne(
-							"SELECT lc.`title` FROM `".BIT_DB_PREFIX."liberty_content` lc
-							 INNER JOIN `".BIT_DB_PREFIX."fisheye_gallery` fg ON (fg.`content_id`=lc.`content_id`)
-							 WHERE fg.`gallery_id`=?",
-							[$gid]
-						);
+					foreach( $ancestors as $ancestor ) {
+						$ret[$ancestor['gid']] = $ancestor['gtitle'];
 					}
 				}
 			}
