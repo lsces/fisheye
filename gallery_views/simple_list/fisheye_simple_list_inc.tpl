@@ -8,7 +8,7 @@
 			{if $breadCrumbs}
 				{foreach from=$breadCrumbs item=breadTitle key=breadId}
 					{if $breadId==$gContent->mGalleryId}<li class="active">{$breadTitle}</li>
-					{else}<li><a href="#" onclick="changePhotoDrawer('{$breadId}');return false;">{$breadTitle}</a></li>{/if}
+					{else}<li><a href="{$smarty.const.FISHEYE_PKG_URL}gallery/{$breadId}">{$breadTitle}</a></li>{/if}
 				{/foreach}
 			{/if}
 		</ol>
