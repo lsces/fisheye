@@ -156,7 +156,10 @@ class FisheyeGallery extends FisheyeBase {
 					if( $this->getPreference( 'gallery_pagination' ) == FISHEYE_PAGINATION_POSITION_NUMBER ) {
 						$this->mInfo['num_pages'] = $this->mDb->getOne( "SELECT COUNT( distinct( floor(`item_position`) ) ) FROM `".BIT_DB_PREFIX."fisheye_gallery_image_map` WHERE gallery_content_id=?", [ $this->mContentId ] );
 					} else {
-						$this->mInfo['images_per_page'] = $this->mInfo['cols_per_page'] * $this->mInfo['rows_per_page'];
+						// galleriffic JS templates hardcode numThumbs:30 — match that here so image_order.tpl page breaks align
+						$this->mInfo['images_per_page'] = ( $this->getPreference( 'gallery_pagination' ) == FISHEYE_PAGINATION_GALLERIFFIC )
+							? 30
+							: $this->mInfo['cols_per_page'] * $this->mInfo['rows_per_page'];
 						$this->mInfo['num_pages'] = (int)$this->mInfo['num_images'] / $this->mInfo['images_per_page'] + ($this->mInfo['num_images'] % $this->mInfo['images_per_page'] == 0 ? 0 : 1);
 					}
 
