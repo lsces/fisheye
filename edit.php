@@ -31,21 +31,13 @@ if( $gBitUser->hasPermission( 'p_fisheye_change_thumb_size' ) ) {
 $gBitSmarty->assign( 'galleryPaginationTypes', $gContent::getAllLayouts() );
 
 if( !empty( $_REQUEST['savegallery'] ) ) {
-	if( $_REQUEST['gallery_pagination'] == 'auto_flow' ) {
-		$_REQUEST['rows_per_page'] = $_REQUEST['total_per_page'];
-		$_REQUEST['cols_per_page'] = '1';
-	} elseif ( $_REQUEST['gallery_pagination'] == 'simple_list' ) {
-		$_REQUEST['rows_per_page'] = $_REQUEST['lines_per_page'];
-		$_REQUEST['cols_per_page'] = '1';
-	} elseif ( $_REQUEST['gallery_pagination'] == 'matteo' ) {
-		$_REQUEST['rows_per_page'] = $_REQUEST['images_per_page'];
-		$_REQUEST['cols_per_page'] = '1';
-	}
 	if( $gContent->store( $_REQUEST ) ) {
 		$gContent->storePreference( 'is_public', !empty( $_REQUEST['is_public'] ) ? $_REQUEST['is_public'] : null );
 		$gContent->storePreference( 'allow_comments', !empty( $_REQUEST['allow_comments'] ) ? $_REQUEST['allow_comments'] : null );
 		$gContent->storePreference( 'gallery_pagination', !empty( $_REQUEST['gallery_pagination'] ) ? $_REQUEST['gallery_pagination'] : null );
 		$gContent->storePreference( 'link_original_images', !empty( $_REQUEST['link_original_images'] ) ? $_REQUEST['link_original_images'] : null );
+		$gContent->storePreference( 'total_per_page', !empty( $_REQUEST['total_per_page'] ) ? (int)$_REQUEST['total_per_page'] : null );
+		$gContent->storePreference( 'galleriffic_num_thumbs', !empty( $_REQUEST['galleriffic_num_thumbs'] ) ? (int)$_REQUEST['galleriffic_num_thumbs'] : null );
 		// make sure var is fully stuffed with current data
 		$gContent->load();
 		// set the mappings, or if nothing checked, nuke them all

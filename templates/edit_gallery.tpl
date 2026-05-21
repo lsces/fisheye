@@ -1,17 +1,19 @@
 {literal}
 <script>//<![CDATA[
 function updateGalleryPagination() {
-	document.getElementById('fixed_grid-pagination').style.display = 'none';
-	document.getElementById('auto_flow-pagination').style.display = 'none';
-	document.getElementById('position_number-pagination').style.display = 'none';
-	document.getElementById('simple_list-pagination').style.display = 'none';
-	document.getElementById('matteo-pagination').style.display = 'none';
-	document.getElementById('galleriffic-pagination').style.display = 'none';
+	var paginationIds = ['fixed_grid','auto_flow','position_number','simple_list','matteo','galleriffic'];
+	paginationIds.forEach(function(id) {
+		var div = document.getElementById(id+'-pagination');
+		div.style.display = 'none';
+		div.querySelectorAll('input, select').forEach(function(el) { el.disabled = true; });
+	});
 	var input = document.getElementById('editGalleryForm').gallery_pagination;
-    var i  = input.selectedIndex;
-    var select = input.options[i].value;
-	document.getElementById(select+'-pagination').style.display = 'block';
+	var select = input.options[input.selectedIndex].value;
+	var activeDiv = document.getElementById(select+'-pagination');
+	activeDiv.style.display = 'block';
+	activeDiv.querySelectorAll('input, select').forEach(function(el) { el.disabled = false; });
 }
+document.addEventListener('DOMContentLoaded', updateGalleryPagination);
 //]]></script>
 {/literal}
 {strip}
@@ -76,8 +78,8 @@ function updateGalleryPagination() {
 								</div>
 
 								<div id="auto_flow-pagination">
-									<input type="text" id="gallery-rows-per-page" name="total_per_page" size="2" maxlength="2" value="{$gContent->mInfo.rows_per_page|default:$gBitSystem->getConfig('fisheye_gallery_default_rows_per_page')}"/> {tr}Total images per page{/tr}
-									{formhelp note="The layout of the images on each gallery page will automatically adjust to the browsers width. You can specify the total number of thumbnails to display per page."}
+									<input type="text" id="gallery-total-per-page" name="total_per_page" size="3" maxlength="3" value="{$gContent->getPreference('total_per_page', $gContent->mInfo.rows_per_page|default:20)}"/> {tr}Total images per page{/tr}
+									{formhelp note="The layout of the images on each gallery page will automatically adjust to the browser width. You can specify the total number of thumbnails to display per page."}
 								</div>
 
 								<div id="position_number-pagination">
@@ -85,16 +87,17 @@ function updateGalleryPagination() {
 								</div>
 
 								<div id="simple_list-pagination">
-									<input type="text" id="gallery-rows-per-page" name="lines_per_page" size="2" maxlength="2" value="{$gContent->mInfo.rows_per_page|default:$gBitSystem->getConfig('fisheye_gallery_default_rows_per_page')}"/> {tr}Total lines per page{/tr}
+									<input type="text" id="gallery-total-per-page-list" name="total_per_page" size="3" maxlength="3" value="{$gContent->getPreference('total_per_page', $gContent->mInfo.rows_per_page|default:20)}"/> {tr}Total lines per page{/tr}
 									{formhelp note="This option allows a single column display of images with mime details where available."}
 								</div>
 
 								<div id="matteo-pagination">
-									<input type="text" id="gallery-rows-per-page" name="images_per_page" size="2" maxlength="2" value="{$gContent->mInfo.rows_per_page|default:$gBitSystem->getConfig('fisheye_gallery_default_rows_per_page')}"/> {tr}Total images per page{/tr}
+									<input type="text" id="gallery-total-per-page-matteo" name="total_per_page" size="3" maxlength="3" value="{$gContent->getPreference('total_per_page', $gContent->mInfo.rows_per_page|default:20)}"/> {tr}Total images per page{/tr}
 									{formhelp note="This option provides an ajax powered scrolling display using the mbGallery jquery library."}
 								</div>
 
 								<div id="galleriffic-pagination">
+									<input type="text" id="galleriffic-num-thumbs" name="galleriffic_num_thumbs" size="3" maxlength="3" value="{$gContent->getPreference('galleriffic_num_thumbs', $gBitSystem->getConfig('fisheye_gallery_default_galleriffic_num_thumbs', 30))}"/> {tr}Thumbnails per page{/tr}<br/>
 									<input type="text" id="galleriffic-style" name="galleriffic_style" size="2" maxlength="2" value="{$gContent->mInfo.galleriffic_style|default:$gBitSystem->getConfig('fisheye_gallery_default_galleriffic_style')}"/> {tr}Galleriffic layout style{/tr}
 									{formhelp note="This option provides a javascript powered tabbed thumbnail list display using the galleriffic jquery library."}
 								</div>
