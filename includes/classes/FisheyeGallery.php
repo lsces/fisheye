@@ -187,7 +187,7 @@ class FisheyeGallery extends FisheyeBase {
 						INNER JOIN `".BIT_DB_PREFIX."liberty_files` lf ON ( lf.`file_id`=la.`foreign_id` )
 					WHERE fgim.`gallery_content_id` = ?
 					ORDER BY fgim.`item_position`, fi.`content_id` ";
-			if( $rows = $this->mDb->getAssoc($query, [ $this->mContentId ] ) ) {
+			if( $rows = $this->mDb->getAll($query, [ $this->mContentId ] ) ) {
 				$tempImage = new FisheyeImage();
 				for( $i = 0; $i < count( $rows ); $i++ ) {
 					if( $rows[$i]['image_id'] == $pCurrentImageId ) {
