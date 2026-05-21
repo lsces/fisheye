@@ -167,10 +167,13 @@ not ready for primetime
 					if( !$parents ) break;
 					$found = false;
 					foreach( $parents as $galleryId => $galleryData ) {
-						if( is_array( $galleryData ) && isset( $galleryData['content_id'] ) ) {
+						if( is_numeric( $galleryId ) && is_array( $galleryData ) ) {
 							$ancestors[] = (int)$galleryId;
 							array_unshift( $pathIds, $galleryId );
-							$currentContentId = $galleryData['content_id'];
+							$currentContentId = $this->mDb->getOne(
+								"SELECT fg.`content_id` FROM `".BIT_DB_PREFIX."fisheye_gallery` fg WHERE fg.`gallery_id`=?",
+								[(int)$galleryId]
+							);
 							$found = true;
 							break;
 						}
