@@ -1,5 +1,5 @@
 {strip}
-{* include file="bitpackage:fisheye/gallery_nav.tpl" *}
+{include file="bitpackage:fisheye/gallery_nav.tpl"}
 <div class="display fisheye container">
 	<div class="header col-xs-12">
 		{include file="bitpackage:fisheye/gallery_icons_inc.tpl"}

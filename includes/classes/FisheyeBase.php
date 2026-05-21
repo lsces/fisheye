@@ -158,9 +158,26 @@ not ready for primetime
 		//$ret['fisheye'] = $gBitSystem->getConfig('site_title');
 		$ret = [];
 		if( !$this->getField( 'gallery_path' ) ) {
-			if( $this->isValid() && $parents = $this->getParentGalleries() ) {
-				$gal = current( $parents );
-				$this->setGalleryPath( '/'.$gal['gallery_id'] );
+			if( $this->isValid() ) {
+				$pathIds = [];
+				$currentContentId = $this->mContentId;
+				for( $depth = 0; $depth < 10; $depth++ ) {
+					$parents = $this->getParentGalleries( $currentContentId );
+					if( !$parents ) break;
+					$found = false;
+					foreach( $parents as $galleryId => $galleryData ) {
+						if( is_array( $galleryData ) && isset( $galleryData['content_id'] ) ) {
+							array_unshift( $pathIds, $galleryId );
+							$currentContentId = $galleryData['content_id'];
+							$found = true;
+							break;
+						}
+					}
+					if( !$found ) break;
+				}
+				if( $pathIds ) {
+					$this->setGalleryPath( '/'.implode( '/', $pathIds ) );
+				}
 			}
 		}
 		if( $this->getField( 'gallery_path' ) ) {

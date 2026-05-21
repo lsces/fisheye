@@ -3,14 +3,14 @@
 	<nav>
 		{assign var=breadCrumbs value=$gContent->getBreadcrumbLinks(1)}
 		<ol class="breadcrumb">
-			<li>
-		{if !empty($gGallery->mInfo)}
-			{displayname user=$gGallery->mInfo.creator_user user_id=$gGallery->mInfo.creator_user_id|default:0 real_name=$gGallery->mInfo.creator_real_name} :: <a href="{$smarty.const.FISHEYE_PKG_URL}?user_id={$gGallery->mInfo.user_id}">Galleries</a>
-		{else}
-			{displayname user=$gContent->mInfo.creator_user user_id=$gContent->mInfo.creator_user_id|default:0 real_name=$gContent->mInfo.creator_real_name} :: <a href="{$smarty.const.FISHEYE_PKG_URL}?user_id={$gContent->mInfo.user_id}">Galleries</a>
-		{/if}
-			</li>
-
+			{if $gContent->hasUpdatePermission()}
+				{if !empty($gGallery->mInfo)}
+					{assign var=creatorInfo value=$gGallery->mInfo}
+				{else}
+					{assign var=creatorInfo value=$gContent->mInfo}
+				{/if}
+				<li>{displayname user=$creatorInfo.creator_user user_id=$creatorInfo.creator_user_id|default:0 real_name=$creatorInfo.creator_real_name} :: <a href="{$smarty.const.FISHEYE_PKG_URL}?user_id={$creatorInfo.user_id}">Galleries</a></li>
+			{/if}
 			{if $breadCrumbs}
 				{foreach from=$breadCrumbs item=breadTitle key=breadId}
 					{if $breadId==$gContent->mGalleryId}<li class="active">{$breadTitle}</li>

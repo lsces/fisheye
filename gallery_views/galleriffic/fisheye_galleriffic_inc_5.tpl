@@ -1,20 +1,10 @@
-{strip}<div class="galleriffic">
+{strip}
+{include file="bitpackage:fisheye/gallery_nav.tpl"}
+<div class="galleriffic">
 
 <div class="header">
 	{include file="bitpackage:fisheye/gallery_icons_inc.tpl"}
 	<h1>{$gContent->getTitle()|escape}</h1>
-	<nav>
-		{assign var=breadCrumbs value=$gContent->getBreadcrumbLinks(1)}
-		<ol class="breadcrumb">
-			<li>{displayname user=$gContent->mInfo.creator_user user_id=$gContent->mInfo.creator_user_id|default:0 real_name=$gContent->mInfo.creator_real_name} :: <a href="{$smarty.const.FISHEYE_PKG_URL}?user_id={$gContent->mInfo.user_id}">{tr}Galleries{/tr}</a></li>
-			{if $breadCrumbs}
-				{foreach from=$breadCrumbs item=breadTitle key=breadId}
-					{if $breadId==$gContent->mGalleryId}<li class="active">{$breadTitle}</li>
-					{else}<li><a href="{$smarty.const.FISHEYE_PKG_URL}gallery/{$breadId}">{$breadTitle}</a></li>{/if}
-				{/foreach}
-			{/if}
-		</ol>
-	</nav>
 </div>
 
 
