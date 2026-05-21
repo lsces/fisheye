@@ -108,7 +108,7 @@ jQuery(document).ready(function($) {
 	// Initialize Advanced Galleriffic Gallery
 	var gallery = $('#thumbs').galleriffic({
 		delay:                     2500,
-		numThumbs:                 {$gContent->getPreference('galleriffic_num_thumbs', $gBitSystem->getConfig('fisheye_gallery_default_galleriffic_num_thumbs', 30))},
+		numThumbs:                 {/literal}{$gContent->getPreference('galleriffic_num_thumbs', $gBitSystem->getConfig('fisheye_gallery_default_galleriffic_num_thumbs', 30))}{literal},
 		preloadAhead:              10,
 		enableTopPager:            false,
 		enableBottomPager:         false,
