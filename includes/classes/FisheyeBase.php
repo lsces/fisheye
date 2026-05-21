@@ -159,6 +159,7 @@ not ready for primetime
 		$ret = [];
 		if( !$this->getField( 'gallery_path' ) ) {
 			if( $this->isValid() ) {
+				$ancestors = [];
 				$pathIds = [];
 				$currentContentId = $this->mContentId;
 				for( $depth = 0; $depth < 10; $depth++ ) {
@@ -167,6 +168,7 @@ not ready for primetime
 					$found = false;
 					foreach( $parents as $galleryId => $galleryData ) {
 						if( is_array( $galleryData ) && isset( $galleryData['content_id'] ) ) {
+							$ancestors[] = (int)$galleryId;
 							array_unshift( $pathIds, $galleryId );
 							$currentContentId = $galleryData['content_id'];
 							$found = true;
@@ -177,10 +179,18 @@ not ready for primetime
 				}
 				if( $pathIds ) {
 					$this->setGalleryPath( '/'.implode( '/', $pathIds ) );
+					foreach( array_reverse( $ancestors ) as $gid ) {
+						$ret[$gid] = $this->mDb->getOne(
+							"SELECT lc.`title` FROM `".BIT_DB_PREFIX."liberty_content` lc
+							 INNER JOIN `".BIT_DB_PREFIX."fisheye_gallery` fg ON (fg.`content_id`=lc.`content_id`)
+							 WHERE fg.`gallery_id`=?",
+							[$gid]
+						);
+					}
 				}
 			}
 		}
-		if( $this->getField( 'gallery_path' ) ) {
+		if( !$ret && $this->getField( 'gallery_path' ) ) {
 			$path = explode( '/', ltrim( $this->getField( 'gallery_path' ), '/' ) );
 			$p = 0;
 			$c = 1;
