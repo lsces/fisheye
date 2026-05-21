@@ -6,6 +6,7 @@
  */
 
 use Bitweaver\KernelTools;
+use Bitweaver\HttpStatusCodes;
 
 /**
  * required setup
@@ -26,8 +27,11 @@ global $gHideModules;
 $gHideModules = $gBitSystem->isFeatureActive( 'fisheye_gallery_hide_modules' );
 
 if ( !$gContent->isValid() ) {
+	if ( !empty( $_REQUEST['gallery_id'] ) ) {
+		$gBitSystem->fatalError( KernelTools::tra('No gallery exists with the given ID'), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
+	}
 	// No gallery was indicated so we will redirect to the browse galleries page
-	KernelTools::bit_redirect( FISHEYE_PKG_URL."list_galleries.php", '404' );
+	KernelTools::bit_redirect( FISHEYE_PKG_URL."list_galleries.php", HttpStatusCodes::HTTP_FOUND );
 	die;
 }
 
