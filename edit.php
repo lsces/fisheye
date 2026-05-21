@@ -31,6 +31,15 @@ if( $gBitUser->hasPermission( 'p_fisheye_change_thumb_size' ) ) {
 $gBitSmarty->assign( 'galleryPaginationTypes', $gContent::getAllLayouts() );
 
 if( !empty( $_REQUEST['savegallery'] ) ) {
+	// When creating a sub-gallery, inherit protector role from the first parent if not explicitly set
+	if( !$gContent->isValid() && !empty( $_REQUEST['gallery_additions'] ) && ( !isset( $_REQUEST['protector']['role_id'] ) || $_REQUEST['protector']['role_id'] == -1 ) ) {
+		$parentGalleryId = reset( $_REQUEST['gallery_additions'] );
+		if( $parentContentId = $gContent->mDb->GetOne( "SELECT `content_id` FROM `".BIT_DB_PREFIX."fisheye_gallery` WHERE `gallery_id`=?", [ $parentGalleryId ] ) ) {
+			if( ( $parentRole = $gContent->mDb->GetOne( "SELECT `role_id` FROM `".BIT_DB_PREFIX."liberty_content_role_map` WHERE `content_id`=?", [ $parentContentId ] ) ) !== false ) {
+				$_REQUEST['protector']['role_id'] = $parentRole;
+			}
+		}
+	}
 	if( $gContent->store( $_REQUEST ) ) {
 		$gContent->storePreference( 'is_public', !empty( $_REQUEST['is_public'] ) ? $_REQUEST['is_public'] : null );
 		$gContent->storePreference( 'allow_comments', !empty( $_REQUEST['allow_comments'] ) ? $_REQUEST['allow_comments'] : null );

@@ -122,6 +122,15 @@ function fisheye_store_upload( &$pFileHash, $pImageData = [], $pAutoRotate=true 
 	if( !empty( $pFileHash ) && ( $pFileHash['size'] > 0 ) && is_file( $pFileHash['tmp_name'] ) && fisheye_verify_upload_item(  $pFileHash ) ) {
 		// make a copy for each image we need to store
 		$image = new FisheyeImage();
+		// Inherit protector role from the target gallery if not explicitly set
+		if( !isset( $pImageData['protector']['role_id'] ) && !empty( $pImageData['gallery_additions'] ) ) {
+			$parentGalleryId = reset( $pImageData['gallery_additions'] );
+			if( $parentContentId = $image->mDb->GetOne( "SELECT `content_id` FROM `".BIT_DB_PREFIX."fisheye_gallery` WHERE `gallery_id`=?", [ $parentGalleryId ] ) ) {
+				if( ( $parentRole = $image->mDb->GetOne( "SELECT `role_id` FROM `".BIT_DB_PREFIX."liberty_content_role_map` WHERE `content_id`=?", [ $parentContentId ] ) ) !== false ) {
+					$pImageData['protector']['role_id'] = $parentRole;
+				}
+			}
+		}
 		// Store/Update the image
 		$pImageData['_files_override'] = [ $pFileHash ];
 		$pImageData['process_storage'] = STORAGE_IMAGE;
