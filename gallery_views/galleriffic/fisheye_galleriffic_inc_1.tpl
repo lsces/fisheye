@@ -7,6 +7,11 @@
 	<h1>{$gContent->getTitle()|escape}</h1>
 </div>
 
+{if $gContent->mInfo.data && $gContent->getPreference('show_description') ne 'n'}
+<div class="body">
+	<p>{$gContent->mInfo.data|escape}</p>
+</div>
+{/if}
 
 <!-- Start Advanced Gallery Html Containers -->				
 <div class="navigation-container">

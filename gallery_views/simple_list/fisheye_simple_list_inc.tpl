@@ -4,6 +4,12 @@
 	<h1>{$gContent->getTitle()|escape}</h1>
 </div>
 
+{if $gContent->mInfo.data && $gContent->getPreference('show_description') ne 'n'}
+<div class="body">
+	<p>{$gContent->mInfo.data|escape}</p>
+</div>
+{/if}
+
 	{assign var=thumbsize value='small'}
 	<table class="data">
 		<caption>{tr}List of files{/tr} <span class="total">[ {$galInfo.total_records|default:0} ]</span></caption>

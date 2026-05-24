@@ -51,6 +51,13 @@ document.addEventListener('DOMContentLoaded', updateGalleryPagination);
 							{/forminput}
 						</div>
 
+						<div class="form-group">
+							{forminput label="checkbox"}
+								<input type="checkbox" name="show_description" id="show_description" value="y" {if $gContent->getPreference('show_description') ne 'n'}checked="checked"{/if} />{tr}Show Description{/tr}
+								{formhelp note="Display the gallery description text below the gallery header."}
+							{/forminput}
+						</div>
+
 						{if $gBitUser->hasPermission('p_fisheye_create_public_gal')}
 							<div class="form-group">
 								{forminput label="checkbox"}

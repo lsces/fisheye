@@ -10,7 +10,7 @@
 		{formfeedback success=$fisheyeSuccess error=$fisheyeErrors warning=$fisheyeWarnings}
 
 		{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='body' serviceHash=$gContent->mInfo}
-		{if $gContent->mInfo.data}
+		{if $gContent->mInfo.data && $gContent->getPreference('show_description') ne 'n'}
 			<p>{$gContent->mInfo.data|escape}</p>
 		{/if}
 

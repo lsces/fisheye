@@ -5,6 +5,13 @@
 		{include file="bitpackage:fisheye/gallery_icons_inc.tpl"}
 		<h1>{$gContent->getTitle()|escape}</h1>
 	</div>
+
+	{if $gContent->mInfo.data && $gContent->getPreference('show_description') ne 'n'}
+	<div class="body">
+		<p>{$gContent->mInfo.data|escape}</p>
+	</div>
+	{/if}
+
 	<div class="body">
 		{if $gContent->mGalleryId != 0}
 			<table class="thumbnailblock">

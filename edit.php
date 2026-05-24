@@ -47,6 +47,7 @@ if( !empty( $_REQUEST['savegallery'] ) ) {
 		$gContent->storePreference( 'link_original_images', !empty( $_REQUEST['link_original_images'] ) ? $_REQUEST['link_original_images'] : null );
 		$gContent->storePreference( 'total_per_page', !empty( $_REQUEST['total_per_page'] ) ? (int)$_REQUEST['total_per_page'] : null );
 		$gContent->storePreference( 'galleriffic_num_thumbs', !empty( $_REQUEST['galleriffic_num_thumbs'] ) ? (int)$_REQUEST['galleriffic_num_thumbs'] : null );
+		$gContent->storePreference( 'show_description', !empty( $_REQUEST['show_description'] ) ? 'y' : 'n' );
 		// make sure var is fully stuffed with current data
 		$gContent->load();
 		// set the mappings, or if nothing checked, nuke them all
