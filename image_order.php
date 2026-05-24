@@ -178,7 +178,9 @@ if (!empty($_REQUEST['cancel'])) {
 				if( !empty( $storageHash ) ) {
 					$galleryItem->store($storageHash);
 				}
-				$galleryItem->updatePosition($gContent->mContentId, $newPos);
+				if( method_exists( $galleryItem, 'updatePosition' ) ) {
+					$galleryItem->updatePosition($gContent->mContentId, $newPos);
+				}
 			}
 		}
 		unset( $storageHash );
