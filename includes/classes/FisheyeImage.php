@@ -212,13 +212,16 @@ class FisheyeImage extends FisheyeBase {
 
 			// Set some default values based on the Exif data
 			if( !empty( $exifHash['IFD0']['ImageDescription'] ) ) {
-				if( empty( $pParamHash['title'] ) ) {
-					$exifTitle = trim( $exifHash['IFD0']['ImageDescription'] );
-					if( !empty( $exifTitle ) ) {
-						$pParamHash['title'] = $exifTitle;
+				$exifDesc = trim( $exifHash['IFD0']['ImageDescription'] );
+				// Sony cameras stamp 'SONY DSC' into ImageDescription — ignore it
+				if( $exifDesc !== 'SONY DSC' ) {
+					if( empty( $pParamHash['title'] ) ) {
+						if( !empty( $exifDesc ) ) {
+							$pParamHash['title'] = $exifDesc;
+						}
+					} elseif( empty( $pParamHash['edit'] ) && !$this->getField( 'data' ) && $pParamHash['title'] != $exifDesc ) {
+						$pParamHash['edit'] = $exifDesc;
 					}
-				} elseif( empty( $pParamHash['edit'] ) && !$this->getField( 'data' ) && $pParamHash['title'] != $exifHash['IFD0']['ImageDescription'] ) {
-					$pParamHash['edit'] = $exifHash['IFD0']['ImageDescription'];
 				}
 			}
 
