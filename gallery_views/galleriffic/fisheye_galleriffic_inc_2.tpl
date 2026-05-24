@@ -191,30 +191,67 @@ jQuery(document).ready(function($) {
 {/jstab}
 {if $hasVideos}
 {jstab title="Videos"}
-<table class="data">
-	<caption>{tr}Videos{/tr}</caption>
-	<tr>
-		<th style="width:1%"></th>
-		<th>{tr}Title{/tr}</th>
-		<th style="width:15%">{tr}Actions{/tr}</th>
-	</tr>
-	{foreach from=$gContent->mItems item=galItem}
-		{if is_a($galItem, '\Bitweaver\Fisheye\FisheyeImage') && $galItem->mInfo.mime_type|substr:0:6 == 'video/'}
-		<tr>
-			<td>{if $galItem->mInfo.thumbnail_url.small}<img src="{$galItem->mInfo.thumbnail_url.small}" alt="{$galItem->mInfo.title|escape}" />{/if}</td>
-			<td><a href="{$galItem->getDisplayUrl()|escape}">{$galItem->getTitle()|escape}</a></td>
-			<td class="actionicon">
-				{if $gBitUser->hasPermission('p_treasury_view_item')}
-					<a href="{$galItem->getDisplayUrl()|escape}">{booticon iname="fa-folder-open" iexplain="View"}</a>
+<div class="row">
+	<div class="col-sm-4" id="fisheye-video-list" style="overflow-y:auto;max-height:500px;border-right:1px solid #ddd;">
+		{foreach from=$gContent->mItems item=galItem}
+			{if is_a($galItem, '\Bitweaver\Fisheye\FisheyeImage') && $galItem->mInfo.mime_type|substr:0:6 == 'video/'}
+			<div class="fisheye-video-item"
+			     data-src="{$galItem->mInfo.download_url|escape}"
+			     data-type="{$galItem->mInfo.mime_type|escape}"
+			     data-title="{$galItem->mInfo.title|escape}"
+			     data-url="{$galItem->getDisplayUrl()|escape}"
+			     style="cursor:pointer;padding:8px;border-bottom:1px solid #eee;">
+				{if $galItem->mInfo.thumbnail_url.small}
+					<img src="{$galItem->mInfo.thumbnail_url.small}" style="float:left;margin-right:8px;max-width:80px;" alt="" />
+				{else}
+					{booticon iname="fa-film" isize="medium" iexplain="Video"}
 				{/if}
-				{if $gBitUser->hasPermission('p_treasury_download_item') && $galItem->mInfo.download_url}
-					<a href="{$galItem->mInfo.download_url|escape}">{biticon ipackage="icons" iname="emblem-downloads" iexplain="Download"}</a>
-				{/if}
-			</td>
-		</tr>
-		{/if}
-	{/foreach}
-</table>
+				<span>{$galItem->mInfo.title|escape}</span>
+				<div style="clear:both;"></div>
+			</div>
+			{/if}
+		{/foreach}
+	</div>
+	<div class="col-sm-8">
+		<p class="norecords" id="fisheye-video-prompt">{tr}Select a video from the list to play.{/tr}</p>
+		<video id="fisheye-video-player" controls preload="metadata" style="width:100%;max-height:500px;display:none;">
+			<source id="fisheye-video-src" src="" type="video/mp4" />
+			<p>{tr}Your browser does not support HTML5 video.{/tr}</p>
+		</video>
+		<div id="fisheye-video-meta" style="display:none;margin-top:8px;">
+			<h4 id="fisheye-video-title"></h4>
+			<a id="fisheye-video-link" href="">{tr}Full page{/tr}</a>
+		</div>
+	</div>
+</div>
+<script>
+{literal}
+(function() {
+	function fisheyePlayVideo(el) {
+		var player  = document.getElementById('fisheye-video-player');
+		var srcEl   = document.getElementById('fisheye-video-src');
+		srcEl.src   = el.getAttribute('data-src');
+		srcEl.type  = el.getAttribute('data-type');
+		player.load();
+		player.play();
+		player.style.display = '';
+		document.getElementById('fisheye-video-prompt').style.display = 'none';
+		document.getElementById('fisheye-video-title').textContent = el.getAttribute('data-title');
+		document.getElementById('fisheye-video-link').href = el.getAttribute('data-url');
+		document.getElementById('fisheye-video-meta').style.display = '';
+		document.querySelectorAll('.fisheye-video-item').forEach(function(item) {
+			item.style.background = '';
+		});
+		el.style.background = '#e8f4fe';
+	}
+	document.addEventListener('DOMContentLoaded', function() {
+		document.querySelectorAll('.fisheye-video-item').forEach(function(el) {
+			el.addEventListener('click', function() { fisheyePlayVideo(this); });
+		});
+	});
+}());
+{/literal}
+</script>
 {/jstab}
 {/if}
 {/jstabs}
