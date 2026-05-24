@@ -20,7 +20,8 @@
 	{/if}
 {/foreach}
 
-{if $hasVideos}{jstabs}{jstab title="Pictures"}{/if}
+{jstabs}
+{jstab title="Pictures"}
 
 <!-- Start Advanced Gallery Html Containers -->
 <div class="navigation-container">
@@ -187,8 +188,8 @@ jQuery(document).ready(function($) {
 {/literal}
 /*]]>*/</script>
 
-{if $hasVideos}
 {/jstab}
+{if $hasVideos}
 {jstab title="Videos"}
 <table class="data">
 	<caption>{tr}Videos{/tr}</caption>
@@ -215,8 +216,8 @@ jQuery(document).ready(function($) {
 	{/foreach}
 </table>
 {/jstab}
-{/jstabs}
 {/if}
+{/jstabs}
 
 </div>
 {/strip}
