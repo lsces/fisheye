@@ -1,0 +1,222 @@
+{strip}
+{include file="bitpackage:fisheye/gallery_nav.tpl"}
+<div class="galleriffic">
+
+<div class="header">
+	{include file="bitpackage:fisheye/gallery_icons_inc.tpl"}
+	<h1>{$gContent->getTitle()|escape}</h1>
+</div>
+
+{if $gContent->mInfo.data && $gContent->getPreference('show_description') ne 'n'}
+<div class="body">
+	<p>{$gContent->mInfo.data|escape}</p>
+</div>
+{/if}
+
+{assign var=hasVideos value=false}
+{foreach from=$gContent->mItems item=_scanItem}
+	{if is_a($_scanItem, '\Bitweaver\Fisheye\FisheyeImage') && $_scanItem->mInfo.mime_type|substr:0:6 == 'video/'}
+		{assign var=hasVideos value=true}
+	{/if}
+{/foreach}
+
+{if $hasVideos}{jstabs}{jstab title="Pictures"}{/if}
+
+<!-- Start Advanced Gallery Html Containers -->
+<div class="navigation-container">
+	<div id="thumbs" class="navigation">
+		<div>
+		<ul class="thumbs noscript">
+			{foreach from=$gContent->mItems item=galItem}
+			{if !is_a($galItem, '\Bitweaver\Fisheye\FisheyeImage') || $galItem->mInfo.thumbnail_url.avatar}
+			<li>
+				{if is_a($galItem, '\Bitweaver\Fisheye\FisheyeImage')}
+					<a class="thumb" name="{$galItem->mImageId}" href="{$galItem->mInfo.thumbnail_url.large}{*$smarty.const.FISHEYE_PKG_URL}view_image.php?image_id={$galItem->mImageId*}" title="{$galItem->mInfo.title|escape}">
+						<img src="{$galItem->mInfo.thumbnail_url.avatar}" alt="{$galItem->mInfo.title|escape}" />
+					</a>
+					<h2 class="heading">
+						<div class="image-heading">{booticon iname="icon-picture" isize="small" iexplain=$galItem->getContentTypeName()|escape}{$galItem->getDisplayLink( null )}</div>
+					</h2>
+					<div class="caption">
+						<div class="meta floatright">
+							{if $galItem->mInfo.event_time}
+							<div class="photo-date date">
+								{$galItem->mInfo.event_time|bit_short_date}
+							</div>
+							{/if}
+							{if ($galItem->hasUpdatePermission() || $gContent->getPreference('link_original_images')) && $galItem->getDownloadUrl()}
+							<div class="download">
+								<a href="{$galItem->getDownloadUrl()}">{tr}Download Original{/tr}</a>
+								{if $galItem->mInfo.width && $galItem->mInfo.height}
+								<div class="photo-date">{$galItem->mInfo.width}x{$galItem->mInfo.height} {tr}pixels{/tr}</div>
+								{/if}
+							</div>
+							{/if}
+						</div>
+						<div class="image-title"><p>{$galItem->mInfo.title|escape}</p></div>
+						<div class="image-desc"><p>{$galItem->mInfo.description|default:''}</p></div>
+					</div>
+				{elseif is_a($galItem, '\Bitweaver\Fisheye\FisheyeGallery')}
+					<a class="thumb" name="{$galItem->mContentId}" href="{$galItem->mPreviewImage->mInfo.thumbnail_url.large}" title="{$galItem->mInfo.title|escape}">
+						<img src="{$galItem->mPreviewImage->mInfo.thumbnail_url.avatar}" alt="{$galItem->mInfo.title|escape}"/>
+					</a>
+					<div class="heading">
+						<h2>{booticon iname="icon-picture" isize="small" iexplain=$galItem->getContentTypeName()|escape}{$galItem->getDisplayLink( null )}</h2><span class="image-count">({$galItem->getImageCount()} {tr}Items{/tr})</span>
+					</div>
+					<div class="caption">
+						<div class="image-title"><p>{$galItem->mInfo.title|escape}</p></div>
+						<div class="image-desc">{$galItem->mInfo.description|default:''}</div>
+						<div class="download"></div>
+					</div>
+				{/if}
+			</li>
+			{/if}
+			{/foreach}
+		</ul>
+		</div>
+	</div>
+	<div class="clear"></div>
+	{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='view' serviceHash=$gContent->mInfo}
+
+	{if $gContent->getPreference('allow_comments') eq 'y'}
+		{include file="bitpackage:liberty/comments.tpl"}
+	{/if}
+
+</div>
+
+<div id="gallery" class="content">
+	<div class="slideshow-container">
+		<div id="heading" class="heading-container"></div>
+		<div id="controls" class="controls"></div>
+		<div id="loading" class="loader"></div>
+		<div id="slideshow" class="slideshow"></div>
+		<div id="imagedetails" class="image-details-container"></div>
+	</div>
+	<div id="caption" class="caption-container"></div>
+</div>
+
+<script>/*<![CDATA[*/
+{literal}
+jQuery(document).ready(function($) {
+	// We only want these styles applied when javascript is enabled
+	$('div.content').css('display', 'block');
+
+	// Initially set opacity on thumbs and add
+	// additional styling for hover effect on thumbs
+	var onMouseOutOpacity = 0.67;
+	$('#thumbs ul.thumbs li').opacityrollover({
+		mouseOutOpacity:   onMouseOutOpacity,
+		mouseOverOpacity:  1.0,
+		fadeSpeed:         'fast',
+		exemptionSelector: '.selected'
+	});
+
+	// Initialize Advanced Galleriffic Gallery
+	var gallery = $('#thumbs').galleriffic({
+		delay:                     2500,
+		numThumbs:                 {/literal}{$gContent->getPreference('galleriffic_num_thumbs', $gBitSystem->getConfig('fisheye_gallery_default_galleriffic_num_thumbs', 30))}{literal},
+		preloadAhead:              10,
+		enableTopPager:            true,
+		enableBottomPager:         true,
+		maxPagesToShow:            6,
+		imageContainerSel:         '#slideshow',
+		controlsContainerSel:      '#controls',
+		headingContainerSel:       '#heading',
+		captionContainerSel:       '#caption',
+		loadingContainerSel:       '#loading',
+		renderSSControls:          true,
+		renderNavControls:         true,
+		playLinkText:              '',
+		playLinkImage:             '{/literal}{booticon iname="icon-control-start" isize="small" iexplain="Play Slideshow"}{literal}',
+		pauseLinkText:             '',
+		pauseLinkImage:            '{/literal}{booticon iname="icon-control-pause" isize="small" iexplain="Pause Slideshow"}{literal}',
+		prevLinkText:              '&laquo;',
+		nextLinkText:              '&raquo;',
+		nextPageLinkText:          'Next &rsaquo;',
+		prevPageLinkText:          '&lsaquo; Prev',
+		enableHistory:             true,
+		autoStart:                 false,
+		syncTransitions:           false,
+		defaultTransitionDuration: 250,
+		onSlideChange:             function(prevIndex, currentIndex) {
+			// 'this' refers to the gallery, which is an extension of $('#thumbs')
+			this.find('ul.thumbs').children()
+				.eq(prevIndex).fadeTo('fast', onMouseOutOpacity).end()
+				.eq(currentIndex).fadeTo('fast', 1.0);
+
+			// Update the photo index display
+			$('.photo-index').html( (currentIndex+1) +' of '+ this.data.length);
+		},
+		onImageLoadFinish:			function(pImageData) {
+			jQuery.ajax({
+				url: '{/literal}{$smarty.const.FISHEYE_PKG_URL}view_image_details.php?image_id={literal}'+pImageData.hash,
+				success: function(data) {
+					$('#imagedetails').html(data);
+				}
+			});
+		},
+		onPageTransitionOut:       function(callback) {
+			this.fadeTo('fast', 0.0, callback);
+		},
+		onPageTransitionIn:        function() {
+			var prevPageLink = this.find('a.prev').css('visibility', 'hidden');
+			var nextPageLink = this.find('a.next').css('visibility', 'hidden');
+
+			// Show appropriate next / prev page links
+			if (this.displayedPage > 0)
+				prevPageLink.css('visibility', 'visible');
+
+			var lastPage = this.getNumPages() - 1;
+			if (this.displayedPage < lastPage)
+				nextPageLink.css('visibility', 'visible');
+
+			this.fadeTo('fast', 1.0);
+		}
+	});
+
+	gallery.find('a.prev').click(function(e) {
+		gallery.previousPage();
+		e.preventDefault();
+	});
+
+	gallery.find('a.next').click(function(e) {
+		gallery.nextPage();
+		e.preventDefault();
+	});
+});
+{/literal}
+/*]]>*/</script>
+
+{if $hasVideos}
+{/jstab}
+{jstab title="Videos"}
+<table class="data">
+	<caption>{tr}Videos{/tr}</caption>
+	<tr>
+		<th style="width:1%"></th>
+		<th>{tr}Title{/tr}</th>
+		<th style="width:15%">{tr}Actions{/tr}</th>
+	</tr>
+	{foreach from=$gContent->mItems item=galItem}
+		{if is_a($galItem, '\Bitweaver\Fisheye\FisheyeImage') && $galItem->mInfo.mime_type|substr:0:6 == 'video/'}
+		<tr>
+			<td>{if $galItem->mInfo.thumbnail_url.small}<img src="{$galItem->mInfo.thumbnail_url.small}" alt="{$galItem->mInfo.title|escape}" />{/if}</td>
+			<td><a href="{$galItem->getDisplayUrl()|escape}">{$galItem->getTitle()|escape}</a></td>
+			<td class="actionicon">
+				{if $gBitUser->hasPermission('p_treasury_view_item')}
+					<a href="{$galItem->getDisplayUrl()|escape}">{booticon iname="fa-folder-open" iexplain="View"}</a>
+				{/if}
+				{if $gBitUser->hasPermission('p_treasury_download_item') && $galItem->mInfo.download_url}
+					<a href="{$galItem->mInfo.download_url|escape}">{biticon ipackage="icons" iname="emblem-downloads" iexplain="Download"}</a>
+				{/if}
+			</td>
+		</tr>
+		{/if}
+	{/foreach}
+</table>
+{/jstab}
+{/jstabs}
+{/if}
+
+</div>
+{/strip}
