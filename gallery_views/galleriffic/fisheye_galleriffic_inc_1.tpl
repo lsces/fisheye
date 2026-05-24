@@ -19,6 +19,7 @@
 		<div>
 		<ul class="thumbs noscript">
 			{foreach from=$gContent->mItems item=galItem}
+			{if !is_a($galItem, '\Bitweaver\Fisheye\FisheyeImage') || $galItem->mInfo.thumbnail_url.avatar}
 			<li>
 				{if is_a($galItem, '\Bitweaver\Fisheye\FisheyeImage')}
 					<a class="thumb" name="{$galItem->mImageId}" href="{$galItem->mInfo.thumbnail_url.large}{*$smarty.const.FISHEYE_PKG_URL}view_image.php?image_id={$galItem->mImageId*}" title="{$galItem->mInfo.title|escape}">
@@ -62,6 +63,7 @@
 					</div>
 				{/if}
 			</li>
+			{/if}
 			{/foreach}	
 		</ul>			
 		</div>
