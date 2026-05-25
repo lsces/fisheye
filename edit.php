@@ -54,10 +54,13 @@ if( !empty( $_REQUEST['savegallery'] ) ) {
 		// set the mappings, or if nothing checked, nuke them all
 		$gContent->addToGalleries( !empty( $_REQUEST['gallery_additions'] ) ? $_REQUEST['gallery_additions'] : null );
 
+		header("location: ".$gContent->getDisplayUrl() );
 		if( !empty( $_REQUEST['generate_thumbnails'] ) ) {
+			if( function_exists( 'fastcgi_finish_request' ) ) {
+				fastcgi_finish_request();
+			}
 			$gContent->generateGalleryThumbnails();
 		}
-		header("location: ".$gContent->getDisplayUrl() );
 		die();
 	}
 } elseif( !empty( $_REQUEST['delete'] ) ) {
