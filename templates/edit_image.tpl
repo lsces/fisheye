@@ -66,6 +66,7 @@
 							{/forminput}
 						</div>
 
+						{if $gContent->mInfo.mime_type|substr:0:6 == 'image/'}
 						<div class="form-group">
 							{formlabel label="Rotate Image"}
 							{forminput}
@@ -81,6 +82,7 @@
 						<div class="form-group">
 							{include file="bitpackage:fisheye/resize_image_select.tpl"}
 						</div>
+						{/if}
 
 						{include file="bitpackage:liberty/edit_services_inc.tpl" serviceFile="content_edit_mini_tpl"}
 				{/jstab}
