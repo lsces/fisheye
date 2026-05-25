@@ -55,7 +55,7 @@ if( !empty( $_REQUEST['savegallery'] ) ) {
 		$gContent->addToGalleries( !empty( $_REQUEST['gallery_additions'] ) ? $_REQUEST['gallery_additions'] : null );
 
 		if( !empty( $_REQUEST['generate_thumbnails'] ) ) {
-			$gContent->generateThumbnails();
+			$gContent->generateGalleryThumbnails();
 		}
 		header("location: ".$gContent->getDisplayUrl() );
 		die();

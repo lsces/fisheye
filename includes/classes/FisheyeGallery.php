@@ -402,6 +402,7 @@ class FisheyeGallery extends FisheyeBase {
 
 	public function generateGalleryThumbnails(): void {
 		if( $this->isValid() ) {
+			set_time_limit(0);
 			if( $this->loadImages() ) {
 				foreach( array_keys( $this->mItems ) as $key ) {
 					$this->mItems[$key]->generateThumbnails();

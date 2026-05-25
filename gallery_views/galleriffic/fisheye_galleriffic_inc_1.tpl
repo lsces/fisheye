@@ -22,7 +22,7 @@
 			{if !is_a($galItem, '\Bitweaver\Fisheye\FisheyeImage') || $galItem->mInfo.thumbnail_url.avatar}
 			<li>
 				{if is_a($galItem, '\Bitweaver\Fisheye\FisheyeImage')}
-					<a class="thumb" name="{$galItem->mImageId}" href="{$galItem->mInfo.thumbnail_url.large}{*$smarty.const.FISHEYE_PKG_URL}view_image.php?image_id={$galItem->mImageId*}" title="{$galItem->mInfo.title|escape}">
+					<a class="thumb" rel="nozoom" name="{$galItem->mImageId}" href="{$galItem->mInfo.thumbnail_url.large}{*$smarty.const.FISHEYE_PKG_URL}view_image.php?image_id={$galItem->mImageId*}" title="{$galItem->mInfo.title|escape}">
 						<img src="{$galItem->mInfo.thumbnail_url.avatar}" alt="{$galItem->mInfo.title|escape}" />
 					</a>
 					<h2 class="heading">
@@ -48,7 +48,7 @@
 						<div class="image-desc"><p>{$galItem->mInfo.description|default:''}</p></div>
 					</div>
 				{elseif is_a($galItem, '\Bitweaver\Fisheye\FisheyeGallery')}
-					<a class="thumb" name="{$galItem->mContentId}" href="{$galItem->mPreviewImage->mInfo.thumbnail_url.large}" title="{$galItem->mInfo.title|escape}">
+					<a class="thumb" rel="nozoom" name="{$galItem->mContentId}" href="{$galItem->mPreviewImage->mInfo.thumbnail_url.large}" title="{$galItem->mInfo.title|escape}">
 						<img src="{$galItem->mPreviewImage->mInfo.thumbnail_url.avatar}" alt="{$galItem->mInfo.title|escape}"/>
 					</a>
 					<div class="heading">

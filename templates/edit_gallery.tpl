@@ -125,6 +125,15 @@ document.addEventListener('DOMContentLoaded', updateGalleryPagination);
 							</div>
 						{/if}
 
+						{if $gContent->isValid()}
+							<div class="form-group">
+								{forminput label="checkbox"}
+									<input type="checkbox" name="generate_thumbnails" id="generate_thumbnails" value="y" />{tr}Regenerate All Thumbnails{/tr}
+									{formhelp note="Re-generate thumbnails for all images and videos in this gallery. This may take some time for large galleries."}
+								{/forminput}
+							</div>
+						{/if}
+
 						<div class="form-group">
 							{forminput label="checkbox"}
 								<input type="checkbox" name="allow_comments" id="allow_comments" value="y" {if !$gContent->isValid() || $gContent->getPreference('allow_comments') eq 'y'}checked="checked"{/if} />{tr}Image Comments{/tr}
