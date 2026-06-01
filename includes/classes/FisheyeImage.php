@@ -520,8 +520,11 @@ class FisheyeImage extends FisheyeBase {
 			$fileHash['dest_branch'] = $this->getStorageBranch( $fileHash );
 			$fileHash['name'] = $this->getField( 'file_name' );
 			$fileHash['thumbnail_sizes'] = $pThumbSizes;
+			$fileHash['attachment_id'] = $this->getField( 'attachment_id' );
 			if( substr( $fileHash['type'] ?? '', 0, 6 ) === 'video/' ) {
 				\Bitweaver\Liberty\mime_video_create_thumbnail( $fileHash['source_file'] );
+			} elseif( preg_match( '/pdf/i', $fileHash['type'] ?? '' ) ) {
+				\Bitweaver\Liberty\mime_pdf_thumbnail( $fileHash );
 			} else {
 				\Bitweaver\Liberty\liberty_generate_thumbnails( $fileHash );
 				if( !empty( $fileHash['error'] ) ) {
