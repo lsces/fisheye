@@ -64,6 +64,12 @@ if( !empty($_REQUEST['saveImage']) || !empty($_REQUEST['regenerateThumbnails'] )
 		}
 	}
 
+	$isPdf = !empty( $gContent->mInfo['mime_type'] ) && $gContent->mInfo['mime_type'] === 'application/pdf';
+	if( $isPdf && empty( $_REQUEST['reload_pdf'] ) ) {
+		// Preserve the extracted text layer — don't let an empty edit field wipe liberty_content.data
+		$_REQUEST['edit'] = $gContent->mInfo['data'];
+	}
+
 	$_REQUEST['purge_from_galleries'] = true;
 	if( $gContent->store($_REQUEST) ) {
 		// refresh all hashes
@@ -92,6 +98,25 @@ if( !empty($_REQUEST['saveImage']) || !empty($_REQUEST['regenerateThumbnails'] )
 		}
 		if( !empty( $_REQUEST['generate_thumbnails'] ) ) {
 			$gContent->generateThumbnails();
+		}
+		if( $isPdf && !empty( $_REQUEST['reload_pdf'] ) ) {
+			foreach( $gContent->mStorage as $attachmentId => $attachment ) {
+				if( !empty( $attachment['source_file'] ) ) {
+					$reloadHash = [
+						'attachment_id' => $attachmentId,
+						'content_id'    => $gContent->mContentId,
+						'upload'        => ['source_file' => $attachment['source_file']],
+					];
+					\Bitweaver\Liberty\mime_pdf_text_extract( $reloadHash );
+					if( !empty( $reloadHash['data'] ) ) {
+						$gBitSystem->mDb->query(
+							"UPDATE `".BIT_DB_PREFIX."liberty_content` SET `data` = ? WHERE `content_id` = ?",
+							[$reloadHash['data'], $gContent->mContentId]
+						);
+					}
+					break;
+				}
+			}
 		}
 		if( empty( $gContent->mErrors ) ) {
 			// add a refresh parameter to the URL so the thumbnails will properly refresh first go reload

@@ -40,12 +40,28 @@
 							{/forminput}
 						</div>
 
+						{if $gContent->mInfo.mime_type == 'application/pdf'}
+						<div class="form-group">
+							{formlabel label="Extracted Text"}
+							{forminput}
+								<textarea class="input-xlarge" rows="6" cols="50" readonly="readonly">{$gContent->mInfo.data|escape}</textarea>
+							{/forminput}
+						</div>
+						<div class="form-group">
+							{forminput}
+								{forminput label="checkbox"}
+									<input type="checkbox" name="reload_pdf" value="1"/> {tr}Re-extract text layer from PDF{/tr}
+								{/forminput}
+							{/forminput}
+						</div>
+						{else}
 						<div class="form-group">
 							{formlabel label="Description" for="image-desc"}
 							{forminput}
 								<textarea name="edit" class="input-xlarge" id="image-desc" rows="4" cols="50">{$gContent->mInfo.data|escape}</textarea>
 							{/forminput}
 						</div>
+						{/if}
 
 						<div class="form-group">
 							{if $gContent->getDownloadUrl()}
