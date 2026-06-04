@@ -46,10 +46,10 @@
 							<strong>{tr}Uploaded{/tr}</strong>: {$galItem->mInfo.created|bit_short_datetime}<br />
 							<strong>{tr}File name{/tr}</strong>: {$galItem->mInfo.filename|default:''} <br />
 								{if $galItem->mInfo.user_id == $gBitUser->mUserId || $gBitUser->isAdmin()}
-								<strong>{tr}Edit Image{/tr}</strong>: <a href="javascript:void(0);" data-toggle="modal" data-target="#imageEditModal" data-fetch-url="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?ajax=true&amp;content_id={$galItem->mInfo.content_id}&amp;gallery_id={$gContent->mGalleryId}">{booticon iname="fa-pen-to-square" iexplain="Edit Details"}</a>
-								<noscript><div><a href="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?content_id={$galItem->mInfo.content_id}">{booticon iname="fa-pen-to-square" iexplain="Edit Image"}</a></div></noscript>
+								<strong>{tr}Edit Image{/tr}</strong>: <a href="javascript:void(0);" data-toggle="modal" data-target="#imageEditModal" data-fetch-url="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?ajax=true&amp;content_id={$galItem->mInfo.content_id}&amp;gallery_id={$gContent->mGalleryId}">{biticon ipackage="icons" iname="document-properties" iexplain="Edit Details"}</a>
+								<noscript><div><a href="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?content_id={$galItem->mInfo.content_id}">{biticon ipackage="icons" iname="document-properties" iexplain="Edit Image"}</a></div></noscript>
 {*								jspopup href="`$smarty.const.FISHEYE_PKG_URL`edit_image.php?content_id=$galItem->mInfo.content_id" title="edit image" *}
-								<a target="_new" href="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?content_id={$galItem->mInfo.content_id}">{booticon iname="fa-pen-to-square" iexplain="Edit Image"}</a>
+								<a target="_new" href="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?content_id={$galItem->mInfo.content_id}">{biticon ipackage="icons" iname="document-properties" iexplain="Edit Image"}</a>
 								<br />
 								{/if}
 							{/if}

@@ -34,7 +34,7 @@ $pluginParams = [
 	'plugin_type'   => DATA_PLUGIN,
 
 	// display icon in quicktags bar
-	'booticon'       => '{booticon iname="icon-picture" iexplain="Image"}',
+	'booticon'       => '{biticon ipackage="icons" iname="image-x-generic" iexplain="Image"}',
 	'taginsert'     => '{carousel id= size= nolink=}',
 
 	// functions

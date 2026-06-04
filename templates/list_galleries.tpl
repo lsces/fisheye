@@ -10,7 +10,7 @@
 
 	<section class="body">
 		<ul class="list-inline sortby">
-			<li>{booticon iname="fa-circle-arrow-right" iexplain="sort by"}</li>
+			<li>{biticon ipackage="icons" iname="go-next" iexplain="sort by"}</li>
 			{if $gBitSystem->isFeatureActive('fisheye_list_title')}
 				<li>{smartlink ititle="Gallery Name" isort="title" user_id=$gQuerUserId offset=$iMaxRows home=$userInfo.login search=$iSearchString}</li>
 			{/if}
@@ -50,7 +50,7 @@
 							</a>
 							</h3><div class="security" style="position:absolute; top:5%;right:5%;color:#fff;">
 							{if $gal.is_hidden=='y' || $gal.is_private=='y' || $gal.access_answer}
-								{booticon iname="fa-lock" iexplain="Security" label=true}
+								{biticon ipackage="icons" iname="lock" iexplain="Security" label=true}
 							{/if}
 							{if $gal.is_hidden=='y'}
 								<span style="padding:5px;">{tr}Hidden{/tr}</span>
@@ -69,7 +69,7 @@
 							<strong>{displayname hash=$gal nolink=true}</strong> <small><a href="{$smarty.const.FISHEYE_PKG_URL}list_galleries.php?user_id={$gal.user_id}" style="display:block;">{tr}Galleries{/tr}</a></small>
 						{/if}
 						{* if $galleryList[ix]->isProtected()}
-							{booticon iname="fa-lock" iexplain="Protected"}
+							{biticon ipackage="icons" iname="lock" iexplain="Protected"}
 						{/if *}
 
 						{if $gBitSystem->isFeatureActive('fisheye_list_created' ) || $gBitSystem->isFeatureActive('fisheye_list_lastmodif' )}
