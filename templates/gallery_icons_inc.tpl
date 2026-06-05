@@ -14,7 +14,7 @@
 		{biticon ipackage="icons" iname="emblem-important"  ipackage="icons"  iexplain="Public"}
 	{/if}
 	{if $gContent->hasAdminPermission()}
-		<a title="{tr}User Permissions{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}edit.php?gallery_id={$gContent->mGalleryId}&amp;delete=1">{biticon ipackage="icons" iname="edit-delete" ipackage="icons" iexplain="Delete Gallery"}</a>
+		<a title="{tr}User Permissions{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}edit.php?gallery_id={$gContent->mGalleryId}&amp;delete=1">{biticon ipackage="icons" iname="user-trash" ipackage="icons" iexplain="Delete Gallery"}</a>
 	{* appears broken at the moment	<a title="{tr}User Permissions{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}edit_gallery_perms.php?gallery_id={$gContent->mGalleryId}">{biticon ipackage="icons" iname="lock" ipackage="icons" iexplain="User Permissions"}</a> *}
 	{/if}
 </div>
