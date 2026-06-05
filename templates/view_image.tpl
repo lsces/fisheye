@@ -9,7 +9,7 @@
 			{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='icon' serviceHash=$gContent->mInfo}
 			{if $gContent->hasUpdatePermission()}
 				<a title="{tr}Refresh{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}image/{$gContent->mImageId}?rethumb=1">{biticon ipackage="icons" iname="view-refresh" iexplain="Refresh"}</a>
-				<a title="{tr}Edit{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?image_id={$gContent->mImageId}">{biticon ipackage="icons" iname="document-properties" iexplain="Edit Image"}</a>
+				<a title="{tr}Edit{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?image_id={$gContent->mImageId}">{biticon ipackage="icons" iname="edit" iexplain="Edit Image"}</a>
 				<a title="{tr}Delete{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?image_id={$gContent->mImageId}&amp;delete=1">{biticon ipackage="icons" iname="user-trash" iexplain="Delete Image"}</a>
 			{/if}
 		</div>

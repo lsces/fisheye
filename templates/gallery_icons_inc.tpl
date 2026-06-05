@@ -4,7 +4,7 @@
 		<a title="{tr}Download Gallery{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}view.php?gallery_id={$gContent->mGalleryId}&amp;download=1">{biticon ipackage="icons" iname="network-receive" iexplain="Download Gallery"}</a>
 	{/if}
 	{if $gContent->hasUpdatePermission()}
-		<a title="{tr}Edit{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}edit.php?gallery_id={$gContent->mGalleryId}">{biticon ipackage="icons" iname="document-properties"  ipackage="icons"  iexplain="Edit"}</a>
+		<a title="{tr}Edit{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}edit.php?gallery_id={$gContent->mGalleryId}">{biticon ipackage="icons" iname="edit"  ipackage="icons"  iexplain="Edit"}</a>
 		<a title="{tr}Image Order{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}image_order.php?gallery_id={$gContent->mGalleryId}">{biticon ipackage="icons" iname="view-sort-ascending" iexplain="Image Order"}</a>
 	{/if}
 	{if $gContent->hasUpdatePermission() || $gContent->getPreference('is_public')}

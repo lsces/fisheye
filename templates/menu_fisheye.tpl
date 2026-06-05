@@ -2,7 +2,7 @@
 {if !empty($packageMenuTitle)}<a class="dropdown-toggle" data-toggle="dropdown" href="#"> {tr}{$packageMenuTitle}{/tr} <b class="caret"></b></a>{/if}
 <ul class="{$packageMenuClass}">
 	{if $gBitUser->hasPermission('p_fisheye_view')}
-		<li><a class="item" href="{$smarty.const.FISHEYE_PKG_URL}list_galleries.php">{biticon ipackage="icons" iname="text-x-generic" iexplain="List Galleries" ilocation=menu}</a></li>
+		<li><a class="item" href="{$smarty.const.FISHEYE_PKG_URL}list_galleries.php">{biticon ipackage="icons" iname="view-list-text" iexplain="List Galleries" ilocation=menu}</a></li>
 	{/if}
 	{if $gBitUser->hasPermission('p_fisheye_create')}
 		<li><a class="item" href="{$smarty.const.FISHEYE_PKG_URL}list_galleries.php?user_id={$gBitUser->mUserId}">{biticon ipackage="icons" iname="image-x-generic" iexplain="My Galleries" ilocation=menu}</a></li>
