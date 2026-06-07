@@ -28,7 +28,7 @@
 				{if !empty( $gGallery->mInfo.previous_image_id )}
 					<a href="{$gContent->getImageUrl($gGallery->mInfo.previous_image_id)|escape}">
 						{if $gBitSystem->isFeatureActive( 'gallerybar_use_icons' )}
-							{biticon ipackage="icons" iname="go-previous"  ipackage="icons"  iexplain=previous}
+							{biticon ipackage="icons" iname="go-previous"  iexplain=previous}
 						{else}
 							&laquo;&nbsp;{tr}previous{/tr}
 						{/if}

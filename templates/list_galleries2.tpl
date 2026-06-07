@@ -9,7 +9,7 @@
 
 	<section class="body">
 		<ul class="list-inline sortby">
-			<li>{biticon ipackage="icons" iname="go-next"  ipackage="icons"  iexplain="sort by" iforce="icon"}</li>
+			<li>{biticon ipackage="icons" iname="go-next"  iexplain="sort by" iforce="icon"}</li>
 			{if $gBitSystem->isFeatureActive('fisheye_list_title')}
 				<li>{smartlink ititle="Gallery Name" isort="title" user_id=$gQuerUserId offset=$iMaxRows home=$userInfo.login|default:'none' search=$iSearchString}</li>
 			{/if}
@@ -49,7 +49,7 @@
 							</a>
 							</h3><div class="security" style="position:absolute; top:5%;right:5%;color:#fff;">
 							{if $gal.is_hidden|default:'n' == 'y' || $gal.is_private|default:'n' == 'y' || $gal.access_answer|default:false}
-								{biticon ipackage="icons" iname="lock" ipackage="icons" iexplain="Security" label=true}
+								{biticon ipackage="icons" iname="lock" iexplain="Security" label=true}
 							{/if}
 							{if $gal.is_hidden|default:'n' =='y'}
 								<span style="padding:5px;">Hidden</span>
@@ -68,7 +68,7 @@
 							<strong>{displayname hash=$gal nolink=true}</strong> <small><a href="{$smarty.const.FISHEYE_PKG_URL}list_galleries.php?user_id={$gal.user_id}" style="display:block;">Galleries</a></small>
 						{/if}
 						{* if $galleryList[ix]->isProtected()}
-							{biticon ipackage="icons" iname="lock" ipackage="icons" iexplain="Protected"}
+							{biticon ipackage="icons" iname="lock" iexplain="Protected"}
 						{/if *}
 
 						{if $gBitSystem->isFeatureActive('fisheye_list_created' ) || $gBitSystem->isFeatureActive('fisheye_list_lastmodif' )}
