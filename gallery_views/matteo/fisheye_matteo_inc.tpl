@@ -38,13 +38,15 @@ $(function(){
 /*]]>*/</script>
 
 
-<div class="header">
+<div class="display fisheye">
+<header>
 	{include file="bitpackage:fisheye/gallery_icons_inc.tpl"}
 	<h1>{$gContent->getTitle()|escape}</h1>
-</div>
+	{include file="bitpackage:fisheye/gallery_breadcrumb_inc.tpl"}
+</header>
 
 {if $gContent->mInfo.data}
-	<p>{$gContent->mInfo.data|escape}</p>
+	<section class="body"><p>{$gContent->mInfo.data|escape}</p></section>
 {/if}
 
 {assign var=thumbsize value='avatar'}
@@ -61,3 +63,4 @@ $(function(){
 {if $gContent->getPreference('allow_comments') eq 'y'}
 	{include file="bitpackage:liberty/comments.tpl"}
 {/if}
+</div>

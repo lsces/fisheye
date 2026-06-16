@@ -1,24 +1,21 @@
 {strip}
-{include file="bitpackage:fisheye/gallery_nav.tpl"}
 <div class="display fisheye">
-	<div class="header">
+	<header>
 		{include file="bitpackage:fisheye/gallery_icons_inc.tpl"}
 		<h1>{$gContent->getTitle()|escape}</h1>
-	</div>
+		{include file="bitpackage:fisheye/gallery_breadcrumb_inc.tpl"}
+	</header>
 
 	{if $gContent->mInfo.data && $gContent->getPreference('show_description') ne 'n'}
-	<div class="body">
+	<section class="body">
 		<p>{$gContent->mInfo.data|escape}</p>
-	</div>
+	</section>
 	{/if}
 
 	<div class="body">
 		{formfeedback success=$fisheyeSuccess error=$fisheyeErrors warning=$fisheyeWarnings}
 
 		{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='body' serviceHash=$gContent->mInfo}
-		{if $gContent->mInfo.data}
-			<p>{$gContent->mInfo.data|escape}</p>
-		{/if}
 
 	<table class="thumbnailblock">
 		{counter assign="imageCount" start="0" print=false}

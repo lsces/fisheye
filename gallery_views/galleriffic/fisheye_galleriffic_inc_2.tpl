@@ -1,16 +1,16 @@
 {strip}
-{include file="bitpackage:fisheye/gallery_nav.tpl"}
-<div class="galleriffic">
+<div class="display fisheye">
 
-<div class="header">
+<header>
 	{include file="bitpackage:fisheye/gallery_icons_inc.tpl"}
 	<h1>{$gContent->getTitle()|escape}</h1>
-</div>
+	{include file="bitpackage:fisheye/gallery_breadcrumb_inc.tpl"}
+</header>
 
 {if $gContent->mInfo.data && $gContent->getPreference('show_description') ne 'n'}
-<div class="body">
+<section class="body">
 	<p>{$gContent->mInfo.data|escape}</p>
-</div>
+</section>
 {/if}
 
 {assign var=hasVideos value=false}
