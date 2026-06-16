@@ -14,7 +14,6 @@
 
 <div class="body">
 	<table class="table table-striped table-hover">
-		<caption>{tr}List of files{/tr} <span class="total">[ {$galInfo.total_records|default:0} ]</span></caption>
 		<thead>
 			<tr>
 				<th style="width:100px"></th>
