@@ -115,7 +115,7 @@
 				<td class="actionicon">
 					{if $galItem->mInfo.content_type_guid != 'fisheyegallery' }
 						{if $gBitUser->hasPermission( 'p_treasury_download_item' ) && $galItem->mInfo.download_url}
-							<a href="{$galItem->mInfo.download_url}">{biticon ipackage="icons" iname="network-receive" iexplain="Download File"}</a>
+							<a href="{$galItem->mInfo.download_url}">{biticon ipackage="icons" iname="go-down" iexplain="Download File"}</a>
 						{/if}
 						{if $gBitUser->hasPermission( 'p_treasury_view_item' )}
 							<a href="{$galItem->getDisplayUrl()}">{biticon ipackage="icons" iname="folder-open" iexplain="View File"}</a>

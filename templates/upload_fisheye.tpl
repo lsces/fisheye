@@ -6,7 +6,7 @@
 {strip}
 <div class="admin fisheye">
 	<div class="header">
-		<h1>{biticon ipackage="icons" iname="network-transmit" iexplain="^"} {tr}Upload Photos{/tr}</h1>
+		<h1>{biticon ipackage="icons" iname="go-up" iexplain="^"} {tr}Upload Photos{/tr}</h1>
 	</div>
 
 	<div class="body">

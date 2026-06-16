@@ -9,7 +9,7 @@
 		<li><a class="item" href="{$smarty.const.FISHEYE_PKG_URL}edit.php">{biticon ipackage="icons" iname="camera-photo" iexplain="Create a Gallery" ilocation=menu}</a></li>
 	{/if}
 	{if $gBitUser->hasPermission('p_fisheye_upload')}
-		<li><a class="item" href="{$smarty.const.FISHEYE_PKG_URL}upload.php">{biticon ipackage="icons" iname="network-transmit" iexplain="Upload Images" ilocation=menu}</a></li>
+		<li><a class="item" href="{$smarty.const.FISHEYE_PKG_URL}upload.php">{biticon ipackage="icons" iname="go-up" iexplain="Upload Images" ilocation=menu}</a></li>
 	{/if}
 	{* if $gBitUser->hasPermission('p_fisheye_view')}
 		<li><a class="item" href="{$smarty.const.FISHEYE_PKG_URL}gallery_tree.php">{biticon ipackage="icons" iname="preferences-system" iexplain="growser gallery tree" ilocation=menu} Browse Gallery Tree</a></li>
