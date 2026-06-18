@@ -35,12 +35,9 @@
 				</div>
 			</div> <!-- End Image Cell -->
 			{counter}
-			{if $imageCount % 2 == 0}
-				{if $imageCount % 4 == 0}<div class="hidden-xs hidden-sm hidden-md clear"></div>
-				{else}<div class="hidden-xs hidden-md hidden-lg clear"></div>
-				{/if}
-			{/if}
-			{if $imageCount % 3 == 0}<div class="hidden-xs hidden-sm hidden-lg clear"></div>{/if}
+			{if $imageCount % 2 == 0}<div class="visible-sm-block clear"></div>{/if}
+			{if $imageCount % 3 == 0}<div class="visible-md-block clear"></div>{/if}
+			{if $imageCount % 4 == 0}<div class="visible-lg-block clear"></div>{/if}
 		{foreachelse}
 			<div class="norecords">{tr}This gallery is empty{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}upload.php?gallery_id={$galleryId}">Upload pictures!</a></div>
 		{/foreach}
