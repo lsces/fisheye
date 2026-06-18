@@ -34,7 +34,7 @@
 					</a>
 				</div>
 			</div> <!-- End Image Cell -->
-			{counter}
+			{counter assign="imageCount"}
 			{if $imageCount % 2 == 0}<div class="visible-sm-block clear"></div>{/if}
 			{if $imageCount % 3 == 0}<div class="visible-md-block clear"></div>{/if}
 			{if $imageCount % 4 == 0}<div class="visible-lg-block clear"></div>{/if}
