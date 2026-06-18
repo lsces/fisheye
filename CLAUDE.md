@@ -80,6 +80,22 @@ if (query) {
 
 **This patch must be re-applied after any pdfjs version upgrade.**
 
+## auto_flow image sizing
+`fisheye_auto_flow_inc.tpl` renders images as `<img class="thumb">` inside flex items.
+Bootstrap and per-site CSS can impose `max-width` or fixed `height` on `.thumb`, which
+breaks the layout for galleries with mixed portrait/landscape images (e.g. paintings).
+
+Fix in `themes/css/config.css` — scoped tightly to avoid collateral:
+```css
+.fisheye-flow img.thumb {
+    width: 100%;
+    height: auto;
+    max-width: none;
+}
+```
+The `.fisheye-flow` wrapper class (specificity 0,2,1) beats `a img.thumb` (0,1,2) from
+per-site theme CSS. Do NOT set `aspect-ratio` — galleries mix landscape and portrait.
+
 ## simple_list feature flags
 Optional columns gated on kernel_config features:
 - `fisheye_item_list_date` / `fisheye_item_list_creator` — Uploaded / by columns
