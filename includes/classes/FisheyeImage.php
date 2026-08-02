@@ -87,7 +87,7 @@ class FisheyeImage extends FisheyeBase {
 				$bindVars[] = $this->mContentId;
 			}
 
-			$this->getServicesSql( 'content_load_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
+			$this->getServicesSql( 'content_load_sql_function', $selectSql, $joinSql, $whereSql, $bindVars, $this );
 
 			$sql = "SELECT fi.*, lc.* $gateSql $selectSql
 						, uue.`login` AS `modifier_user`, uue.`real_name` AS `modifier_real_name`

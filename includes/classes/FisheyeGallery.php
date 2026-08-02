@@ -112,7 +112,7 @@ class FisheyeGallery extends FisheyeBase {
 		}
 
 		if ($whereSql) {	// If we have some way to know what fisheye_gallery row to load...
-			$this->getServicesSql( 'content_load_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
+			$this->getServicesSql( 'content_load_sql_function', $selectSql, $joinSql, $whereSql, $bindVars, $this );
 
 			$query = "SELECT fg.*, lc.* $selectSql
 						, uue.`login` AS modifier_user, uue.`real_name` AS `modifier_real_name`
