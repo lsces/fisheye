@@ -96,9 +96,7 @@
 			</div>
 		</div>
 
-		<nav>
-			{pagination gallery_id=$gContent->mGalleryId|default:0}
-		</nav>
+		{pagination gallery_id=$gContent->mGalleryId|default:0}
 
 	</section>	<!-- end .body -->
 {/strip}
