@@ -53,25 +53,20 @@
 		{/if}
 	</section>
 
-	{if is_object($gGallery) && $gGallery->mItems|@count > 1}
-		<section class="film-gallery-strip">
-			<h2>{tr}More in{/tr} {$gGallery->getTitle()|escape}</h2>
+	{if $filmImages|@count}
+		<section class="film-images-strip">
+			<h2>{tr}Images{/tr}</h2>
 			<div class="row">
-				{foreach from=$gGallery->mItems item=galItem key=itemContentId}
-					{if $itemContentId ne $gContent->mContentId}
-						<div class="col-md-3 col-sm-4 col-xs-6">
-							<div class="gallery-box">
-								<a href="{$galItem->getDisplayUrl()|escape}">
-									<div class="gallery-img">
-										<img class="img-responsive thumb" src="{$galItem->getThumbnailUri()}" alt="{$galItem->mInfo.title|escape|default:'film'}" />
-									</div>
-									<div class="gallery-img-title center">
-										<small>{$galItem->mInfo.title|escape}</small>
-									</div>
-								</a>
-							</div>
+				{foreach from=$filmImages item=filmImage}
+					<div class="col-md-3 col-sm-4 col-xs-6">
+						<div class="gallery-box">
+							<a href="{$smarty.const.FISHEYE_PKG_URL}view_extra_image.php?xref_id={$filmImage.xref_id}" target="_blank" rel="noopener">
+								<div class="gallery-img">
+									<img class="img-responsive thumb" src="{$smarty.const.FISHEYE_PKG_URL}view_extra_image.php?xref_id={$filmImage.xref_id}" alt="{$gContent->getTitle()|escape}" />
+								</div>
+							</a>
 						</div>
-					{/if}
+					</div>
 				{/foreach}
 			</div>
 		</section>

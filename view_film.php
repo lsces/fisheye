@@ -33,6 +33,12 @@ $gContent->loadXrefInfo();
 $genres = $directors = $writers = $stars = [];
 $contentRating = $durationMs = null;
 $externalLinks = [];
+// this film's own alternate poster/backdrop images (FisheyeFilm::reloadPlexImages()) - xref-based,
+// not a second liberty_attachments row per image, see fisheye.md's 2026-09-02 "'images' xref
+// group" entry. Rendered via view_extra_image.php (xref_id only, never a raw path - see that
+// script's own docblock for why) rather than a direct URL, since these files live outside
+// storage/attachments/ with no nginx location serving that tree yet.
+$filmImages = [];
 if( $gContent->mXrefInfo ) {
 	foreach( $gContent->mXrefInfo->allXrefs() as $xref ) {
 		switch( $xref['item'] ) {
@@ -42,6 +48,7 @@ if( $gContent->mXrefInfo ) {
 			case 'star':           $stars[]      = $xref['xkey_ext']; break;
 			case 'content_rating': $contentRating = $xref['xkey_ext']; break;
 			case 'duration':       $durationMs    = (int)$xref['xkey_ext']; break;
+			case 'image':          $filmImages[]  = [ 'xref_id' => $xref['xref_id'] ]; break;
 		}
 		// external links (imdb/tvdb/tmdb/...) - identified by having a cross_ref_href
 		// (the href template's marker, loaded onto every xref row already, see
@@ -62,8 +69,12 @@ $gBitSmarty->assign( 'stars', $stars );
 $gBitSmarty->assign( 'contentRating', $contentRating );
 $gBitSmarty->assign( 'durationMs', $durationMs );
 $gBitSmarty->assign( 'externalLinks', $externalLinks );
+$gBitSmarty->assign( 'filmImages', $filmImages );
 
-// gallery + sibling films for the poster row, modeled on contact/templates/fisheye_fixed_grid_contact.tpl
+// gallery for the breadcrumb/creator line only now (gallery_breadcrumb_inc.tpl) - the foot-of-page
+// strip used to show sibling films from this same gallery as a placeholder; replaced by this
+// film's own images above, per Lester 2026-09-02, so the gallery's own image list is no longer
+// needed here.
 $gGallery = null;
 if( !empty( $_REQUEST['gallery_id'] ) && is_numeric( $_REQUEST['gallery_id'] )) {
 	$gGallery = FisheyeGallery::lookup( $_REQUEST );
@@ -71,10 +82,6 @@ if( !empty( $_REQUEST['gallery_id'] ) && is_numeric( $_REQUEST['gallery_id'] )) 
 	$gal = current( $parents );
 	$gGallery = new FisheyeGallery( $gal['gallery_id'] );
 	$gGallery->load();
-}
-if( is_object( $gGallery ) && $gGallery->isValid() ) {
-	$listHash = [ 'max_records' => -1 ];
-	$gGallery->loadImages( $listHash );
 }
 $gBitSmarty->assign( 'gGallery', $gGallery );
 $gBitSmarty->assign( 'gContent', $gContent );
