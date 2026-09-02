@@ -72,6 +72,20 @@ $gBitSmarty->assign( 'externalLinks', $externalLinks );
 $listHash = [ 'max_records' => -1 ];
 $gContent->loadImages( $listHash );
 
+// season card titles drop the "<show> - " prefix (Lester, 2026-09-02: "loose the 'Inspector
+// Morse - ' and just show Season 1") - same split as view_season.php's own title-link suffix,
+// keyed by content_id since this is a whole grid of seasons rather than a single one. Falls back
+// to the season's own full title if it doesn't actually start with the show's title.
+$showTitle = $gContent->getTitle();
+$seasonTitles = [];
+foreach( (array)$gContent->mItems as $season ) {
+	$seasonTitle = $season->mInfo['title'] ?? '';
+	$seasonTitles[$season->mContentId] = str_starts_with( $seasonTitle, $showTitle )
+		? ltrim( substr( $seasonTitle, strlen( $showTitle ) ), ' -' )
+		: $seasonTitle;
+}
+$gBitSmarty->assign( 'seasonTitles', $seasonTitles );
+
 $gBitSmarty->assign( 'gContent', $gContent );
 
 $gBitSystem->setCanonicalLink( $gContent->getDisplayUrl() );

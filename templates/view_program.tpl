@@ -62,7 +62,7 @@
 									</div>
 								{/if}
 								<div class="gallery-img-title center">
-									<small>{$season->mInfo.title|escape}</small>
+									{$seasonTitles[$season->mContentId]|default:$season->mInfo.title|escape}
 								</div>
 							</a>
 						</div>
