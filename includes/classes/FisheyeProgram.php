@@ -45,18 +45,24 @@ class FisheyeProgram extends FisheyeGallery {
 	}
 
 	/**
-	 * A show gets its own dedicated view page (list_program.php - header facts + a grid of its
+	 * A show gets its own dedicated view page (view_program.php - header facts + a grid of its
 	 * own season members) rather than the generic gallery view.php a plain FisheyeGallery uses -
 	 * "extending for fisheyeprogram would also slot into directing to list_program as a program
 	 * specific 'gallery' of seasons" (Lester, 2026-09-02). Every gallery-grid template links via
 	 * getDisplayUrl() generically (see fisheye_fixed_grid_inc.tpl), so overriding this alone is
 	 * enough to redirect from the TV Shows gallery grid with no template changes.
 	 *
+	 * Originally named list_program.php - renamed to view_program.php 2026-09-02 to match the
+	 * view_X.php convention every other per-item content type uses (view_film.php, view_image.php);
+	 * the old name made a Shows gallery's member links look like they pointed at a listing page,
+	 * inconsistent with the Films gallery's view_film.php links (Lester: "gallery_id=5 gives
+	 * view_film links while the tvshow gallery has list_program links").
+	 *
 	 * @return string
 	 */
 	public function getDisplayUrl( $pContentId = null, $pMixed = null ) {
 		$contentId = \Bitweaver\BitBase::verifyId( $pContentId ) ? $pContentId : $this->mContentId;
-		return FISHEYE_PKG_URL.'list_program.php?content_id='.$contentId;
+		return FISHEYE_PKG_URL.'view_program.php?content_id='.$contentId;
 	}
 
 	/**

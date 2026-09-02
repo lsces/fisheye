@@ -6,6 +6,11 @@
  * gallery view.php, same reasoning as view_film.php being separate from view_image.php - see
  * fisheye.md's 2026-09-02 "program liberty object" entry for the wider design.
  *
+ * Named view_program.php (not its original list_program.php) to match the view_X.php convention
+ * every other per-item content type uses (view_film.php, view_image.php) - the old name made a
+ * TV Show gallery's member links look like they routed to a listing page rather than a single
+ * show's own detail view, unlike the Films gallery's view_film.php links.
+ *
  * Also hosts 'Reload Images' (FisheyeProgram::reloadPlexImages()) directly on this view page
  * rather than a separate edit_program.php - a show's real edit page (title/layout/permissions)
  * is the inherited, unmodified FisheyeGallery edit.php (a show genuinely is a gallery), so there
@@ -80,4 +85,4 @@ $gBitSmarty->assign( 'gContent', $gContent );
 
 $gBitSystem->setCanonicalLink( $gContent->getDisplayUrl() );
 $gBitSystem->setBrowserTitle( $gContent->getTitle() );
-$gBitSystem->display( 'bitpackage:fisheye/list_program.tpl', null, [ 'display_mode' => 'display' ] );
+$gBitSystem->display( 'bitpackage:fisheye/view_program.tpl', null, [ 'display_mode' => 'display' ] );
