@@ -38,10 +38,18 @@ if( !$gLibertySystem->isPluginActive( 'mimefilm' )) {
 $root = \Bitweaver\Liberty\mime_film_get_storage_root();
 print "fisheye_disk_storage_root (normalised) = '$root'\n";
 
-$gallery = new FisheyeGallery( 1 );
+// Looked up by title, not a hardcoded gallery_id - sequence-generated ids are never guaranteed to
+// land the same way across different databases (desktop/srv9/srv10 all have independent
+// liberty_content_id_seq/fisheye_gallery_id_seq histories), confirmed the hard way 2026-09-02.
+global $gBitDb;
+$galleryContentId = $gBitDb->getOne(
+	"SELECT lc.content_id FROM liberty_content lc INNER JOIN fisheye_gallery fg ON fg.content_id = lc.content_id WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ?",
+	[ 'Films' ]
+);
+$gallery = new FisheyeGallery( null, $galleryContentId );
 $gallery->load();
 if( !$gallery->isValid() ) {
-	print "ABORT: could not load gallery (gallery_id=1)\n";
+	print "ABORT: could not load the 'Films' gallery - run rdmcloud's apply_media_scheme.php first.\n";
 	exit( 1 );
 }
 print "Loaded gallery: ".$gallery->getTitle()." (content_id=".$gallery->mContentId.")\n";
