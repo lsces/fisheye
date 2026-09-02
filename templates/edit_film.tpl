@@ -12,7 +12,7 @@
 		{if $plexResult}
 			<div class="alert alert-info">
 				{if $plexResult.matched}
-					<p>{tr}Metadata reloaded from Plex:{/tr}</p>
+					<p>{$plexResultLabel|escape}:</p>
 					<ul>{foreach from=$plexResult.items item=line}<li>{$line|escape}</li>{/foreach}</ul>
 				{else}
 					<p>{tr}No matching Plex entry found for this file.{/tr}</p>
@@ -51,6 +51,7 @@
 				<input type="submit" class="btn btn-default" name="fCancel" value="{tr}Cancel{/tr}" />
 				<input type="submit" class="btn btn-primary" name="fSave" value="{tr}Save{/tr}" />
 				<input type="submit" class="btn btn-secondary" name="fReloadMetadata" value="{tr}Reload Metadata{/tr}" />
+				<input type="submit" class="btn btn-secondary" name="fReloadImages" value="{tr}Reload Images{/tr}" />
 			</div>
 		{/form}
 	</div><!-- end .body -->
