@@ -155,6 +155,12 @@ attachment directly).
 
 ## Plex integration
 
+Plex is a bootstrap/backfill **source**, not a runtime dependency — every reload action below
+copies data (text fields, artwork files) into fisheye's own storage (`liberty_xref`/`liberty_content`/
+a real attachment, per the sections above) rather than reading from Plex live at display time. The
+intent is that Plex is switched off entirely once real local metadata/artwork exists for everything
+it's fed — nothing in fisheye reads from Plex outside these explicit, one-off reload actions.
+
 Two config keys (`fisheye/admin/admin_fisheye_inc.php`):
 - `fisheye_plex_db_path` — Plex's own library SQLite database. World-readable by default, no
   permission workaround needed for text metadata.
