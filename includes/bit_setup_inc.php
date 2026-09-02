@@ -55,6 +55,16 @@ if( $gBitSystem->isPackageActive( 'fisheye' ) ) { // && $gBitUser->hasPermission
 		'handler_package'   => 'fisheye',
 		'handler_file'      => 'FisheyeAlbum.php',
 	] );
+	// FisheyeProgram extends FisheyeGallery (not FisheyeImage) - the show level, a phantom
+	// subclass so a show can carry its own metadata + a genuinely selected thumbnail while
+	// remaining a real gallery (still holds its seasons via addItem()/loadImages() unchanged).
+	$gLibertySystem->registerContentType( 'fisheyeprogram', [
+		'content_type_guid' => 'fisheyeprogram',
+		'content_name'      => 'TV Show',
+		'handler_class'     => 'FisheyeProgram',
+		'handler_package'   => 'fisheye',
+		'handler_file'      => 'FisheyeProgram.php',
+	] );
 
 	define( 'LIBERTY_SERVICE_PHOTOSHARING', 'photosharing');
 
