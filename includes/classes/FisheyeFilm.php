@@ -119,6 +119,42 @@ class FisheyeFilm extends FisheyeImage {
 	}
 
 	/**
+	 * Promote one of this film's already-downloaded 'image' xref alternates into its actual
+	 * displayed thumbnail - unlike FisheyeSeason/FisheyeProgram (which have no attachment of
+	 * their own and gained a brand new real attachment slot for this), a film's single
+	 * attachment is already occupied by the video itself (mime.film.php), so there's no second
+	 * slot to store a thumbnail in. Reuses mime_film_get_thumbnail_url()'s own existing sidecar
+	 * convention instead: copies the chosen alternate to `<video basename>-poster.jpg` next to
+	 * the source video (the same filename that function already checks FIRST, before falling
+	 * back to an ffmpeg frame-grab), then clears the cached thumbs so the next load regenerates
+	 * from it rather than keeping whatever was cached before.
+	 *
+	 * @param string $pRelativePath  an 'image' xref row's own xkey_ext value
+	 * @return bool
+	 */
+	public function promoteImageToThumbnail( string $pRelativePath ): bool {
+		$root = $this->getImageStorageRoot();
+		if( empty( $root ) || !is_file( $root.$pRelativePath ) ) {
+			return false;
+		}
+		$this->load();
+		$sourceFile = $this->mStorage[$this->mContentId]['source_file'] ?? '';
+		if( empty( $sourceFile ) ) {
+			return false;
+		}
+		$sidecarPath = preg_replace( '/\.[^.\/]+$/', '', $sourceFile ).'-poster.jpg';
+		if( !copy( $root.$pRelativePath, $sidecarPath ) ) {
+			return false;
+		}
+		$destBranch = \Bitweaver\Liberty\liberty_mime_get_storage_branch( [ 'attachment_id' => $this->mContentId ] );
+		foreach( glob( STORAGE_PKG_PATH.$destBranch.'thumbs/*' ) ?: [] as $oldThumb ) {
+			@unlink( $oldThumb );
+		}
+		$this->load();
+		return true;
+	}
+
+	/**
 	 * Locate this film in the local Plex library, matched by its real absolute file path
 	 * (Plex's own media_parts.file, not fisheye's root-relative convention — realpath() bridges
 	 * the fisheye_disk_storage_root symlink, e.g. /media3/, back to what Plex actually stored,
