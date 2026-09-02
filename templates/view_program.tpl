@@ -13,11 +13,11 @@
 	<section class="body">
 		<div class="row">
 			{if $gContent->getThumbnailUri('medium')}
-				<div class="col-md-3 film-poster">
+				<div class="col-md-6 film-poster">
 					<img class="img-responsive" src="{$gContent->getThumbnailUri('medium')}" alt="{$gContent->getTitle()|escape}" />
 				</div>
 			{/if}
-			<div class="col-md-9 film-facts">
+			<div class="col-md-6 film-facts">
 				{if $directors|@count || $stars|@count}
 					<p class="film-credits">
 						{if $directors|@count}<strong>{tr}Director{/tr}{if $directors|@count > 1}s{/if}:</strong> {$directors|@implode:", "|escape}<br />{/if}
