@@ -8,7 +8,16 @@
 			{/if}
 		</div>
 		<h1>{$gContent->getTitle()|escape}</h1>
-		{include file="bitpackage:fisheye/gallery_breadcrumb_inc.tpl"}
+		{* The shared gallery_breadcrumb_inc.tpl hardcodes a pretty-url 'gallery/<id>' link for
+		   every ancestor, which always lands on the generic gallery view regardless of type -
+		   wrong for a show (FisheyeProgram has its own view_program.php). A season is only ever
+		   one level below its show, so a single direct "back up a level" link via the parent's
+		   own getDisplayUrl() (Lester, 2026-09-02: "make the program title a link back up a
+		   level") is simpler and correct, rather than trying to make the shared, type-agnostic
+		   breadcrumb component type-aware. *}
+		{if $gGallery}
+			<small><a href="{$gGallery->getDisplayUrl()|escape}">&larr; {$gGallery->getTitle()|escape}</a></small>
+		{/if}
 	</header>
 
 	<section class="body">

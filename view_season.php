@@ -72,14 +72,19 @@ $gBitSmarty->assign( 'externalLinks', $externalLinks );
 $gBitSmarty->assign( 'seasonImages', $seasonImages );
 $gBitSmarty->assign( 'episodes', $episodes );
 
-// parent show, for the breadcrumb line - same pattern as view_film.php.
+// parent show, for the "back up a level" link - lookup() (not `new FisheyeGallery()`) so this
+// resolves to a real FisheyeProgram instance when the parent is a show, not a plain FisheyeGallery -
+// needed for its own getDisplayUrl() override to fire (Lester, 2026-09-02: "Program is using
+// prettyurl and so goes to a generic view" - the generic shared breadcrumb's own hardcoded
+// 'gallery/<id>' pretty-url route bypasses that override entirely, landing on the plain gallery
+// view instead of view_program.php; `new FisheyeGallery()` here would have silently reproduced the
+// same bug even after dropping that shared breadcrumb).
 $gGallery = null;
 if( !empty( $_REQUEST['gallery_id'] ) && is_numeric( $_REQUEST['gallery_id'] )) {
 	$gGallery = FisheyeGallery::lookup( $_REQUEST );
 } elseif( $parents = $gContent->getParentGalleries() ) {
 	$gal = current( $parents );
-	$gGallery = new FisheyeGallery( $gal['gallery_id'] );
-	$gGallery->load();
+	$gGallery = FisheyeGallery::lookup( [ 'gallery_id' => $gal['gallery_id'] ] );
 }
 $gBitSmarty->assign( 'gGallery', $gGallery );
 $gBitSmarty->assign( 'gContent', $gContent );
