@@ -247,13 +247,25 @@ class FisheyeFilm extends FisheyeImage {
 		$plexDb = $plexMatch['db'];
 		$metadataItemId = $plexMatch['id'];
 
-		$stmt = $plexDb->prepare( "SELECT content_rating, duration FROM metadata_items WHERE id = ?" );
+		$stmt = $plexDb->prepare( "SELECT content_rating, duration, summary FROM metadata_items WHERE id = ?" );
 		$stmt->execute( [ $metadataItemId ] );
 		$plexRow = $stmt->fetch( \PDO::FETCH_ASSOC );
 		if( !$plexRow ) {
 			return $summary;
 		}
 		$summary['matched'] = true;
+
+		// the film's own description - same gap/fix as FisheyeProgram::reloadPlexMetadata() (see
+		// its own docblock for the two silent-failure bugs found there: by-reference store() param,
+		// and 'edit' not 'data' as the input key for LibertyContent::verify() to pick up). Unlike
+		// FisheyeGallery::store(), FisheyeImage::store()'s own verifyImageData() has no equivalent
+		// hard requirement for 'title' to be present, so it's safely omitted here (confirmed
+		// against edit_film.php's own title-only $gContent->store() calls using this same path).
+		if( !empty( $plexRow['summary'] ) ) {
+			$descriptionStoreHash = [ 'content_id' => $this->mContentId, 'edit' => $plexRow['summary'] ];
+			$this->store( $descriptionStoreHash );
+			$summary['items'][] = 'description updated';
+		}
 
 		self::deleteXrefByItem(
 			$this->mContentId,
