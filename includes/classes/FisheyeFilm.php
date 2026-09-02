@@ -34,6 +34,29 @@ class FisheyeFilm extends FisheyeImage {
 	}
 
 	/**
+	 * Override LibertyContent::getEditUrl()'s generic '<package>/edit.php' default - fisheye's
+	 * own edit.php is the GALLERY edit page (FisheyeGallery::getAllLayouts() etc.), not a film's.
+	 * Without this, liberty/edit_xref.php's post-save/post-delete redirect (which calls
+	 * getEditUrl() on whatever content type the xref belongs to) sent a film back to the wrong
+	 * page entirely - a fatal error hit live 2026-09-02 ("Call to undefined method
+	 * FisheyeFilm::getAllLayouts()") the moment an image xref row was actually deleted.
+	 *
+	 * @param int|null $pContentId
+	 * @param array|null $pMixed  extra query params to append (content_id itself is skipped)
+	 * @return string
+	 */
+	public function getEditUrl( $pContentId = null, $pMixed = null ) {
+		$contentId = \Bitweaver\BitBase::verifyId( $pContentId ) ? $pContentId : $this->mContentId;
+		$ret = FISHEYE_PKG_URL.'edit_film.php?content_id='.$contentId;
+		foreach( (array)$pMixed as $key => $value ) {
+			if( $key !== 'content_id' ) {
+				$ret .= '&'.$key.'='.$value;
+			}
+		}
+		return $ret;
+	}
+
+	/**
 	 * Locate this film in the local Plex library, matched by its real absolute file path
 	 * (Plex's own media_parts.file, not fisheye's root-relative convention — realpath() bridges
 	 * the fisheye_disk_storage_root symlink, e.g. /media3/, back to what Plex actually stored,
