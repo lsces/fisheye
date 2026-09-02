@@ -63,7 +63,7 @@
 			<h2>{tr}Images{/tr}</h2>
 			<div class="row">
 				{foreach from=$filmImages item=filmImage name=filmImages}
-					<div class="col-md-2 col-sm-4 col-xs-6">
+					<div class="col-md-1 col-sm-4 col-xs-6">
 						<div class="gallery-box">
 							<a href="{$smarty.const.FISHEYE_PKG_URL}view_extra_image.php?xref_id={$filmImage.xref_id}" target="_blank" rel="noopener">
 								<div class="gallery-img">
@@ -75,10 +75,12 @@
 					{* posters (portrait) and backdrops (landscape) mixed in the same row leave rows of
 					   uneven height, so a plain Bootstrap float grid tucks the next item up under a
 					   shorter neighbour instead of starting a clean new row - one clearfix per
-					   breakpoint's own column count (2/3/6) forces the wrap at the right point. *}
+					   breakpoint's own column count (2/3/12 - col-md-1 is Bootstrap's narrowest, 12
+					   across, per Lester's "go up to 12 images across on hr monitor") forces the wrap
+					   at the right point. *}
 					{if $smarty.foreach.filmImages.iteration % 2 == 0}<div class="clearfix visible-xs-block"></div>{/if}
 					{if $smarty.foreach.filmImages.iteration % 3 == 0}<div class="clearfix visible-sm-block"></div>{/if}
-					{if $smarty.foreach.filmImages.iteration % 6 == 0}<div class="clearfix visible-md-block visible-lg-block"></div>{/if}
+					{if $smarty.foreach.filmImages.iteration % 12 == 0}<div class="clearfix visible-md-block visible-lg-block"></div>{/if}
 				{/foreach}
 			</div>
 		</section>
