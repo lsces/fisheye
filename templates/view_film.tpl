@@ -11,13 +11,13 @@
 
 	<section class="body">
 		<div class="row">
-			<div class="col-md-6">
+			<div class="col-md-5">
 				{* player.tpl directly, not video/view.tpl via getMimeTemplate() - skips its
 				   trailing mime_meta_inc.tpl include (Uploaded by/Downloads/Last Modified/
 				   Hits), which just duplicates/clutters what this page already shows better *}
 				{include file="bitpackage:liberty/mime/video/player.tpl" attachment=$gContent->mInfo.image_file}
 			</div>
-			<div class="col-md-6 film-facts">
+			<div class="col-md-4 film-facts">
 				{if $directors|@count || $stars|@count}
 					<p class="film-credits">
 						{if $directors|@count}<strong>{tr}Director{/tr}{if $directors|@count > 1}s{/if}:</strong> {$directors|@implode:", "|escape}<br />{/if}
@@ -42,6 +42,11 @@
 					</p>
 				{/if}
 			</div>
+			{if $gContent->getThumbnailUrl('medium')}
+				<div class="col-md-3 film-poster">
+					<img class="img-responsive" src="{$gContent->getThumbnailUrl('medium')|escape}" alt="{$gContent->getTitle()|escape}" />
+				</div>
+			{/if}
 		</div>
 
 		{if $gContent->mInfo.data}
