@@ -197,6 +197,11 @@ class FisheyeFilm extends FisheyeImage {
 	 * Capped at 5 of each type - same reasoning as reloadPlexMetadata()'s 5-star cap, a well-known
 	 * film's poster/art set from Plex can run into dozens and most are near-duplicates.
 	 *
+	 * Fetches TMDB's own pre-resized w185 (poster)/w300 (art) sizes, not the 'original' full
+	 * resolution (1-4MB apiece) - these are only ever shown as small thumbnails on view_film.tpl,
+	 * downloading/storing full-size was wasted weight discovered the first time this actually
+	 * rendered (Lester, 2026-09-02).
+	 *
 	 * @return array Summary of what was found/stored, for the calling page's result display.
 	 */
 	public function reloadPlexImages(): array {
@@ -233,6 +238,13 @@ class FisheyeFilm extends FisheyeImage {
 		$sourceFile = $this->mStorage[$this->mContentId]['source_file'] ?? '';
 		$baseName = pathinfo( $sourceFile, PATHINFO_FILENAME ) ?: $this->getTitle();
 
+		// TMDB serves the same image at several pre-resized widths from a predictable URL (its
+		// own image CDN, not a Plex-specific thing) - swapping the 'key' attribute's '/original/'
+		// segment for one of these avoids downloading/storing full-resolution (1-4MB, largely
+		// wasted on what's only ever shown as a small thumbnail here) or doing any local
+		// resizing. w185/w300 are real TMDB poster/backdrop size names, not arbitrary numbers.
+		$thumbSizes = [ 'poster' => 'w185', 'art' => 'w300' ];
+
 		$xorder = 1;
 		foreach( [ 'poster' => 'posters', 'art' => 'arts' ] as $type => $endpoint ) {
 			$apiUrl = "http://localhost:32400/library/metadata/$metadataItemId/$endpoint?X-Plex-Token=".urlencode( $plexToken );
@@ -245,7 +257,8 @@ class FisheyeFilm extends FisheyeImage {
 				if( $fetched >= 5 ) {
 					break;
 				}
-				$imageData = @file_get_contents( html_entity_decode( $imageUrl ) );
+				$imageUrl = str_replace( '/original/', '/'.$thumbSizes[$type].'/', html_entity_decode( $imageUrl ) );
+				$imageData = @file_get_contents( $imageUrl );
 				if( $imageData === false ) {
 					continue;
 				}

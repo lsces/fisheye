@@ -58,7 +58,7 @@
 			<h2>{tr}Images{/tr}</h2>
 			<div class="row">
 				{foreach from=$filmImages item=filmImage}
-					<div class="col-md-3 col-sm-4 col-xs-6">
+					<div class="col-md-2 col-sm-4 col-xs-6">
 						<div class="gallery-box">
 							<a href="{$smarty.const.FISHEYE_PKG_URL}view_extra_image.php?xref_id={$filmImage.xref_id}" target="_blank" rel="noopener">
 								<div class="gallery-img">
