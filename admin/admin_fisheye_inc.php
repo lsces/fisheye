@@ -31,6 +31,21 @@ $formGalleryGeneral = [
 		'note' => 'This will allow gallery admins to upload and move around images in all galleries. This might cause problems on large sites with many galleries.',
 		'type' => 'checkbox',
 	],
+	"fisheye_disk_storage_root" => [
+		'label' => 'External Disk Storage Path',
+		'note' => 'Filesystem path an external media library (e.g. a film collection) lives under. Used by mime plugins that register files already on disk without copying them into storage/attachments/. Include a trailing slash.',
+		'type' => 'text',
+	],
+	"fisheye_tvshow_storage_root_am" => [
+		'label' => 'TV Show Storage Path (A-M)',
+		'note' => 'Filesystem path for TV shows whose title starts A-M, if the library is split across two roots. Leave blank if TV shows live under the single External Disk Storage Path above instead. Include a trailing slash.',
+		'type' => 'text',
+	],
+	"fisheye_tvshow_storage_root_nz" => [
+		'label' => 'TV Show Storage Path (N-Z)',
+		'note' => 'Filesystem path for TV shows whose title starts N-Z - see the A-M path above.',
+		'type' => 'text',
+	],
 ];
 if( !$gBitSystem->isPackageActive( 'gigaupload' ) ) {
 	$formGalleryGeneral["fisheye_extended_upload_slots"] = [
