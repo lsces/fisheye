@@ -5,14 +5,15 @@
 
    Collapsible (Lester, 2026-09-02: "The images strip would benefit from a open/close until we
    replace it with cast images") - a stopgap presentation, not a permanent fixture, so it stays
-   out of the way by default rather than always taking up page space. Starts open; plain JS
-   toggle, no library, same pattern as fisheyeShowEpisode(). *}
+   out of the way by default rather than always taking up page space. Starts CLOSED (Lester:
+   "the image bar needs to come up closed"); plain JS toggle, no library, same pattern as
+   fisheyeShowEpisode(). *}
 {if $images|@count}
 	<section class="film-images-strip">
 		<h2 class="images-strip-toggle" onclick="fisheyeToggleStrip('{$stripId|default:'images-strip'}', this)" style="cursor:pointer;">
-			<span class="toggle-indicator">&#9660;</span> {$stripTitle|default:"Images"}
+			<span class="toggle-indicator">&#9654;</span> {$stripTitle|default:"Images"}
 		</h2>
-		<div class="row" id="{$stripId|default:'images-strip'}">
+		<div class="row" id="{$stripId|default:'images-strip'}" style="display:none;">
 			{foreach from=$images item=stripImage name=stripImages}
 				<div class="col-md-1 col-sm-4 col-xs-6">
 					<div class="gallery-box">
