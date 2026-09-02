@@ -1,23 +1,24 @@
 {strip}
-<div class="display fisheye view-program">
+<div class="display fisheye view-season">
 	<header>
 		<div class="floaticon">
 			{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='icon' serviceHash=$gContent->mInfo}
 			{if $gContent->hasUpdatePermission()}
-				<a title="{tr}Edit{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}edit_program.php?content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="edit" iexplain="Edit"}</a>
+				<a title="{tr}Edit{/tr}" href="{$gContent->getEditUrl()|escape}">{biticon ipackage="icons" iname="edit" iexplain="Edit"}</a>
 			{/if}
 		</div>
 		<h1>{$gContent->getTitle()|escape}</h1>
+		{include file="bitpackage:fisheye/gallery_breadcrumb_inc.tpl"}
 	</header>
 
 	<section class="body">
 		<div class="row">
-			<div class="col-md-6">
+			<div class="col-md-3">
 				{if $gContent->getThumbnailUri()}
 					<img class="img-responsive" src="{$gContent->getThumbnailUri()}" alt="{$gContent->getTitle()|escape}" />
 				{/if}
 			</div>
-			<div class="col-md-6 film-facts">
+			<div class="col-md-9 film-facts">
 				{if $directors|@count || $stars|@count}
 					<p class="film-credits">
 						{if $directors|@count}<strong>{tr}Director{/tr}{if $directors|@count > 1}s{/if}:</strong> {$directors|@implode:", "|escape}<br />{/if}
@@ -51,28 +52,36 @@
 				</div>
 			</div>
 		{/if}
-
 	</section>
 
-	{if $gContent->mItems|@count}
-		<section class="film-seasons">
-			<h2>{tr}Seasons{/tr}</h2>
+	{if $episodes|@count}
+		<section class="season-episodes">
+			<h2>{tr}Episodes{/tr}</h2>
+			<ol>
+				{foreach from=$episodes item=episode}
+					<li>{$episode.title|escape}</li>
+				{/foreach}
+			</ol>
+		</section>
+	{/if}
+
+	{if $seasonImages|@count}
+		<section class="film-images-strip">
+			<h2>{tr}Images{/tr}</h2>
 			<div class="row">
-				{foreach from=$gContent->mItems item=season}
-					<div class="col-md-3 col-sm-4 col-xs-6">
+				{foreach from=$seasonImages item=seasonImage name=seasonImages}
+					<div class="col-md-1 col-sm-4 col-xs-6">
 						<div class="gallery-box">
-							<a href="{$smarty.const.FISHEYE_PKG_URL}view_season.php?content_id={$season->mContentId}">
-								{if $season->getThumbnailUri()}
-									<div class="gallery-img">
-										<img class="img-responsive thumb" src="{$season->getThumbnailUri()}" alt="{$season->mInfo.title|escape}" />
-									</div>
-								{/if}
-								<div class="gallery-img-title center">
-									<small>{$season->mInfo.title|escape}</small>
+							<a href="{$smarty.const.FISHEYE_PKG_URL}view_extra_image.php?xref_id={$seasonImage.xref_id}" target="_blank" rel="noopener">
+								<div class="gallery-img">
+									<img class="img-responsive thumb" src="{$smarty.const.FISHEYE_PKG_URL}view_extra_image.php?xref_id={$seasonImage.xref_id}" alt="{$gContent->getTitle()|escape}" />
 								</div>
 							</a>
 						</div>
 					</div>
+					{if $smarty.foreach.seasonImages.iteration % 2 == 0}<div class="clearfix visible-xs-block"></div>{/if}
+					{if $smarty.foreach.seasonImages.iteration % 3 == 0}<div class="clearfix visible-sm-block"></div>{/if}
+					{if $smarty.foreach.seasonImages.iteration % 12 == 0}<div class="clearfix visible-md-block visible-lg-block"></div>{/if}
 				{/foreach}
 			</div>
 		</section>

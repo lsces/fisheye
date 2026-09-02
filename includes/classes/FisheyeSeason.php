@@ -56,6 +56,22 @@ class FisheyeSeason extends FisheyeImage {
 	}
 
 	/**
+	 * Override FisheyeImage::getDisplayUrl()'s image_id-keyed default - a season is never a plain
+	 * photo, so its display page is view_season.php (facts + episode list, no video player of its
+	 * own), the "matching pair" to edit_season.php Lester asked for 2026-09-02 alongside
+	 * view_program.php/edit_program.php. Previously fell through to FisheyeImage's generic
+	 * getDisplayUrl(), which pointed a season's gallery-grid link at view_image.php - wrong page
+	 * for a season, just never noticed since nothing linked to a season directly until
+	 * view_program.php's season grid was built.
+	 *
+	 * @return string
+	 */
+	public function getDisplayUrl( $pContentId = null, $pMixed = null ) {
+		$contentId = \Bitweaver\BitBase::verifyId( $pContentId ) ? $pContentId : $this->mContentId;
+		return FISHEYE_PKG_URL.'view_season.php?content_id='.$contentId;
+	}
+
+	/**
 	 * A season has no mime attachment of its own at all (no single file - it's a pure metadata
 	 * container over its episodes' own xref rows, see fisheye.md's 2026-09-01/02 entries), so
 	 * FisheyeImage's own mime-derived thumbnail is never populated by the normal load path.

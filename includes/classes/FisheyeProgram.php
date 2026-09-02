@@ -66,6 +66,26 @@ class FisheyeProgram extends FisheyeGallery {
 	}
 
 	/**
+	 * Override LibertyContent::getEditUrl()'s generic '<package>/edit.php' default - same
+	 * fatal-until-fixed reasoning as FisheyeSeason::getEditUrl() - edit_program.php (title edit +
+	 * xref table + Reload Metadata/Reload Images, a clone of edit_film.php - Lester, 2026-09-02:
+	 * "you need a clone of edit_film to create an edit_program") is this show's own real edit page,
+	 * not the plain FisheyeGallery one.
+	 *
+	 * @return string
+	 */
+	public function getEditUrl( $pContentId = null, $pMixed = null ) {
+		$contentId = \Bitweaver\BitBase::verifyId( $pContentId ) ? $pContentId : $this->mContentId;
+		$ret = FISHEYE_PKG_URL.'edit_program.php?content_id='.$contentId;
+		foreach( (array)$pMixed as $key => $value ) {
+			if( $key !== 'content_id' ) {
+				$ret .= '&'.$key.'='.$value;
+			}
+		}
+		return $ret;
+	}
+
+	/**
 	 * A show's own selected thumbnail. Fixed properly 2026-09-02 (second attempt - see
 	 * fisheye.md's same-dated "real attachment" entry): FisheyeGallery descends from LibertyMime
 	 * just like a real photo does, so this show has its own unused attachment slot -
@@ -274,6 +294,93 @@ class FisheyeProgram extends FisheyeGallery {
 		}
 
 		return [ 'db' => $plexDb, 'id' => (int)$showMetadataItemId ];
+	}
+
+	/**
+	 * Best-effort metadata backfill/refresh for this show, same shape as
+	 * FisheyeFilm::reloadPlexMetadata() (same tag_type map, same delete-then-reinsert rebuild, same
+	 * imdb/tmdb guid fetch) - the piece that was missing entirely until now (Lester, 2026-09-02:
+	 * "no metadata for morse as that is our only test"), which is why view_program.php's facts
+	 * panel was always empty and its one 'Reload Images' button looked orphaned with nothing to
+	 * pair it with. A show-level Plex record only carries genre + actor(tag_type 1/6) taggings in
+	 * practice - director/writer are per-episode, not per-show, so those two stay empty here and
+	 * the template's own {if $directors|@count} guards already handle that with no special-casing
+	 * needed.
+	 *
+	 * @return array Summary of what was found/stored, for the calling page's result display.
+	 */
+	public function reloadPlexMetadata(): array {
+		global $gBitSystem;
+		$summary = [ 'matched' => false, 'items' => [] ];
+
+		$plexMatch = $this->matchPlexShowMetadataItem();
+		if( !$plexMatch ) {
+			return $summary;
+		}
+		$plexDb = $plexMatch['db'];
+		$metadataItemId = $plexMatch['id'];
+
+		$stmt = $plexDb->prepare( "SELECT content_rating, duration FROM metadata_items WHERE id = ?" );
+		$stmt->execute( [ $metadataItemId ] );
+		$plexRow = $stmt->fetch( \PDO::FETCH_ASSOC );
+		if( !$plexRow ) {
+			return $summary;
+		}
+		$summary['matched'] = true;
+
+		self::deleteXrefByItem(
+			$this->mContentId,
+			[ 'genre', 'director', 'writer', 'star', 'content_rating', 'duration', 'imdb', 'tmdb' ]
+		);
+
+		// tag_type: 1=genre, 4=director, 5=writer, 6=actor(star) - same mapping confirmed against
+		// real live data as FisheyeFilm::reloadPlexMetadata(); a show-level record just tends to
+		// have nothing under 4/5.
+		$tagTypes = [ 'genre' => 1, 'director' => 4, 'writer' => 5, 'star' => 6 ];
+		foreach( $tagTypes as $item => $tagType ) {
+			$tagStmt = $plexDb->prepare(
+				"SELECT t.tag FROM taggings tg JOIN tags t ON t.id = tg.tag_id WHERE tg.metadata_item_id = ? AND t.tag_type = ? ORDER BY tg.\"index\""
+			);
+			$tagStmt->execute( [ $metadataItemId, $tagType ] );
+			$xorder = 1;
+			foreach( $tagStmt->fetchAll( \PDO::FETCH_COLUMN ) as $value ) {
+				// 'star' capped at 5 - a show's aggregate cast list spans every season/episode and
+				// can run into hundreds (confirmed live: 200 rows for Inspector Morse).
+				if( $item === 'star' && $xorder > 5 ) { break; }
+				$xrefParamHash = [ 'content_id' => $this->mContentId, 'item' => $item, 'xkey_ext' => $value, 'xorder' => $xorder ];
+				$this->storeXref( $xrefParamHash );
+				$summary['items'][] = "$item: $value";
+				$xorder++;
+			}
+		}
+
+		if( !empty( $plexRow['content_rating'] ) ) {
+			// Plex stores e.g. 'gb/15' - the region prefix isn't useful for display.
+			$rating = preg_replace( '#^[a-z]{2}/#i', '', $plexRow['content_rating'] );
+			$ratingParamHash = [ 'content_id' => $this->mContentId, 'item' => 'content_rating', 'xkey_ext' => $rating ];
+			$this->storeXref( $ratingParamHash );
+			$summary['items'][] = "content_rating: $rating";
+		}
+		if( !empty( $plexRow['duration'] ) ) {
+			$durationParamHash = [ 'content_id' => $this->mContentId, 'item' => 'duration', 'xkey_ext' => (string)(int)$plexRow['duration'] ];
+			$this->storeXref( $durationParamHash );
+			$summary['items'][] = "duration: {$plexRow['duration']}ms";
+		}
+
+		$plexToken = $gBitSystem->getConfig( 'fisheye_plex_token', '' );
+		if( !empty( $plexToken ) ) {
+			$apiUrl = "http://localhost:32400/library/metadata/$metadataItemId?X-Plex-Token=".urlencode( $plexToken );
+			$xml = @file_get_contents( $apiUrl );
+			if( $xml !== false && preg_match_all( '#<Guid id="(imdb|tmdb)://([^"]+)"#', $xml, $matches, PREG_SET_ORDER ) ) {
+				foreach( $matches as $match ) {
+					$linkParamHash = [ 'content_id' => $this->mContentId, 'item' => $match[1], 'xkey' => $match[2] ];
+					$this->storeXref( $linkParamHash );
+					$summary['items'][] = "{$match[1]}: {$match[2]}";
+				}
+			}
+		}
+
+		return $summary;
 	}
 
 	/**

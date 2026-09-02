@@ -1,19 +1,10 @@
 <?php
 /**
- * Dedicated view page for a TV show ("program" - FisheyeProgram, extends FisheyeGallery) -
- * show-level facts (genre/cast/rating/external links, same allXrefs() pattern view_film.php
- * uses) plus a grid of this show's own season members. Deliberately separate from the generic
- * gallery view.php, same reasoning as view_film.php being separate from view_image.php - see
- * fisheye.md's 2026-09-02 "program liberty object" entry for the wider design.
- *
- * Named view_program.php (not its original list_program.php) to match the view_X.php convention
- * every other per-item content type uses (view_film.php, view_image.php) - the old name made a
- * TV Show gallery's member links look like they routed to a listing page rather than a single
- * show's own detail view, unlike the Films gallery's view_film.php links.
- *
- * Pure display, no update actions - Lester, 2026-09-02: "view is ONLY a view page". The Plex
- * 'Reload Metadata'/'Reload Images' actions live on edit_program.php instead, same split as
- * edit_film.php/view_film.php.
+ * Dedicated view page for TV season content (FisheyeSeason) - the "matching pair" to
+ * edit_season.php, alongside view_program.php/edit_program.php (Lester, 2026-09-02). Same shape
+ * as view_film.php: facts panel via one flat allXrefs() pass (no group names hardcoded), plus
+ * this season's own alternate poster/backdrop images strip. Adds an episode list (this season's
+ * own 'episode' xref rows) and drops the video player - a season has no single file of its own.
  *
  * @package fisheye
  * @subpackage functions
@@ -29,19 +20,21 @@ global $gBitSystem, $gBitSmarty;
 
 $gBitSystem->verifyPackage( 'fisheye' );
 
-$gContent = FisheyeGallery::lookup( $_REQUEST );
+$gContent = FisheyeImage::lookup( $_REQUEST );
 if( !$gContent || !$gContent->isValid() ) {
-	$gBitSystem->fatalError( KernelTools::tra( 'No show exists with the given ID' ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
+	$gBitSystem->fatalError( KernelTools::tra( 'No season exists with the given ID' ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
 }
 $gContent->verifyViewPermission();
 $gContent->addHit();
 
-// bucket this show's own xref data - same flat allXrefs() pass as view_film.php, no group names
+// bucket this season's own xref data - same flat allXrefs() pass as view_film.php, no group names
 // hardcoded (see that page's own comment for why that matters).
 $gContent->loadXrefInfo();
 $genres = $directors = $writers = $stars = [];
 $contentRating = $durationMs = null;
 $externalLinks = [];
+$seasonImages = [];
+$episodes = [];
 if( $gContent->mXrefInfo ) {
 	foreach( $gContent->mXrefInfo->allXrefs() as $xref ) {
 		switch( $xref['item'] ) {
@@ -51,6 +44,12 @@ if( $gContent->mXrefInfo ) {
 			case 'star':           $stars[]      = $xref['xkey_ext']; break;
 			case 'content_rating': $contentRating = $xref['xkey_ext']; break;
 			case 'duration':       $durationMs    = (int)$xref['xkey_ext']; break;
+			case 'image':          $seasonImages[] = [ 'xref_id' => $xref['xref_id'] ]; break;
+			case 'episode':
+				// no per-episode title/number data exists yet (xkey_ext is just the raw file
+				// path) - shown as its own basename until that's built out.
+				$episodes[] = [ 'title' => pathinfo( $xref['xkey_ext'], PATHINFO_FILENAME ) ];
+				break;
 		}
 		if( !empty( $xref['cross_ref_href'] ) && !empty( $xref['xkey'] )) {
 			$externalLinks[] = [
@@ -67,13 +66,21 @@ $gBitSmarty->assign( 'stars', $stars );
 $gBitSmarty->assign( 'contentRating', $contentRating );
 $gBitSmarty->assign( 'durationMs', $durationMs );
 $gBitSmarty->assign( 'externalLinks', $externalLinks );
+$gBitSmarty->assign( 'seasonImages', $seasonImages );
+$gBitSmarty->assign( 'episodes', $episodes );
 
-// this show's own season members - real gallery membership, unchanged from plain FisheyeGallery.
-$listHash = [ 'max_records' => -1 ];
-$gContent->loadImages( $listHash );
-
+// parent show, for the breadcrumb line - same pattern as view_film.php.
+$gGallery = null;
+if( !empty( $_REQUEST['gallery_id'] ) && is_numeric( $_REQUEST['gallery_id'] )) {
+	$gGallery = FisheyeGallery::lookup( $_REQUEST );
+} elseif( $parents = $gContent->getParentGalleries() ) {
+	$gal = current( $parents );
+	$gGallery = new FisheyeGallery( $gal['gallery_id'] );
+	$gGallery->load();
+}
+$gBitSmarty->assign( 'gGallery', $gGallery );
 $gBitSmarty->assign( 'gContent', $gContent );
 
 $gBitSystem->setCanonicalLink( $gContent->getDisplayUrl() );
 $gBitSystem->setBrowserTitle( $gContent->getTitle() );
-$gBitSystem->display( 'bitpackage:fisheye/view_program.tpl', null, [ 'display_mode' => 'display' ] );
+$gBitSystem->display( 'bitpackage:fisheye/view_season.tpl', null, [ 'display_mode' => 'display' ] );
