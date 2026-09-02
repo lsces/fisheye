@@ -4,9 +4,12 @@
  * (list_xref.tpl / add_xref.php / edit_xref.php) for genre/director/writer/star/rating/duration/
  * imdb/tvdb/tmdb/episodes/images - same reuse-the-generic-table decision as edit_film.php.
  *
- * Only hosts 'Reload Images' (FisheyeSeason::reloadPlexImages()) for now - no season equivalent
- * of reloadPlexMetadata() exists yet, not asked for when this was built (Lester, 2026-09-02:
- * "do the same for the season/episode images").
+ * Hosts 'Reload Images' (FisheyeSeason::reloadPlexImages()) and 'Load Episodes'
+ * (FisheyeSeason::reloadPlexEpisodes()) - no season-level 'Reload Metadata' exists deliberately
+ * (Lester, 2026-09-02: "Plex DOESN'T put anything up on a season page... it's the TV that toggles
+ * to display a selected episode's metadata as you select each") - genre/director/writer/star/
+ * rating/duration live per-episode instead, fetched by 'Load Episodes' and shown per-episode on
+ * view_season.php.
  *
  * @package fisheye
  * @subpackage functions
@@ -40,6 +43,9 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 } elseif( !empty( $_REQUEST['fReloadImages'] ) ) {
 	$plexResult = $gContent->reloadPlexImages();
 	$plexResultLabel = KernelTools::tra( 'Images reloaded from Plex' );
+} elseif( !empty( $_REQUEST['fReloadEpisodes'] ) ) {
+	$plexResult = $gContent->reloadPlexEpisodes();
+	$plexResultLabel = KernelTools::tra( 'Episodes loaded from Plex' );
 }
 
 $gBitSmarty->assign( 'errors', $gContent->mErrors );

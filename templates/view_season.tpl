@@ -18,23 +18,7 @@
 					<img class="img-responsive" src="{$gContent->getThumbnailUri()}" alt="{$gContent->getTitle()|escape}" />
 				{/if}
 			</div>
-			<div class="col-md-9 film-facts">
-				{if $directors|@count || $stars|@count}
-					<p class="film-credits">
-						{if $directors|@count}<strong>{tr}Director{/tr}{if $directors|@count > 1}s{/if}:</strong> {$directors|@implode:", "|escape}<br />{/if}
-						{if $stars|@count}<strong>{tr}Starring{/tr}:</strong> {$stars|@implode:", "|escape}{/if}
-					</p>
-				{/if}
-				{if $genres|@count}
-					<p class="film-genres">
-						{foreach from=$genres item=genre}<span class="label label-default">{$genre|escape}</span> {/foreach}
-					</p>
-				{/if}
-				<dl class="film-info">
-					{if $contentRating}<dt>{tr}Rating{/tr}</dt><dd>{$contentRating|escape}</dd>{/if}
-					{if $durationMs}<dt>{tr}Duration{/tr}</dt><dd>{($durationMs/1000)|display_duration}</dd>{/if}
-					{if $writers|@count}<dt>{tr}Writer{/tr}{if $writers|@count > 1}s{/if}</dt><dd>{$writers|@implode:", "|escape}</dd>{/if}
-				</dl>
+			<div class="col-md-9">
 				{if $externalLinks|@count}
 					<p class="film-external-links">
 						{foreach from=$externalLinks item=link name=externalLinks}
@@ -42,27 +26,59 @@
 						{/foreach}
 					</p>
 				{/if}
+				{if $gContent->mInfo.data}
+					<p>{$gContent->mInfo.data|escape}</p>
+				{/if}
 			</div>
 		</div>
-
-		{if $gContent->mInfo.data}
-			<div class="row">
-				<div class="col-md-12 film-summary">
-					<p>{$gContent->mInfo.data|escape}</p>
-				</div>
-			</div>
-		{/if}
 	</section>
 
+	{* No season-level facts panel - Plex has none of its own (Lester, 2026-09-02: "Plex DOESN'T
+	   put anything up on a season page... it's the TV that toggles to display a selected
+	   episode's metadata as you select each"). This episode list is the real content of the
+	   page - clicking an episode swaps which already-rendered detail block is shown, same
+	   highlight-swaps-the-panel interaction, no per-episode request. *}
 	{if $episodes|@count}
 		<section class="season-episodes">
 			<h2>{tr}Episodes{/tr}</h2>
-			<ol>
-				{foreach from=$episodes item=episode}
-					<li>{$episode.title|escape}</li>
-				{/foreach}
-			</ol>
+			<div class="row">
+				<div class="col-md-4">
+					<ul class="episode-list list-unstyled">
+						{foreach from=$episodes item=episode name=episodes}
+							<li class="episode-item{if $smarty.foreach.episodes.first} active{/if}" onclick="fisheyeShowEpisode({$smarty.foreach.episodes.index})" style="cursor:pointer;">
+								{$episode.xorder}. {$episode.title|escape}
+							</li>
+						{/foreach}
+					</ul>
+				</div>
+				<div class="col-md-8">
+					{foreach from=$episodes item=episode name=episodes}
+						<div class="episode-detail" id="episode-detail-{$smarty.foreach.episodes.index}"{if !$smarty.foreach.episodes.first} style="display:none;"{/if}>
+							<h3>{$episode.title|escape}</h3>
+							{if $episode.air_date}<p class="episode-air-date"><small>{$episode.air_date|escape}</small></p>{/if}
+							{if $episode.summary}<p>{$episode.summary|escape}</p>{/if}
+							<dl>
+								{if $episode.directors|@count}<dt>{tr}Director{/tr}{if $episode.directors|@count > 1}s{/if}</dt><dd>{$episode.directors|@implode:", "|escape}</dd>{/if}
+								{if $episode.writers|@count}<dt>{tr}Writer{/tr}{if $episode.writers|@count > 1}s{/if}</dt><dd>{$episode.writers|@implode:", "|escape}</dd>{/if}
+								{if $episode.stars|@count}<dt>{tr}Starring{/tr}</dt><dd>{$episode.stars|@implode:", "|escape}</dd>{/if}
+								{if $episode.content_rating}<dt>{tr}Rating{/tr}</dt><dd>{$episode.content_rating|escape}</dd>{/if}
+								{if $episode.durationMs}<dt>{tr}Duration{/tr}</dt><dd>{($episode.durationMs/1000)|display_duration}</dd>{/if}
+							</dl>
+						</div>
+					{/foreach}
+				</div>
+			</div>
 		</section>
+		<script>
+			function fisheyeShowEpisode( idx ) {
+				document.querySelectorAll( '.episode-detail' ).forEach( function( el ) { el.style.display = 'none'; } );
+				document.querySelectorAll( '.episode-item' ).forEach( function( el ) { el.classList.remove( 'active' ); } );
+				var detail = document.getElementById( 'episode-detail-' + idx );
+				if( detail ) { detail.style.display = ''; }
+				var items = document.querySelectorAll( '.episode-item' );
+				if( items[idx] ) { items[idx].classList.add( 'active' ); }
+			}
+		</script>
 	{/if}
 
 	{if $seasonImages|@count}

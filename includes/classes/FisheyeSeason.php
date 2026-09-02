@@ -302,6 +302,114 @@ class FisheyeSeason extends FisheyeImage {
 	}
 
 	/**
+	 * Fetch this season's full episode list from Plex - the "Load Episodes" action
+	 * (Lester, 2026-09-02), superseding the one-off import_episode_test.php script that had
+	 * registered only the one episode it was hand-fed. Rebuild-not-diff, same as every other
+	 * reload* method here: every 'episode' xref row for this content_id is deleted before
+	 * re-inserting, since 'episode' is multiple=1 and storeXref() has no natural key to update
+	 * in place.
+	 *
+	 * There is no season-level facts panel to populate (Lester, 2026-09-02: "Plex DOESN'T put
+	 * anything up on a season page... it's the TV that toggles to display a selected episode's
+	 * metadata as you select each" - confirmed directly against the local Plex db: the season's
+	 * own metadata_item has empty content_rating/duration and no genre/director/writer/star
+	 * taggings at all). Real per-episode facts - director(tag_type 4)/writer(5)/star(6, capped at
+	 * 5 same reasoning as every other star cap here)/content_rating/duration - DO exist one level
+	 * down, on each episode's own metadata_item (metadata_type=4), confirmed against S01E01 (id
+	 * 1870). Genre never exists below show level in Plex's own model, so it's not attempted here -
+	 * that's what view_program.php's own facts panel already covers, one level up.
+	 *
+	 * Each episode's full packet (title/summary/air_date/director/writer/star/content_rating/
+	 * duration) is JSON-encoded into the xref row's `data` column (via the 'edit' param key -
+	 * see import_episode_test.php's own comment on that non-obvious key name), so a single
+	 * already-loaded xref row carries everything view_season.php needs to show when that episode
+	 * is selected - no per-episode page/request needed, matching Plex's own smart-TV pattern of
+	 * a live highlight-swaps-the-detail-panel interaction rather than navigating away.
+	 *
+	 * @return array Summary of what was found/stored, for the calling page's result display.
+	 */
+	public function reloadPlexEpisodes(): array {
+		$summary = [ 'matched' => false, 'items' => [] ];
+
+		$plexMatch = $this->matchPlexSeasonMetadataItem();
+		if( !$plexMatch ) {
+			return $summary;
+		}
+		$plexDb = $plexMatch['db'];
+		$seasonMetadataItemId = $plexMatch['id'];
+		$root = $plexMatch['root'];
+
+		$realRoot = realpath( $root );
+		if( empty( $realRoot ) ) {
+			return $summary;
+		}
+		$realRoot = rtrim( $realRoot, '/' ).'/';
+
+		$stmt = $plexDb->prepare(
+			"SELECT mi.id, mi.\"index\", mi.title, mi.summary, mi.originally_available_at,
+			        mi.content_rating, mi.duration, mp.file
+			 FROM metadata_items mi
+			 JOIN media_items mi2 ON mi2.metadata_item_id = mi.id
+			 JOIN media_parts mp ON mp.media_item_id = mi2.id
+			 WHERE mi.parent_id = ? AND mi.metadata_type = 4
+			 ORDER BY mi.\"index\""
+		);
+		$stmt->execute( [ $seasonMetadataItemId ] );
+		$episodeRows = $stmt->fetchAll( \PDO::FETCH_ASSOC );
+		if( empty( $episodeRows ) ) {
+			return $summary;
+		}
+		$summary['matched'] = true;
+
+		self::deleteXrefByItem( $this->mContentId, [ 'episode' ] );
+
+		$tagTypes = [ 'director' => 4, 'writer' => 5, 'star' => 6 ];
+		foreach( $episodeRows as $row ) {
+			if( !str_starts_with( $row['file'], $realRoot ) || !is_file( $row['file'] ) ) {
+				continue;
+			}
+			$relativePath = substr( $row['file'], strlen( $realRoot ) );
+
+			$episodeData = [
+				'title'    => $row['title'],
+				'summary'  => $row['summary'],
+				'air_date' => !empty( $row['originally_available_at'] ) ? gmdate( 'Y-m-d', (int)$row['originally_available_at'] ) : null,
+			];
+			foreach( $tagTypes as $tagItem => $tagType ) {
+				$tagStmt = $plexDb->prepare(
+					"SELECT t.tag FROM taggings tg JOIN tags t ON t.id = tg.tag_id WHERE tg.metadata_item_id = ? AND t.tag_type = ? ORDER BY tg.\"index\""
+				);
+				$tagStmt->execute( [ $row['id'], $tagType ] );
+				$values = $tagStmt->fetchAll( \PDO::FETCH_COLUMN );
+				if( $tagItem === 'star' ) {
+					$values = array_slice( $values, 0, 5 );
+				}
+				if( $values ) {
+					$episodeData[$tagItem] = $values;
+				}
+			}
+			if( !empty( $row['content_rating'] ) ) {
+				$episodeData['content_rating'] = preg_replace( '#^[a-z]{2}/#i', '', $row['content_rating'] );
+			}
+			if( !empty( $row['duration'] ) ) {
+				$episodeData['duration'] = (int)$row['duration'];
+			}
+
+			$xrefParamHash = [
+				'content_id' => $this->mContentId,
+				'item'       => 'episode',
+				'xkey_ext'   => $relativePath,
+				'edit'       => json_encode( $episodeData ),
+				'xorder'     => (int)$row['index'],
+			];
+			$this->storeXref( $xrefParamHash );
+			$summary['items'][] = "S{$row['index']}: {$row['title']}";
+		}
+
+		return $summary;
+	}
+
+	/**
 	 * Fetch alternate poster/backdrop images from Plex for this season, same shape as
 	 * FisheyeFilm::reloadPlexImages() (per-type idempotency, w342/w780 TMDB sizes, 5-per-type
 	 * cap, xref-based storage - see that method's own docblock and fisheye.md's 2026-09-02

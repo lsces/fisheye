@@ -1,10 +1,16 @@
 <?php
 /**
  * Dedicated view page for TV season content (FisheyeSeason) - the "matching pair" to
- * edit_season.php, alongside view_program.php/edit_program.php (Lester, 2026-09-02). Same shape
- * as view_film.php: facts panel via one flat allXrefs() pass (no group names hardcoded), plus
- * this season's own alternate poster/backdrop images strip. Adds an episode list (this season's
- * own 'episode' xref rows) and drops the video player - a season has no single file of its own.
+ * edit_season.php, alongside view_program.php/edit_program.php (Lester, 2026-09-02).
+ *
+ * No season-level facts panel - Plex itself has none (Lester, 2026-09-02: "Plex DOESN'T put
+ * anything up on a season page... it's the TV that toggles to display a selected episode's
+ * metadata as you select each"). Instead this page's main content is the episode list; each
+ * episode's own JSON packet (FisheyeSeason::reloadPlexEpisodes(), stored in its xref row's `data`
+ * column - title/summary/air_date/director/writer/star/content_rating/duration) is decoded here
+ * and rendered into the template already, so selecting an episode client-side just toggles which
+ * already-rendered detail block is visible - no per-episode request, mirroring Plex's own
+ * highlight-swaps-the-panel interaction.
  *
  * @package fisheye
  * @subpackage functions
@@ -27,28 +33,29 @@ if( !$gContent || !$gContent->isValid() ) {
 $gContent->verifyViewPermission();
 $gContent->addHit();
 
-// bucket this season's own xref data - same flat allXrefs() pass as view_film.php, no group names
-// hardcoded (see that page's own comment for why that matters).
 $gContent->loadXrefInfo();
-$genres = $directors = $writers = $stars = [];
-$contentRating = $durationMs = null;
 $externalLinks = [];
 $seasonImages = [];
 $episodes = [];
 if( $gContent->mXrefInfo ) {
 	foreach( $gContent->mXrefInfo->allXrefs() as $xref ) {
 		switch( $xref['item'] ) {
-			case 'genre':          $genres[]     = $xref['xkey_ext']; break;
-			case 'director':       $directors[]  = $xref['xkey_ext']; break;
-			case 'writer':         $writers[]    = $xref['xkey_ext']; break;
-			case 'star':           $stars[]      = $xref['xkey_ext']; break;
-			case 'content_rating': $contentRating = $xref['xkey_ext']; break;
-			case 'duration':       $durationMs    = (int)$xref['xkey_ext']; break;
-			case 'image':          $seasonImages[] = [ 'xref_id' => $xref['xref_id'] ]; break;
+			case 'image':
+				$seasonImages[] = [ 'xref_id' => $xref['xref_id'] ];
+				break;
 			case 'episode':
-				// no per-episode title/number data exists yet (xkey_ext is just the raw file
-				// path) - shown as its own basename until that's built out.
-				$episodes[] = [ 'title' => pathinfo( $xref['xkey_ext'], PATHINFO_FILENAME ) ];
+				$data = !empty( $xref['data'] ) ? json_decode( $xref['data'], true ) : [];
+				$episodes[] = [
+					'xorder'        => (int)$xref['xorder'],
+					'title'         => $data['title'] ?? pathinfo( $xref['xkey_ext'], PATHINFO_FILENAME ),
+					'summary'       => $data['summary'] ?? '',
+					'air_date'      => $data['air_date'] ?? '',
+					'directors'     => $data['director'] ?? [],
+					'writers'       => $data['writer'] ?? [],
+					'stars'         => $data['star'] ?? [],
+					'content_rating'=> $data['content_rating'] ?? '',
+					'durationMs'    => $data['duration'] ?? null,
+				];
 				break;
 		}
 		if( !empty( $xref['cross_ref_href'] ) && !empty( $xref['xkey'] )) {
@@ -59,12 +66,6 @@ if( $gContent->mXrefInfo ) {
 		}
 	}
 }
-$gBitSmarty->assign( 'genres', $genres );
-$gBitSmarty->assign( 'directors', $directors );
-$gBitSmarty->assign( 'writers', $writers );
-$gBitSmarty->assign( 'stars', $stars );
-$gBitSmarty->assign( 'contentRating', $contentRating );
-$gBitSmarty->assign( 'durationMs', $durationMs );
 $gBitSmarty->assign( 'externalLinks', $externalLinks );
 $gBitSmarty->assign( 'seasonImages', $seasonImages );
 $gBitSmarty->assign( 'episodes', $episodes );
