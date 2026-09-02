@@ -31,6 +31,31 @@ if( $gBitSystem->isPackageActive( 'fisheye' ) ) { // && $gBitUser->hasPermission
 	];
 	$gBitSystem->registerAppMenu( $menuHash );
 
+	// Register sub-type content types at startup so getLibertyObject() can resolve them.
+	// registerContentType() is a no-op in memory once the row exists in the DB - same pattern
+	// contact's own bit_setup_inc.php uses for ContactPerson/ContactBusiness.
+	$gLibertySystem->registerContentType( 'fisheyefilm', [
+		'content_type_guid' => 'fisheyefilm',
+		'content_name'      => 'Film',
+		'handler_class'     => 'FisheyeFilm',
+		'handler_package'   => 'fisheye',
+		'handler_file'      => 'FisheyeFilm.php',
+	] );
+	$gLibertySystem->registerContentType( 'fisheyeseason', [
+		'content_type_guid' => 'fisheyeseason',
+		'content_name'      => 'TV Season',
+		'handler_class'     => 'FisheyeSeason',
+		'handler_package'   => 'fisheye',
+		'handler_file'      => 'FisheyeSeason.php',
+	] );
+	$gLibertySystem->registerContentType( 'fisheyealbum', [
+		'content_type_guid' => 'fisheyealbum',
+		'content_name'      => 'Music Album',
+		'handler_class'     => 'FisheyeAlbum',
+		'handler_package'   => 'fisheye',
+		'handler_file'      => 'FisheyeAlbum.php',
+	] );
+
 	define( 'LIBERTY_SERVICE_PHOTOSHARING', 'photosharing');
 
 	$gLibertySystem->registerService( LIBERTY_SERVICE_PHOTOSHARING, FISHEYE_PKG_NAME, [
