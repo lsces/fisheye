@@ -625,10 +625,18 @@ class FisheyeImage extends FisheyeBase {
 		$ret = '';
 		$size = (!empty( $pParamHash['size'] ) && is_string( $pParamHash['size'] ) && isset( $pParamHash['thumbnail_url'][$pParamHash['size']] ) ) ? $pParamHash['size'] : null ;
 
+		// Single place this branches so every caller (gallery grids, the sibling poster row,
+		// contact's gallery bar, etc) gets it for free rather than each template needing to
+		// know about film vs photo - pretty_urls branch below updated to match but its actual
+		// route isn't confirmed wired up (pretty_urls isn't active on rdmcloud to test against).
+		$isFilm = ( $pParamHash['attachment_plugin_guid'] ?? null ) === 'mimefilm';
+		$viewScript = $isFilm ? 'view_film.php' : 'view_image.php';
+		$prettyUrlSegment = $isFilm ? 'film/' : 'image/';
+
 		global $gBitSystem;
 		if( BitBase::verifyId( $pParamHash['image_id'] ?? 0 ) ) {
 			if( $gBitSystem->isFeatureActive( 'pretty_urls' ) ) {
-				$ret = FISHEYE_PKG_URL.'image/'.$pParamHash['image_id'];
+				$ret = FISHEYE_PKG_URL.$prettyUrlSegment.$pParamHash['image_id'];
 				if( !empty( $pParamHash['gallery_path'] ) ) {
 					$ret .= $pParamHash['gallery_path'];
 				}
@@ -636,7 +644,7 @@ class FisheyeImage extends FisheyeBase {
 					$ret .= '/'.$size;
 				}
 			} else {
-				$ret = FISHEYE_PKG_URL.'view_image.php?image_id='.$pParamHash['image_id'];
+				$ret = FISHEYE_PKG_URL.$viewScript.'?image_id='.$pParamHash['image_id'];
 				if( !empty( $pParamHash['gallery_path'] ) ) {
 					$ret .= '&gallery_path='.$pParamHash['gallery_path'];
 				}
@@ -645,7 +653,7 @@ class FisheyeImage extends FisheyeBase {
 				}
 			}
 		} elseif ( BitBase::verifyId( $pParamHash['content_id'] ?? 0 ) ) {
-			$ret = FISHEYE_PKG_URL.'view_image.php?content_id='.$pParamHash['content_id'];
+			$ret = FISHEYE_PKG_URL.$viewScript.'?content_id='.$pParamHash['content_id'];
 		}
 		return $ret;
 	}

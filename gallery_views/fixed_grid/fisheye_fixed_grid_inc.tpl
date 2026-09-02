@@ -47,7 +47,7 @@
 			{/if}
 
 		{foreachelse}
-			<tr><td class="norecords">{tr}This gallery is empty{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}upload.php?gallery_id={$gGallery->mGalleryId ?? 0}">Upload pictures!</a></td></tr>
+			<tr><td class="norecords">{tr}This gallery is empty{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}upload.php?gallery_id={$gContent->mGalleryId ?? 0}">Upload pictures!</a></td></tr>
 		{/foreach}
 
 		{if $imageCount % $cols != 0}</tr>{/if}

@@ -1,7 +1,10 @@
 {strip}
 <div class="display fisheye view-film">
 	<header>
-		{include file="bitpackage:fisheye/gallery_icons_inc.tpl"}
+		{* film_icons_inc.tpl, not gallery_icons_inc.tpl - the gallery one's download/image-order/
+		   upload/permissions icons all key off $gContent->mGalleryId, which a plain film content
+		   item doesn't have; a film only ever needs the one Edit icon. *}
+		{include file="bitpackage:fisheye/film_icons_inc.tpl"}
 		<h1>{$gContent->getTitle()|escape}</h1>
 		{include file="bitpackage:fisheye/gallery_breadcrumb_inc.tpl"}
 	</header>
