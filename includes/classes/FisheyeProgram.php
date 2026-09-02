@@ -320,13 +320,35 @@ class FisheyeProgram extends FisheyeGallery {
 		$plexDb = $plexMatch['db'];
 		$metadataItemId = $plexMatch['id'];
 
-		$stmt = $plexDb->prepare( "SELECT content_rating, duration FROM metadata_items WHERE id = ?" );
+		$stmt = $plexDb->prepare( "SELECT content_rating, duration, summary FROM metadata_items WHERE id = ?" );
 		$stmt->execute( [ $metadataItemId ] );
 		$plexRow = $stmt->fetch( \PDO::FETCH_ASSOC );
 		if( !$plexRow ) {
 			return $summary;
 		}
 		$summary['matched'] = true;
+
+		// the show's own description - a real gap found live 2026-09-02 (Lester: "The top level
+		// Morse on plex has a description section which we seem to be missing") - stored directly
+		// on liberty_content.data (view_program.php's own {if $gContent->mInfo.data} block was
+		// already there, just never had anything to show since nothing populated it).
+		if( !empty( $plexRow['summary'] ) ) {
+			// FisheyeGallery::store() (inherited) declares its param by-reference, so a literal
+			// inline array here is a fatal error - must assign to a variable first. The input key
+			// is 'edit', not 'data' - LibertyContent::verify() only maps content_store['data']
+			// from $pParamHash['edit'] (via the format plugin's own verify_function, e.g.
+			// bithtml_verify_data()) - same "wrong field name" gotcha already hit once this
+			// session for xref rows, now found again one layer up in plain content storage.
+			// 'title' must also be included even though it's unchanged - FisheyeGallery::store()'s
+			// own verifyGalleryData() unconditionally requires it in the hash (unlike rows_per_page/
+			// cols_per_page/thumbnail_size, which fall back to $this->mInfo when omitted) and
+			// otherwise fails validation silently - reloadPlexMetadata() never checked store()'s
+			// return value, so this failed with no visible error until checked directly against
+			// the database.
+			$descriptionStoreHash = [ 'content_id' => $this->mContentId, 'title' => $this->getTitle(), 'edit' => $plexRow['summary'] ];
+			$this->store( $descriptionStoreHash );
+			$summary['items'][] = 'description updated';
+		}
 
 		self::deleteXrefByItem(
 			$this->mContentId,
