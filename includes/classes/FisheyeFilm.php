@@ -103,6 +103,16 @@ class FisheyeFilm extends FisheyeImage {
 	 * the latter downloads several image files), so they get their own action/button each
 	 * rather than one doing both.
 	 *
+	 * A second run rebuilds from scratch rather than diffing - every item this method writes
+	 * (genre/director/writer/star/content_rating/duration/imdb/tmdb) is deleted for this content_id
+	 * via LibertyContent::deleteXrefByItem() *before* re-inserting, since storeXref() always
+	 * inserts a fresh row when called without an xref_id (correct for the multiple=1 items, which
+	 * have no natural single-row key to update in place) - without the upfront delete, a second
+	 * "Reload Metadata" just appended duplicate rows on top of the first run's, found live
+	 * 2026-09-02 (Lester: "metadata seems to have been duplicated, not refreshed"). Same
+	 * rebuild-not-diff pattern deleteXrefByItem()'s own docblock already documents for health's
+	 * RebuildHRDerived.php and food's FoodAssembly::clearItems().
+	 *
 	 * @return array Summary of what was found/stored, for the calling page's result display.
 	 */
 	public function reloadPlexMetadata(): array {
@@ -123,6 +133,11 @@ class FisheyeFilm extends FisheyeImage {
 			return $summary;
 		}
 		$summary['matched'] = true;
+
+		self::deleteXrefByItem(
+			$this->mContentId,
+			[ 'genre', 'director', 'writer', 'star', 'content_rating', 'duration', 'imdb', 'tmdb' ]
+		);
 
 		// tag_type: 1=genre, 4=director, 5=writer, 6=actor(star) - confirmed against real live
 		// data 2026-09-02, not documented anywhere by Plex itself.
