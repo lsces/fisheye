@@ -329,6 +329,7 @@ class FisheyeSeason extends FisheyeImage {
 	 * @return array Summary of what was found/stored, for the calling page's result display.
 	 */
 	public function reloadPlexEpisodes(): array {
+		global $gBitSystem;
 		$summary = [ 'matched' => false, 'items' => [] ];
 
 		$plexMatch = $this->matchPlexSeasonMetadataItem();
@@ -344,6 +345,12 @@ class FisheyeSeason extends FisheyeImage {
 			return $summary;
 		}
 		$realRoot = rtrim( $realRoot, '/' ).'/';
+
+		$plexToken = $gBitSystem->getConfig( 'fisheye_plex_token', '' );
+		$imagesDir = $root.'images/';
+		if( !empty( $plexToken ) ) {
+			KernelTools::mkdir_p( $imagesDir );
+		}
 
 		$stmt = $plexDb->prepare(
 			"SELECT mi.id, mi.\"index\", mi.title, mi.summary, mi.originally_available_at,
@@ -393,6 +400,31 @@ class FisheyeSeason extends FisheyeImage {
 			}
 			if( !empty( $row['duration'] ) ) {
 				$episodeData['duration'] = (int)$row['duration'];
+			}
+
+			// this episode's own Plex-generated screenshot ("thumb") - a real per-episode still,
+			// distinct from the season-level poster/backdrop alternates reloadPlexImages() fetches.
+			// Confirmed live 2026-09-02: each episode's own metadata carries a `thumb="..."`
+			// attribute (a lowercase-only match so it can't collide with `parentThumb`/
+			// `grandparentThumb` on the same element). Stored in the same shared images/ folder as
+			// the season's other alternates, named by episode index rather than xorder/basename
+			// since a season has no single file of its own to derive a name from.
+			if( !empty( $plexToken ) ) {
+				$episodeXml = @file_get_contents( "http://localhost:32400/library/metadata/{$row['id']}?X-Plex-Token=".urlencode( $plexToken ) );
+				if( $episodeXml !== false && preg_match( '#\bthumb="([^"]+)"#', $episodeXml, $m ) ) {
+					$thumbPath = html_entity_decode( $m[1] );
+					$thumbUrl = "http://localhost:32400$thumbPath?X-Plex-Token=".urlencode( $plexToken );
+					$imageData = @file_get_contents( $thumbUrl );
+					if( !empty( $imageData ) ) {
+						$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_ep_thumb_' );
+						file_put_contents( $tmpFile, $imageData );
+						$fileName = $this->getTitle().' - episode-'.(int)$row['index'].'.jpg';
+						if( self::resizeImageFile( $tmpFile, $imagesDir.$fileName, 400 ) ) {
+							$episodeData['thumb'] = 'images/'.$fileName;
+						}
+						@unlink( $tmpFile );
+					}
+				}
 			}
 
 			$xrefParamHash = [

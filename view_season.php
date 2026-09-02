@@ -46,6 +46,7 @@ if( $gContent->mXrefInfo ) {
 			case 'episode':
 				$data = !empty( $xref['data'] ) ? json_decode( $xref['data'], true ) : [];
 				$episodes[] = [
+					'xref_id'       => $xref['xref_id'],
 					'xorder'        => (int)$xref['xorder'],
 					'title'         => $data['title'] ?? pathinfo( $xref['xkey_ext'], PATHINFO_FILENAME ),
 					'summary'       => $data['summary'] ?? '',
@@ -55,6 +56,7 @@ if( $gContent->mXrefInfo ) {
 					'stars'         => $data['star'] ?? [],
 					'content_rating'=> $data['content_rating'] ?? '',
 					'durationMs'    => $data['duration'] ?? null,
+					'thumb'         => $data['thumb'] ?? null,
 				];
 				break;
 		}

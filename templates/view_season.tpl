@@ -13,11 +13,6 @@
 
 	<section class="body">
 		<div class="row">
-			<div class="col-md-3">
-				{if $gContent->getThumbnailUri()}
-					<img class="img-responsive" src="{$gContent->getThumbnailUri()}" alt="{$gContent->getTitle()|escape}" />
-				{/if}
-			</div>
 			<div class="col-md-9">
 				{if $externalLinks|@count}
 					<p class="film-external-links">
@@ -30,30 +25,48 @@
 					<p>{$gContent->mInfo.data|escape}</p>
 				{/if}
 			</div>
+			{if $gContent->getThumbnailUri('medium')}
+				<div class="col-md-3 film-poster">
+					<img class="img-responsive" src="{$gContent->getThumbnailUri('medium')}" alt="{$gContent->getTitle()|escape}" />
+				</div>
+			{/if}
 		</div>
 	</section>
 
 	{* No season-level facts panel - Plex has none of its own (Lester, 2026-09-02: "Plex DOESN'T
 	   put anything up on a season page... it's the TV that toggles to display a selected
-	   episode's metadata as you select each"). This episode list is the real content of the
-	   page - clicking an episode swaps which already-rendered detail block is shown, same
-	   highlight-swaps-the-panel interaction, no per-episode request. *}
+	   episode's metadata as you select each"). The episode grid below is the real content of the
+	   page - clicking a card swaps which already-rendered detail block is shown, same
+	   highlight-swaps-the-panel interaction, no per-episode request. Grid is 6-across at md+
+	   (col-md-2 - Lester: "a block which I think follows the 6 across style"). *}
 	{if $episodes|@count}
 		<section class="season-episodes">
 			<h2>{tr}Episodes{/tr}</h2>
 			<div class="row">
-				<div class="col-md-4">
-					<ul class="episode-list list-unstyled">
-						{foreach from=$episodes item=episode name=episodes}
-							<li class="episode-item{if $smarty.foreach.episodes.first} active{/if}" onclick="fisheyeShowEpisode({$smarty.foreach.episodes.index})" style="cursor:pointer;">
-								{$episode.xorder}. {$episode.title|escape}
-							</li>
-						{/foreach}
-					</ul>
-				</div>
-				<div class="col-md-8">
-					{foreach from=$episodes item=episode name=episodes}
-						<div class="episode-detail" id="episode-detail-{$smarty.foreach.episodes.index}"{if !$smarty.foreach.episodes.first} style="display:none;"{/if}>
+				{foreach from=$episodes item=episode name=episodes}
+					<div class="col-md-2 col-sm-4 col-xs-6">
+						<div class="gallery-box episode-item{if $smarty.foreach.episodes.first} active{/if}" onclick="fisheyeShowEpisode({$smarty.foreach.episodes.index})" style="cursor:pointer;">
+							<div class="gallery-img">
+								{if $episode.thumb}
+									<img class="img-responsive thumb" src="{$smarty.const.FISHEYE_PKG_URL}view_extra_image.php?xref_id={$episode.xref_id}" alt="{$episode.title|escape}" />
+								{/if}
+								<a class="episode-play" href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$episode.xref_id}" target="_blank" rel="noopener" title="{tr}Play{/tr}" onclick="event.stopPropagation();">&#9658;</a>
+							</div>
+							<div class="gallery-img-title center">
+								<small>{$episode.xorder}. {$episode.title|escape}{if $episode.air_date} &middot; {$episode.air_date|escape}{/if}</small>
+							</div>
+						</div>
+					</div>
+					{if $smarty.foreach.episodes.iteration % 2 == 0}<div class="clearfix visible-xs-block"></div>{/if}
+					{if $smarty.foreach.episodes.iteration % 3 == 0}<div class="clearfix visible-sm-block"></div>{/if}
+					{if $smarty.foreach.episodes.iteration % 6 == 0}<div class="clearfix visible-md-block visible-lg-block"></div>{/if}
+				{/foreach}
+			</div>
+
+			<div class="row">
+				<div class="col-md-12">
+					{foreach from=$episodes item=episode name=episodeDetails}
+						<div class="episode-detail" id="episode-detail-{$smarty.foreach.episodeDetails.index}"{if !$smarty.foreach.episodeDetails.first} style="display:none;"{/if}>
 							<h3>{$episode.title|escape}</h3>
 							{if $episode.air_date}<p class="episode-air-date"><small>{$episode.air_date|escape}</small></p>{/if}
 							{if $episode.summary}<p>{$episode.summary|escape}</p>{/if}
