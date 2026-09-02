@@ -24,19 +24,23 @@ if( !$gContent || !$gContent->isValid() ) {
 $gContent->verifyViewPermission();
 $gContent->addHit();
 
-// bucket the film's xref metadata (all share x_group='metadata') into template-friendly arrays
+// bucket the film's xref metadata into template-friendly arrays - 'star' lives in its own
+// 'cast' group (moved out of 'metadata' 2026-09-02, a long cast list crowded the single-value
+// fields), everything else is still 'metadata', hence reading both groups here.
 $gContent->loadXrefInfo();
 $genres = $directors = $writers = $stars = [];
 $contentRating = $durationMs = null;
-if( $gContent->mXrefInfo && !empty( $gContent->mXrefInfo->mGroups['metadata'] )) {
-	foreach( $gContent->mXrefInfo->mGroups['metadata']->mXrefs as $xref ) {
-		switch( $xref['item'] ) {
-			case 'genre':          $genres[]     = $xref['xkey_ext']; break;
-			case 'director':       $directors[]  = $xref['xkey_ext']; break;
-			case 'writer':         $writers[]    = $xref['xkey_ext']; break;
-			case 'star':           $stars[]      = $xref['xkey_ext']; break;
-			case 'content_rating': $contentRating = $xref['xkey_ext']; break;
-			case 'duration':       $durationMs    = (int)$xref['xkey_ext']; break;
+foreach( [ 'metadata', 'cast' ] as $xGroup ) {
+	if( $gContent->mXrefInfo && !empty( $gContent->mXrefInfo->mGroups[$xGroup] )) {
+		foreach( $gContent->mXrefInfo->mGroups[$xGroup]->mXrefs as $xref ) {
+			switch( $xref['item'] ) {
+				case 'genre':          $genres[]     = $xref['xkey_ext']; break;
+				case 'director':       $directors[]  = $xref['xkey_ext']; break;
+				case 'writer':         $writers[]    = $xref['xkey_ext']; break;
+				case 'star':           $stars[]      = $xref['xkey_ext']; break;
+				case 'content_rating': $contentRating = $xref['xkey_ext']; break;
+				case 'duration':       $durationMs    = (int)$xref['xkey_ext']; break;
+			}
 		}
 	}
 }
