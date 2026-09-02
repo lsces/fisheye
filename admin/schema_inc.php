@@ -111,9 +111,6 @@ $gBitInstaller->registerRequirements( FISHEYE_PKG_NAME, [
 ]);
 
 // No liberty_xref_group/liberty_xref_item defaults for FisheyeFilm/Season/Album (or the earlier
-// 'fisheyeimage'-level genre/director/etc set) - that vocabulary is rdmcloud-specific personal
-// media cataloguing, not a generic feature every fisheye install should get. It's applied
-// privately, outside this package entirely, via LibertyXrefScheme::apply() (liberty) from
-// rdmcloud's own site directory - see fisheye.md's 2026-09-02 entry for the full reasoning and
-// the retraction of the original 5.0.2/5.0.3 upgrade files that used to live here.
+// 'fisheyeimage'-level genre/director/etc set) - not a generic feature every fisheye install
+// should get, applied privately per-site instead via LibertyXrefScheme::apply() (liberty).
 
