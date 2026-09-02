@@ -20,13 +20,16 @@ global $gBitSystem, $gBitDb, $gBitUser, $_SERVER;
 
 $_SERVER['HTTP_HOST'] = $_SERVER['HTTP_HOST'] ?? '';
 $_SERVER['SERVER_NAME'] = $_SERVER['SERVER_NAME'] ?? '';
+// This script is meant to be run through a real web request (php-fpm as nginx) - DOCUMENT_ROOT
+// is already correct in that case, only patch it for the CLI fallback case, where it's empty.
 // CLI has no real DOCUMENT_ROOT - setup_inc.php's own BIT_ROOT_PATH fallback resolves from its
 // own __FILE__, which PHP flattens through the kernel/_bw5 symlink chain down to the dev repo,
-// not the site root. Confirmed for real running this script (not just predicted, see
-// fisheye.md's 2026-09-02 entry). Deliberately uses $_SERVER['PWD'] (the shell's logical cwd),
-// NOT dirname(__FILE__) - __FILE__ resolves through the same symlink chain and would land back
-// on the dev repo too, one directory further out.
-$_SERVER['DOCUMENT_ROOT'] = dirname( $_SERVER['PWD'] ?? getenv( 'PWD' ) ?? getcwd() );
+// not the site root. $_SERVER['PWD'] (the shell's logical cwd) is used rather than
+// dirname(__FILE__) - __FILE__ resolves through the same symlink chain and would land back on
+// the dev repo too.
+if( empty( $_SERVER['DOCUMENT_ROOT'] ) ) {
+	$_SERVER['DOCUMENT_ROOT'] = dirname( $_SERVER['PWD'] ?? getenv( 'PWD' ) ?? getcwd() );
+}
 
 chdir( dirname( __FILE__ ) );
 require_once '../kernel/includes/setup_inc.php';

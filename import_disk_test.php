@@ -18,12 +18,17 @@ global $gBitSystem, $gLibertySystem, $_SERVER;
 
 $_SERVER['HTTP_HOST'] = $_SERVER['HTTP_HOST'] ?? '';
 $_SERVER['SERVER_NAME'] = $_SERVER['SERVER_NAME'] ?? '';
-// CLI has no real DOCUMENT_ROOT - setup_inc.php's own BIT_ROOT_PATH fallback resolves from its
-// own __FILE__, which PHP flattens through the kernel/_bw5 symlink chain down to the dev repo,
-// not the site root. Confirmed for real 2026-09-02 (previously just predicted). Deliberately
-// uses $_SERVER['PWD'] (the shell's logical cwd), not dirname(__FILE__) - __FILE__ resolves
-// through the same symlink chain and would land back on the dev repo too.
-$_SERVER['DOCUMENT_ROOT'] = dirname( $_SERVER['PWD'] ?? getenv( 'PWD' ) ?? getcwd() );
+// This script is meant to be run through a real web request (php-fpm as nginx - correct
+// storage/attachments/ permissions for thumbnail generation come for free that way, confirmed
+// 2026-09-02 after CLI-as-lester hit a real permission wall there). DOCUMENT_ROOT is already
+// correct in that case - only patch it for the CLI fallback case, where it's empty. CLI has no
+// real DOCUMENT_ROOT - setup_inc.php's own BIT_ROOT_PATH fallback resolves from its own __FILE__,
+// which PHP flattens through the kernel/_bw5 symlink chain down to the dev repo, not the site
+// root. $_SERVER['PWD'] (the shell's logical cwd) is used rather than dirname(__FILE__) - __FILE__
+// resolves through the same symlink chain and would land back on the dev repo too.
+if( empty( $_SERVER['DOCUMENT_ROOT'] ) ) {
+	$_SERVER['DOCUMENT_ROOT'] = dirname( $_SERVER['PWD'] ?? getenv( 'PWD' ) ?? getcwd() );
+}
 
 chdir( dirname( __FILE__ ) );
 require_once '../kernel/includes/setup_inc.php';
@@ -75,6 +80,8 @@ print "Loaded gallery: ".$gallery->getTitle()." (content_id=".$gallery->mContent
 // h264+aac confirmed via ffprobe - genuinely browser-playable, unlike the first (mpeg4/mkv) test.
 $toRegister = [
 	'Films/James Bond/Casino Royale (2006).mp4'   => 'Casino Royale (2006)', // 2.25GB - file_size overflow fix test
+	'Films/Highlander (1986) [720p].mp4'          => 'Highlander (1986)',
+	'Films/12 Years a Slave (2013).mp4'           => '12 Years a Slave (2013)',
 ];
 
 foreach( $toRegister as $relativePath => $title ) {
