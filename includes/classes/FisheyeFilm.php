@@ -221,9 +221,13 @@ class FisheyeFilm extends FisheyeImage {
 	 * button/action rather than running unconditionally every time metadata is reloaded.
 	 *
 	 * Needs fisheye_plex_token (the posters/arts endpoints aren't in the world-readable db, only
-	 * via Plex's authenticated local API). Idempotent by skipping entirely if this film already
-	 * has any 'image' xref rows — re-running is for a film that's never been fetched, not a way
-	 * to add more/refresh; expunge the existing rows first (and their files) to force a re-fetch.
+	 * via Plex's authenticated local API). Idempotent **per type** (poster/art), not globally -
+	 * a type is only re-fetched if every existing row of that type has been deleted first;
+	 * a global "any image exists at all" check (the original 2026-09-02 shape) meant tidying
+	 * down to just the kept images of one type by deleting a whole other type still blocked ever
+	 * re-fetching that now-empty type without wiping everything else too, found live the same day
+	 * against Casino Royale. A new fetch continues the existing xorder sequence rather than
+	 * restarting at 1, so a top-up run doesn't collide with rows the other type still has.
 	 *
 	 * Storage: a shared `images/` folder directly under fisheye_disk_storage_root, alongside
 	 * `Films/` itself (Films/ is currently flat, one file per film, not one directory per film -
@@ -256,10 +260,21 @@ class FisheyeFilm extends FisheyeImage {
 		$summary['matched'] = true;
 		$metadataItemId = $plexMatch['id'];
 
+		// Per-type, not global - checked below per poster/art rather than skipping the whole
+		// method just because *some* image exists. A global check meant that deliberately
+		// deleting one entire type as part of tidying (e.g. every poster, keeping the backdrops)
+		// still blocked ever re-fetching that now-empty type without wiping everything else too -
+		// found live 2026-09-02 against Casino Royale (content_id=4066). Also tracks the current
+		// max xorder so a top-up run continues the sequence rather than restarting at 1 and
+		// colliding with what's already there.
 		$this->loadXrefInfo();
-		if( $this->mXrefInfo->findByItem( 'image' ) ) {
-			$summary['items'][] = 'Already has stored images - not re-fetched (expunge the existing image xref rows first to force a re-fetch).';
-			return $summary;
+		$existingImagePaths = [];
+		$xorder = 0;
+		foreach( $this->mXrefInfo->allXrefs() as $xref ) {
+			if( $xref['item'] === 'image' ) {
+				$existingImagePaths[] = $xref['xkey_ext'];
+				$xorder = max( $xorder, (int)$xref['xorder'] );
+			}
 		}
 
 		$plexToken = $gBitSystem->getConfig( 'fisheye_plex_token', '' );
@@ -287,8 +302,19 @@ class FisheyeFilm extends FisheyeImage {
 		// method's own docblock for why these particular ones.
 		$thumbSizes = [ 'poster' => 'w342', 'art' => 'w780' ];
 
-		$xorder = 1;
 		foreach( [ 'poster' => 'posters', 'art' => 'arts' ] as $type => $endpoint ) {
+			$alreadyHasType = false;
+			foreach( $existingImagePaths as $path ) {
+				if( str_contains( $path, "-$type-" ) ) {
+					$alreadyHasType = true;
+					break;
+				}
+			}
+			if( $alreadyHasType ) {
+				$summary['items'][] = "$type: already has stored images - not re-fetched (delete all of this type first to force a re-fetch of it).";
+				continue;
+			}
+
 			$apiUrl = "http://localhost:32400/library/metadata/$metadataItemId/$endpoint?X-Plex-Token=".urlencode( $plexToken );
 			$xml = @file_get_contents( $apiUrl );
 			if( $xml === false || !preg_match_all( '#<Photo[^>]*\bkey="(https://[^"]+)"#', $xml, $matches ) ) {
@@ -310,10 +336,10 @@ class FisheyeFilm extends FisheyeImage {
 				if( file_put_contents( $imagesDir.$fileName, $imageData ) === false ) {
 					continue;
 				}
+				$xorder++;
 				$xrefParamHash = [ 'content_id' => $this->mContentId, 'item' => 'image', 'xkey_ext' => $relativePath, 'xorder' => $xorder ];
 				$this->storeXref( $xrefParamHash );
 				$summary['items'][] = "$type: $relativePath";
-				$xorder++;
 			}
 		}
 
