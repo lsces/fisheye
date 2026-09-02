@@ -30,6 +30,8 @@
 			<div class="form-group submit">
 				<input type="submit" class="btn btn-default" name="fCancel" value="{tr}Cancel{/tr}" />
 				<input type="submit" class="btn btn-primary" name="fSaveXref" value="{tr}Save{/tr}" />
+				<input type="submit" class="btn btn-secondary" name="fSetAsThumbnail" value="{tr}Set as Thumbnail{/tr}" />
+				{formhelp note="Makes this the real, single thumbnail shown in galleries - overrides whichever image was picked automatically."}
 			</div>
 		{/form}
 	</div><!-- end .body -->

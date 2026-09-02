@@ -60,28 +60,38 @@ class FisheyeProgram extends FisheyeGallery {
 	}
 
 	/**
-	 * A show's own selected thumbnail - its first (lowest-xorder, i.e. primary poster) 'image'
-	 * xref row, same convention as FisheyeSeason's own override, rather than FisheyeGallery's
-	 * inherited getThumbnailImage()/loadThumbnail() bubbling down into whichever member it
-	 * happens to land on (which broke entirely for a season member with no mime attachment -
-	 * the root cause found live 2026-09-02, see FisheyeSeason's own override for the fuller
-	 * trace). This is the actual point of being a distinct content type at all: a real, directly-
-	 * owned thumbnail instead of an inherited/accidental one.
+	 * A show's own selected thumbnail. Fixed properly 2026-09-02 (second attempt - see
+	 * fisheye.md's same-dated "real attachment" entry): FisheyeGallery descends from LibertyMime
+	 * just like a real photo does, so this show has its own unused attachment slot -
+	 * reloadPlexImages() stores a real image attachment there via attachThumbnail(), same as a
+	 * normal upload would. Read here via LibertyMime's own storage-based lookup (explicit class
+	 * scoping, since FisheyeGallery's own getThumbnailUrl() override always bubbles to a member
+	 * instead) rather than the earlier xref-based approach, which (a) never generated an actual
+	 * small thumbnail, just linked to the same file shown in the Images tab, and (b) broke for a
+	 * genuinely anonymous visitor - every xref group in media.php, images included, is
+	 * role_id=3 ('Registered'), so loadXrefInfo() silently returned nothing for a guest even
+	 * though the file itself was already public.
 	 *
 	 * @return string
 	 */
 	public function getThumbnailUri( $pSize = 'small', $pInfoHash = null ) {
-		if( $this->isValid() ) {
-			$this->loadXrefInfo();
-			if( $this->mXrefInfo && ( $imageXref = $this->mXrefInfo->findRowByItem( 'image' ) ) ) {
-				return FISHEYE_PKG_URL.'view_extra_image.php?xref_id='.$imageXref['xref_id'];
-			}
-		}
-		return '';
+		return $this->getThumbnailUrl( $pSize ) ?: '';
 	}
 
 	public function getThumbnailUrl( string $pSize = 'small', ?array $pInfoHash = null, ?int $pSecondaryId = null, ?int $pDefault = null ): string|null {
-		return $this->getThumbnailUri( $pSize ) ?: null;
+		if( $this->isValid() ) {
+			// Explicit class scoping, not $this->load() - FisheyeGallery::load() shortcuts
+			// straight to LibertyContent::load() (same shortcut its own store() override takes),
+			// so mStorage is never populated via the normal load() path at all. Found live
+			// 2026-09-02: attachThumbnail() had stored a real attachment correctly, but this
+			// method still read back empty because $this->load() never touched mStorage.
+			\Bitweaver\Liberty\LibertyMime::load();
+			$url = \Bitweaver\Liberty\LibertyMime::getThumbnailUrl( $pSize, $pInfoHash, $pSecondaryId, $pDefault );
+			if( !empty( $url ) ) {
+				return $url;
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -89,24 +99,141 @@ class FisheyeProgram extends FisheyeGallery {
 	 * nested FisheyeGallery-family member as "just another gallery to bubble down through" via
 	 * `is_a($ret, FisheyeGallery)` - since FisheyeProgram itself extends FisheyeGallery, a parent
 	 * gallery's own getThumbnailImage() (e.g. 'TV Shows', resolving a random member) would
-	 * otherwise recurse straight past this show's own selected image and back into whichever
+	 * otherwise recurse straight past this show's own real attachment and back into whichever
 	 * season it happens to contain, undoing the entire point of this class existing - found live
 	 * 2026-09-02, immediately after Reload Images populated this show's own images and the
 	 * top-level galleries listing *still* showed the season's poster instead.
 	 *
-	 * Falls back to the normal inherited behaviour if this show has no image of its own yet
+	 * Falls back to the normal inherited behaviour if this show has no attachment of its own yet
 	 * (e.g. before Reload Images has ever been run) rather than returning nothing.
 	 *
 	 * @return static|mixed
 	 */
 	public function getThumbnailImage( $pContentId=null, $pThumbnailContentId=null, $pThumbnailContentType=null ) {
 		if( $this->isValid() ) {
-			$this->loadXrefInfo();
-			if( $this->mXrefInfo && $this->mXrefInfo->findRowByItem( 'image' ) ) {
+			// Explicit class scoping - see getThumbnailUrl()'s identical comment above.
+			\Bitweaver\Liberty\LibertyMime::load();
+			if( !empty( $this->mStorage ) ) {
 				return $this;
 			}
 		}
 		return parent::getThumbnailImage( $pContentId, $pThumbnailContentId, $pThumbnailContentType );
+	}
+
+	/**
+	 * Store real image bytes (fetched from a URL, or read from a local file - file_get_contents()
+	 * handles both transparently) as this show's own single image attachment - see
+	 * FisheyeSeason::attachThumbnail()'s identical docblock for the mechanism detail (synthetic
+	 * `_files_override` fed to LibertyMime's own upload path, explicit class scoping to bypass
+	 * FisheyeGallery's own store() override, which never touches attachments at all).
+	 *
+	 * Reuses the existing attachment slot if one's already there - see FisheyeSeason::
+	 * attachThumbnail()'s identical comment for why (a real bug found live 2026-09-02).
+	 *
+	 * @param string $pSourcePathOrUrl
+	 * @return bool
+	 */
+	private function attachThumbnail( string $pSourcePathOrUrl ): bool {
+		$imageData = @file_get_contents( $pSourcePathOrUrl );
+		if( empty( $imageData ) ) {
+			return false;
+		}
+		$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_thumb_' );
+		file_put_contents( $tmpFile, $imageData );
+
+		// Explicit class scoping - see getThumbnailUrl()'s comment for why $this->load() alone
+		// wouldn't populate mStorage here (FisheyeGallery::load() shortcuts past it).
+		\Bitweaver\Liberty\LibertyMime::load();
+		$existingAttachmentId = array_key_first( $this->mStorage ) ?: null;
+		$upload = [ 'name' => 'thumbnail.jpg', 'type' => 'image/jpeg', 'tmp_name' => $tmpFile, 'error' => 0, 'size' => filesize( $tmpFile ) ];
+		if( $existingAttachmentId ) {
+			$upload['attachment_id'] = $existingAttachmentId;
+		}
+		$pParamHash = [
+			'content_id' => $this->mContentId,
+			'skip_content_store' => true,
+			'_files_override' => [ $upload ],
+		];
+		$ret = \Bitweaver\Liberty\LibertyMime::store( $pParamHash );
+		@unlink( $tmpFile );
+		if( $ret ) {
+			// Explicit class scoping - see getThumbnailUrl()'s comment for why $this->load()
+			// alone wouldn't refresh mStorage here.
+			\Bitweaver\Liberty\LibertyMime::load();
+		}
+		return $ret;
+	}
+
+	/**
+	 * Promote one of this show's already-downloaded 'image' xref alternates (a local file under
+	 * the TV storage root's images/ folder) into the real, single thumbnail attachment - the
+	 * manual "change it" action Lester asked for, since the auto-picked (Plex's own currently-
+	 * selected poster) default is sometimes not the best of the available alternates.
+	 *
+	 * @param string $pRelativePath  an 'image' xref row's own xkey_ext value
+	 * @return bool
+	 */
+	public function promoteImageToThumbnail( string $pRelativePath ): bool {
+		$root = $this->getImageStorageRoot();
+		if( empty( $root ) || !is_file( $root.$pRelativePath ) ) {
+			return false;
+		}
+		return $this->attachThumbnail( $root.$pRelativePath );
+	}
+
+	/**
+	 * The storage root this show's own 'image' xref rows live relative to - the TV-specific
+	 * per-show root (A-M/N-Z split), resolved directly from this show's own title (it already IS
+	 * the real show name, unlike a season). NOT the same root as a plain film's
+	 * fisheye_disk_storage_root - see FisheyeSeason::getImageStorageRoot()'s identical docblock
+	 * for why edit_xref.php calls this generically rather than assuming one shared root.
+	 *
+	 * @return string empty string if the config is unset
+	 */
+	public function getImageStorageRoot(): string {
+		return \Bitweaver\Liberty\mime_film_get_tvshow_storage_root( $this->getTitle() );
+	}
+
+	/**
+	 * Generic file-lifecycle hook liberty/edit_xref.php calls (via method_exists()) when a file
+	 * is uploaded to replace an xref row's own referenced file - see FisheyeFilm::
+	 * replaceXrefFile()'s identical docblock for the fuller reasoning (same method, same shape,
+	 * just this show's own storage root).
+	 *
+	 * @param string $pItem
+	 * @param string $pXkeyExt
+	 * @param string $pTmpPath  the uploaded file's own tmp_name
+	 * @return bool
+	 */
+	public function replaceXrefFile( string $pItem, string $pXkeyExt, string $pTmpPath ): bool {
+		if( $pItem !== 'image' || empty( $pXkeyExt ) ) {
+			return false;
+		}
+		$root = $this->getImageStorageRoot();
+		if( empty( $root ) ) {
+			return false;
+		}
+		return move_uploaded_file( $pTmpPath, $root.$pXkeyExt );
+	}
+
+	/**
+	 * Generic file-lifecycle hook liberty/edit_xref.php calls (via method_exists()) on a real
+	 * hard-delete (expunge=3) of an xref row - see FisheyeFilm::deleteXrefFile()'s identical
+	 * docblock for the fuller reasoning.
+	 *
+	 * @param string $pItem
+	 * @param string $pXkeyExt
+	 * @return bool
+	 */
+	public function deleteXrefFile( string $pItem, string $pXkeyExt ): bool {
+		if( $pItem !== 'image' || empty( $pXkeyExt ) ) {
+			return false;
+		}
+		$root = $this->getImageStorageRoot();
+		if( empty( $root ) || !is_file( $root.$pXkeyExt ) ) {
+			return false;
+		}
+		return @unlink( $root.$pXkeyExt );
 	}
 
 	/**
@@ -185,6 +312,28 @@ class FisheyeProgram extends FisheyeGallery {
 			$summary['items'][] = 'fisheye_tvshow_storage_root is not configured for this show.';
 			return $summary;
 		}
+
+		// Auto-pick the real thumbnail attachment (once only - see FisheyeSeason::
+		// reloadPlexImages()'s identical block for the fuller reasoning) from Plex's own
+		// currently-selected poster rather than just grabbing whichever alternate comes first.
+		if( empty( $this->mStorage ) ) {
+			$postersXml = @file_get_contents( "http://localhost:32400/library/metadata/$metadataItemId/posters?X-Plex-Token=".urlencode( $plexToken ) );
+			if( $postersXml !== false && preg_match_all( '#<Photo\b[^>]*/>#', $postersXml, $tagMatches ) ) {
+				foreach( $tagMatches[0] as $tag ) {
+					if( str_contains( $tag, 'selected="1"' ) && preg_match( '#\bthumb="([^"]+)"#', $tag, $m ) ) {
+						$thumb = html_entity_decode( $m[1] );
+						$thumbUrl = str_starts_with( $thumb, '/' )
+							? "http://localhost:32400$thumb".( str_contains( $thumb, '?' ) ? '&' : '?' )."X-Plex-Token=".urlencode( $plexToken )
+							: $thumb;
+						if( $this->attachThumbnail( $thumbUrl ) ) {
+							$summary['items'][] = 'thumbnail: attached from Plex\'s own selected poster';
+						}
+						break;
+					}
+				}
+			}
+		}
+
 		$imagesDir = $root.'images/';
 		KernelTools::mkdir_p( $imagesDir );
 

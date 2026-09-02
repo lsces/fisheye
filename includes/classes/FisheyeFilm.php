@@ -57,6 +57,68 @@ class FisheyeFilm extends FisheyeImage {
 	}
 
 	/**
+	 * The storage root this film's own 'image' xref rows live relative to - the plain
+	 * fisheye_disk_storage_root (no A-M/N-Z split, unlike TV). Exists so edit_xref.php can call
+	 * this generically (via method_exists()) without needing to know 'image' means anything
+	 * fisheye-specific, or which root function applies to which content type - see
+	 * FisheyeSeason::getImageStorageRoot()'s docblock for the fuller reasoning (found live
+	 * 2026-09-02 as a real bug: edit_xref.php previously hardcoded this exact function for every
+	 * content type, silently wrong for Season/Program on any deployment where the TV root
+	 * genuinely differs from the film root).
+	 *
+	 * @return string empty string if the config is unset
+	 */
+	public function getImageStorageRoot(): string {
+		return \Bitweaver\Liberty\mime_film_get_storage_root();
+	}
+
+	/**
+	 * Generic file-lifecycle hook liberty/edit_xref.php calls (via method_exists()) when a file
+	 * is uploaded to replace an xref row's own referenced file - deliberately generic (item name
+	 * + its xkey_ext + the uploaded tmp path) so the shared controller never needs to know this
+	 * is fisheye-specific or what 'image' means; this class decides internally which items it
+	 * actually applies to (only 'image' - "replace what's in this slot", not "point this row at
+	 * a different file", so xkey_ext itself never changes).
+	 *
+	 * @param string $pItem
+	 * @param string $pXkeyExt
+	 * @param string $pTmpPath  the uploaded file's own tmp_name
+	 * @return bool
+	 */
+	public function replaceXrefFile( string $pItem, string $pXkeyExt, string $pTmpPath ): bool {
+		if( $pItem !== 'image' || empty( $pXkeyExt ) ) {
+			return false;
+		}
+		$root = $this->getImageStorageRoot();
+		if( empty( $root ) ) {
+			return false;
+		}
+		return move_uploaded_file( $pTmpPath, $root.$pXkeyExt );
+	}
+
+	/**
+	 * Generic file-lifecycle hook liberty/edit_xref.php calls (via method_exists()) on a real
+	 * hard-delete (expunge=3) of an xref row - see replaceXrefFile()'s docblock for why this is
+	 * generic rather than fisheye-specific in the controller. Only 'image' rows have a disposable
+	 * local file worth cleaning up (a local copy of a Plex/TMDB download); every other item type
+	 * (e.g. 'episode', whose xkey_ext is the real, precious video file) must never be touched here.
+	 *
+	 * @param string $pItem
+	 * @param string $pXkeyExt
+	 * @return bool
+	 */
+	public function deleteXrefFile( string $pItem, string $pXkeyExt ): bool {
+		if( $pItem !== 'image' || empty( $pXkeyExt ) ) {
+			return false;
+		}
+		$root = $this->getImageStorageRoot();
+		if( empty( $root ) || !is_file( $root.$pXkeyExt ) ) {
+			return false;
+		}
+		return @unlink( $root.$pXkeyExt );
+	}
+
+	/**
 	 * Locate this film in the local Plex library, matched by its real absolute file path
 	 * (Plex's own media_parts.file, not fisheye's root-relative convention — realpath() bridges
 	 * the fisheye_disk_storage_root symlink, e.g. /media3/, back to what Plex actually stored,
