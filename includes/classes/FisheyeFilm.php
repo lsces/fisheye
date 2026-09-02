@@ -212,10 +212,13 @@ class FisheyeFilm extends FisheyeImage {
 	 * Capped at 5 of each type - same reasoning as reloadPlexMetadata()'s 5-star cap, a well-known
 	 * film's poster/art set from Plex can run into dozens and most are near-duplicates.
 	 *
-	 * Fetches TMDB's own pre-resized w185 (poster)/w300 (art) sizes, not the 'original' full
-	 * resolution (1-4MB apiece) - these are only ever shown as small thumbnails on view_film.tpl,
-	 * downloading/storing full-size was wasted weight discovered the first time this actually
-	 * rendered (Lester, 2026-09-02).
+	 * Fetches TMDB's own pre-resized w342 (poster)/w780 (art) sizes, not the 'original' full
+	 * resolution (1-4MB apiece, wasted weight for what's only ever shown as a thumbnail on
+	 * view_film.tpl - discovered live the first time this actually rendered, Lester 2026-09-02).
+	 * w185/w300 (TMDB's next size down) turned out too small once seen rendered - bumped up a
+	 * tier the same day. TMDB only offers a fixed size set (no arbitrary width) - w342 is its
+	 * closest poster size to a ~400px target, w780 the closest backdrop size above it (nothing
+	 * exists between w300 and w780 for backdrops).
 	 *
 	 * @return array Summary of what was found/stored, for the calling page's result display.
 	 */
@@ -256,9 +259,10 @@ class FisheyeFilm extends FisheyeImage {
 		// TMDB serves the same image at several pre-resized widths from a predictable URL (its
 		// own image CDN, not a Plex-specific thing) - swapping the 'key' attribute's '/original/'
 		// segment for one of these avoids downloading/storing full-resolution (1-4MB, largely
-		// wasted on what's only ever shown as a small thumbnail here) or doing any local
-		// resizing. w185/w300 are real TMDB poster/backdrop size names, not arbitrary numbers.
-		$thumbSizes = [ 'poster' => 'w185', 'art' => 'w300' ];
+		// wasted on what's only ever shown as a thumbnail here) or doing any local resizing.
+		// w342/w780 are real TMDB poster/backdrop size names, not arbitrary numbers - see this
+		// method's own docblock for why these particular ones.
+		$thumbSizes = [ 'poster' => 'w342', 'art' => 'w780' ];
 
 		$xorder = 1;
 		foreach( [ 'poster' => 'posters', 'art' => 'arts' ] as $type => $endpoint ) {
