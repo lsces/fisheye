@@ -18,6 +18,9 @@
 				</div>
 			{/if}
 			<div class="col-md-6 film-facts">
+				{if $gContent->mInfo.data}
+					<p class="film-summary">{$gContent->mInfo.data|escape}</p>
+				{/if}
 				{if $directors|@count || $stars|@count}
 					<p class="film-credits">
 						{if $directors|@count}<strong>{tr}Director{/tr}{if $directors|@count > 1}s{/if}:</strong> {$directors|@implode:", "|escape}<br />{/if}
@@ -43,15 +46,6 @@
 				{/if}
 			</div>
 		</div>
-
-		{if $gContent->mInfo.data}
-			<div class="row">
-				<div class="col-md-12 film-summary">
-					<p>{$gContent->mInfo.data|escape}</p>
-				</div>
-			</div>
-		{/if}
-
 	</section>
 
 	{if $gContent->mItems|@count}
