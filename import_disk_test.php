@@ -18,6 +18,12 @@ global $gBitSystem, $gLibertySystem, $_SERVER;
 
 $_SERVER['HTTP_HOST'] = $_SERVER['HTTP_HOST'] ?? '';
 $_SERVER['SERVER_NAME'] = $_SERVER['SERVER_NAME'] ?? '';
+// CLI has no real DOCUMENT_ROOT - setup_inc.php's own BIT_ROOT_PATH fallback resolves from its
+// own __FILE__, which PHP flattens through the kernel/_bw5 symlink chain down to the dev repo,
+// not the site root. Confirmed for real 2026-09-02 (previously just predicted). Deliberately
+// uses $_SERVER['PWD'] (the shell's logical cwd), not dirname(__FILE__) - __FILE__ resolves
+// through the same symlink chain and would land back on the dev repo too.
+$_SERVER['DOCUMENT_ROOT'] = dirname( $_SERVER['PWD'] ?? getenv( 'PWD' ) ?? getcwd() );
 
 chdir( dirname( __FILE__ ) );
 require_once '../kernel/includes/setup_inc.php';
