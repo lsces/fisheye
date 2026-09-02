@@ -7,16 +7,17 @@
 				<a title="{tr}Edit{/tr}" href="{$gContent->getEditUrl()|escape}">{biticon ipackage="icons" iname="edit" iexplain="Edit"}</a>
 			{/if}
 		</div>
-		<h1>{$gContent->getTitle()|escape}</h1>
 		{* The shared gallery_breadcrumb_inc.tpl hardcodes a pretty-url 'gallery/<id>' link for
 		   every ancestor, which always lands on the generic gallery view regardless of type -
 		   wrong for a show (FisheyeProgram has its own view_program.php). A season is only ever
-		   one level below its show, so a single direct "back up a level" link via the parent's
-		   own getDisplayUrl() (Lester, 2026-09-02: "make the program title a link back up a
-		   level") is simpler and correct, rather than trying to make the shared, type-agnostic
-		   breadcrumb component type-aware. *}
+		   one level below its show, so the title itself just links back up to the parent's own
+		   getDisplayUrl() (Lester, 2026-09-02: "The point was to put the link ON the title text")
+		   rather than a separate breadcrumb line, and rather than trying to make the shared,
+		   type-agnostic breadcrumb component type-aware. *}
 		{if $gGallery}
-			<small><a href="{$gGallery->getDisplayUrl()|escape}">&larr; {$gGallery->getTitle()|escape}</a></small>
+			<h1><a href="{$gGallery->getDisplayUrl()|escape}">{$gContent->getTitle()|escape}</a></h1>
+		{else}
+			<h1>{$gContent->getTitle()|escape}</h1>
 		{/if}
 	</header>
 
