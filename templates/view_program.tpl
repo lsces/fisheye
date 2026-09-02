@@ -12,6 +12,11 @@
 
 	<section class="body">
 		<div class="row">
+			{if $gContent->getThumbnailUri('medium')}
+				<div class="col-md-3 film-poster">
+					<img class="img-responsive" src="{$gContent->getThumbnailUri('medium')}" alt="{$gContent->getTitle()|escape}" />
+				</div>
+			{/if}
 			<div class="col-md-9 film-facts">
 				{if $directors|@count || $stars|@count}
 					<p class="film-credits">
@@ -37,11 +42,6 @@
 					</p>
 				{/if}
 			</div>
-			{if $gContent->getThumbnailUri('medium')}
-				<div class="col-md-3 film-poster">
-					<img class="img-responsive" src="{$gContent->getThumbnailUri('medium')}" alt="{$gContent->getTitle()|escape}" />
-				</div>
-			{/if}
 		</div>
 
 		{if $gContent->mInfo.data}

@@ -13,6 +13,11 @@
 
 	<section class="body">
 		<div class="row">
+			{if $gContent->getThumbnailUri('medium')}
+				<div class="col-md-3 film-poster">
+					<img class="img-responsive" src="{$gContent->getThumbnailUri('medium')}" alt="{$gContent->getTitle()|escape}" />
+				</div>
+			{/if}
 			<div class="col-md-9">
 				{if $externalLinks|@count}
 					<p class="film-external-links">
@@ -25,11 +30,6 @@
 					<p>{$gContent->mInfo.data|escape}</p>
 				{/if}
 			</div>
-			{if $gContent->getThumbnailUri('medium')}
-				<div class="col-md-3 film-poster">
-					<img class="img-responsive" src="{$gContent->getThumbnailUri('medium')}" alt="{$gContent->getTitle()|escape}" />
-				</div>
-			{/if}
 		</div>
 	</section>
 
@@ -94,26 +94,6 @@
 		</script>
 	{/if}
 
-	{if $seasonImages|@count}
-		<section class="film-images-strip">
-			<h2>{tr}Images{/tr}</h2>
-			<div class="row">
-				{foreach from=$seasonImages item=seasonImage name=seasonImages}
-					<div class="col-md-1 col-sm-4 col-xs-6">
-						<div class="gallery-box">
-							<a href="{$smarty.const.FISHEYE_PKG_URL}view_extra_image.php?xref_id={$seasonImage.xref_id}" target="_blank" rel="noopener">
-								<div class="gallery-img">
-									<img class="img-responsive thumb" src="{$smarty.const.FISHEYE_PKG_URL}view_extra_image.php?xref_id={$seasonImage.xref_id}" alt="{$gContent->getTitle()|escape}" />
-								</div>
-							</a>
-						</div>
-					</div>
-					{if $smarty.foreach.seasonImages.iteration % 2 == 0}<div class="clearfix visible-xs-block"></div>{/if}
-					{if $smarty.foreach.seasonImages.iteration % 3 == 0}<div class="clearfix visible-sm-block"></div>{/if}
-					{if $smarty.foreach.seasonImages.iteration % 12 == 0}<div class="clearfix visible-md-block visible-lg-block"></div>{/if}
-				{/foreach}
-			</div>
-		</section>
-	{/if}
+	{include file="bitpackage:fisheye/images_strip_inc.tpl" images=$seasonImages stripId="season-images-strip" stripTitle="Images"}
 </div>
 {/strip}
