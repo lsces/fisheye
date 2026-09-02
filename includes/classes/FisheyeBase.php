@@ -288,6 +288,66 @@ not ready for primetime
 		return false;
 	}
 
+	/**
+	 * Shrink a downloaded image to fit within a bounding box, preserving aspect ratio - reuses
+	 * liberty's own existing resize primitive (the same one liberty_generate_thumbnails() calls
+	 * for every real attachment thumbnail - liberty_get_function('resize'), 'gd' by default, only
+	 * a config change away from an alternate processor) rather than hand-rolling a second GD
+	 * implementation. Lives here on FisheyeBase (not duplicated on FisheyeFilm/Season/Program
+	 * separately) so any fisheye content type descending from either FisheyeImage or
+	 * FisheyeGallery gets it for free - Lester, 2026-09-02: "Can't it be shared in some way since
+	 * even music will need it in a bit?" (a future FisheyeAlbum-equivalent will).
+	 *
+	 * Originally needed because TMDB only offers fixed *width*-based presets (w342/w500/w780/etc,
+	 * no bounding-box option) - a landscape backdrop fetched at w780 is still 780x439, fine as a
+	 * full-size Images-tab view but wasted weight for a small alternates-strip thumbnail (Lester:
+	 * "the 700px images are just too big").
+	 *
+	 * Works on files, not raw bytes (liberty's resize function's own calling convention), so the
+	 * caller writes any downloaded bytes to a temp source file first. Silently falls back to
+	 * copying the original file unresized if the configured processor is unavailable, rather than
+	 * failing the whole fetch over a resize step.
+	 *
+	 * Resizes into a *second* temp file rather than $pDestFile directly, then moves that into
+	 * place with a plain filesystem rename - this site's configured processor is imagick, whose
+	 * own security policy blocks it from writing directly under fisheye_disk_storage_root/TV
+	 * roots ("attempt to perform an operation not authorized by the security policy", confirmed
+	 * live 2026-09-02 via php-fpm's own error log) but has no objection to reading/writing under
+	 * the system temp dir, which is all it's ever asked to do here. Adjusting ImageMagick's own
+	 * policy.xml would be a wider, riskier change (affects the whole machine, not just this
+	 * feature) for what's really just a "where do intermediate files live" question.
+	 *
+	 * @param string $pSourceFile  a real file path (e.g. a tempnam() temp file)
+	 * @param string $pDestFile    where the resized (or, on failure, copied) image ends up
+	 * @param int    $pMaxDimension  bounding box - liberty's own resize picks width- or
+	 *                                height-based scaling per the source image's own orientation
+	 * @return bool
+	 */
+	protected static function resizeImageFile( string $pSourceFile, string $pDestFile, int $pMaxDimension = 400 ): bool {
+		$resizeFunc = \Bitweaver\Liberty\liberty_get_function( 'resize' );
+		if( !$resizeFunc ) {
+			return copy( $pSourceFile, $pDestFile );
+		}
+		$tmpDest = tempnam( sys_get_temp_dir(), 'fisheye_resized_' );
+		$pFileHash = [
+			'source_file'    => $pSourceFile,
+			'dest_file'      => $tmpDest,
+			'dest_base_name' => pathinfo( $tmpDest, PATHINFO_FILENAME ),
+			'max_width'      => $pMaxDimension,
+			'max_height'     => $pMaxDimension,
+			'type'           => 'image/jpeg',
+		];
+		$ok = (bool)$resizeFunc( $pFileHash ) && is_file( $tmpDest ) && filesize( $tmpDest ) > 0 && rename( $tmpDest, $pDestFile );
+		@unlink( $tmpDest );
+		if( $ok ) {
+			// rename() carries over tempnam()'s own 600 (owner-only) permissions, unlike every
+			// other file already sitting in that folder - found live 2026-09-02 straight after
+			// the temp-then-move fix above.
+			@chmod( $pDestFile, 0644 );
+		}
+		return $ok;
+	}
+
 	public function isInGallery( $pGalleryContentId, $pItemContentId = null) {
 		if( !$this->verifyId( $pItemContentId ) ) {
 			$pItemContentId = $this->mContentId;

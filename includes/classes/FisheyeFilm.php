@@ -394,10 +394,11 @@ class FisheyeFilm extends FisheyeImage {
 
 		// TMDB serves the same image at several pre-resized widths from a predictable URL (its
 		// own image CDN, not a Plex-specific thing) - swapping the 'key' attribute's '/original/'
-		// segment for one of these avoids downloading/storing full-resolution (1-4MB, largely
-		// wasted on what's only ever shown as a thumbnail here) or doing any local resizing.
-		// w342/w780 are real TMDB poster/backdrop size names, not arbitrary numbers - see this
-		// method's own docblock for why these particular ones.
+		// segment for one of these avoids downloading/storing full-resolution (1-4MB). w342/w780
+		// are real TMDB poster/backdrop size names, not arbitrary numbers - see this method's own
+		// docblock for why these particular ones. Still resized further via resizeImageFile()
+		// below - TMDB's own presets are width-only, no bounding-box option, so a backdrop at
+		// w780 landscape is still 780px wide until the local resize step also caps it.
 		$thumbSizes = [ 'poster' => 'w342', 'art' => 'w780' ];
 
 		foreach( [ 'poster' => 'posters', 'art' => 'arts' ] as $type => $endpoint ) {
@@ -431,7 +432,11 @@ class FisheyeFilm extends FisheyeImage {
 				$fetched++;
 				$fileName = "$baseName-$type-$fetched.jpg";
 				$relativePath = 'images/'.$fileName;
-				if( file_put_contents( $imagesDir.$fileName, $imageData ) === false ) {
+				$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_alt_' );
+				file_put_contents( $tmpFile, $imageData );
+				$resized = self::resizeImageFile( $tmpFile, $imagesDir.$fileName, 400 );
+				@unlink( $tmpFile );
+				if( !$resized ) {
 					continue;
 				}
 				$xorder++;

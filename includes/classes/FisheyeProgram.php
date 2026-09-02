@@ -371,7 +371,11 @@ class FisheyeProgram extends FisheyeGallery {
 				$fetched++;
 				$fileName = "$baseName-$type-$fetched.jpg";
 				$relativePath = 'images/'.$fileName;
-				if( file_put_contents( $imagesDir.$fileName, $imageData ) === false ) {
+				$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_alt_' );
+				file_put_contents( $tmpFile, $imageData );
+				$resized = self::resizeImageFile( $tmpFile, $imagesDir.$fileName, 400 );
+				@unlink( $tmpFile );
+				if( !$resized ) {
 					continue;
 				}
 				$xorder++;
