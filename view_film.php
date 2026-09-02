@@ -24,23 +24,34 @@ if( !$gContent || !$gContent->isValid() ) {
 $gContent->verifyViewPermission();
 $gContent->addHit();
 
-// bucket the film's xref metadata into template-friendly arrays - 'star' lives in its own
-// 'cast' group (moved out of 'metadata' 2026-09-02, a long cast list crowded the single-value
-// fields), everything else is still 'metadata', hence reading both groups here.
+// bucket the film's xref data into template-friendly arrays - one flat pass over every group
+// via allXrefs(), keyed by item name only. Deliberately not keyed off which x_group an item
+// happens to be organised under (that's a tab-layout concern - see media.php's xref_schemes) -
+// hardcoding group names here already broke silently once, when 'star' moved out of 'metadata'
+// into its own 'cast' tab and this page kept reading only 'metadata'.
 $gContent->loadXrefInfo();
 $genres = $directors = $writers = $stars = [];
 $contentRating = $durationMs = null;
-foreach( [ 'metadata', 'cast' ] as $xGroup ) {
-	if( $gContent->mXrefInfo && !empty( $gContent->mXrefInfo->mGroups[$xGroup] )) {
-		foreach( $gContent->mXrefInfo->mGroups[$xGroup]->mXrefs as $xref ) {
-			switch( $xref['item'] ) {
-				case 'genre':          $genres[]     = $xref['xkey_ext']; break;
-				case 'director':       $directors[]  = $xref['xkey_ext']; break;
-				case 'writer':         $writers[]    = $xref['xkey_ext']; break;
-				case 'star':           $stars[]      = $xref['xkey_ext']; break;
-				case 'content_rating': $contentRating = $xref['xkey_ext']; break;
-				case 'duration':       $durationMs    = (int)$xref['xkey_ext']; break;
-			}
+$externalLinks = [];
+if( $gContent->mXrefInfo ) {
+	foreach( $gContent->mXrefInfo->allXrefs() as $xref ) {
+		switch( $xref['item'] ) {
+			case 'genre':          $genres[]     = $xref['xkey_ext']; break;
+			case 'director':       $directors[]  = $xref['xkey_ext']; break;
+			case 'writer':         $writers[]    = $xref['xkey_ext']; break;
+			case 'star':           $stars[]      = $xref['xkey_ext']; break;
+			case 'content_rating': $contentRating = $xref['xkey_ext']; break;
+			case 'duration':       $durationMs    = (int)$xref['xkey_ext']; break;
+		}
+		// external links (imdb/tvdb/tmdb/...) - identified by having a cross_ref_href
+		// (the href template's marker, loaded onto every xref row already, see
+		// LibertyXrefType.php), not by group name - built into a real url here since
+		// nothing generic renders these outside the admin xref-list table.
+		if( !empty( $xref['cross_ref_href'] ) && !empty( $xref['xkey'] )) {
+			$externalLinks[] = [
+				'title' => $xref['xref_title'] ?? strtoupper( $xref['item'] ),
+				'url'   => $xref['cross_ref_href'].$xref['xkey'],
+			];
 		}
 	}
 }
@@ -50,22 +61,6 @@ $gBitSmarty->assign( 'writers', $writers );
 $gBitSmarty->assign( 'stars', $stars );
 $gBitSmarty->assign( 'contentRating', $contentRating );
 $gBitSmarty->assign( 'durationMs', $durationMs );
-
-// external links (imdb/tvdb/tmdb/...) - x_group='external', href template: xkey holds the id,
-// cross_ref_href the link prefix (both loaded onto every xref row already, see
-// LibertyXrefType.php) - built into a real url here since nothing generic renders these outside
-// the admin xref-list table.
-$externalLinks = [];
-if( $gContent->mXrefInfo && !empty( $gContent->mXrefInfo->mGroups['external'] )) {
-	foreach( $gContent->mXrefInfo->mGroups['external']->mXrefs as $xref ) {
-		if( !empty( $xref['cross_ref_href'] ) && !empty( $xref['xkey'] )) {
-			$externalLinks[] = [
-				'title' => $xref['xref_title'] ?? strtoupper( $xref['item'] ),
-				'url'   => $xref['cross_ref_href'].$xref['xkey'],
-			];
-		}
-	}
-}
 $gBitSmarty->assign( 'externalLinks', $externalLinks );
 
 // gallery + sibling films for the poster row, modeled on contact/templates/fisheye_fixed_grid_contact.tpl
