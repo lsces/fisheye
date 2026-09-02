@@ -21,6 +21,18 @@ $_SERVER['SERVER_NAME'] = $_SERVER['SERVER_NAME'] ?? '';
 
 chdir( dirname( __FILE__ ) );
 require_once '../kernel/includes/setup_inc.php';
+
+// Log in as the real 'lsces' admin - registering content as Anonymous (user_id=-1, the CLI
+// bootstrap default) isn't how a real admin operation should happen; same 3 lines
+// RoleUser::login() runs after a successful password check, skipping the parts that only make
+// sense for a real HTTP request. LibertyContent::verify() picks up $gBitUser->mUserId
+// automatically for the film content created below.
+global $gBitDb, $gBitUser;
+$adminUserId = $gBitDb->getOne( "SELECT user_id FROM users_users WHERE login = ?", [ 'lsces' ] );
+$gBitUser->mUserId = $adminUserId;
+$gBitUser->load();
+$gBitUser->loadPermissions( true );
+
 // mime plugins are scanned lazily (normally triggered by lookupMimeHandler()) - our own
 // store() path deliberately never calls that, so force this one plugin file to load directly.
 // Lives in liberty/plugins/ now, not fisheye/liberty_plugins/ - see liberty.md's 2026-09-01
