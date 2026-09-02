@@ -87,6 +87,17 @@ if( !empty( $_REQUEST['gallery_id'] ) && is_numeric( $_REQUEST['gallery_id'] )) 
 	$gGallery = FisheyeGallery::lookup( [ 'gallery_id' => $gal['gallery_id'] ] );
 }
 $gBitSmarty->assign( 'gGallery', $gGallery );
+
+// this season's title is conventionally "<show title> - <season name>" (e.g. "Inspector Morse -
+// Series 1") - split off just the show-name portion to link (Lester, 2026-09-02: "JUST the
+// 'Inspector Morse' will be tidier"), leaving the season-specific remainder as plain text.
+// Falls back to the full title with no split if it doesn't actually start with the show's own
+// title (defensive - naming isn't enforced anywhere, just a convention).
+$seasonTitleSuffix = '';
+if( $gGallery && str_starts_with( $gContent->getTitle(), $gGallery->getTitle() ) ) {
+	$seasonTitleSuffix = substr( $gContent->getTitle(), strlen( $gGallery->getTitle() ) );
+}
+$gBitSmarty->assign( 'seasonTitleSuffix', $seasonTitleSuffix );
 $gBitSmarty->assign( 'gContent', $gContent );
 
 $gBitSystem->setCanonicalLink( $gContent->getDisplayUrl() );

@@ -14,7 +14,9 @@
 		   getDisplayUrl() (Lester, 2026-09-02: "The point was to put the link ON the title text")
 		   rather than a separate breadcrumb line, and rather than trying to make the shared,
 		   type-agnostic breadcrumb component type-aware. *}
-		{if $gGallery}
+		{if $gGallery && $seasonTitleSuffix}
+			<h1><a href="{$gGallery->getDisplayUrl()|escape}">{$gGallery->getTitle()|escape}</a>{$seasonTitleSuffix|escape}</h1>
+		{elseif $gGallery}
 			<h1><a href="{$gGallery->getDisplayUrl()|escape}">{$gContent->getTitle()|escape}</a></h1>
 		{else}
 			<h1>{$gContent->getTitle()|escape}</h1>
