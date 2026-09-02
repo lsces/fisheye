@@ -46,6 +46,16 @@ $formGalleryGeneral = [
 		'note' => 'Filesystem path for TV shows whose title starts N-Z - see the A-M path above.',
 		'type' => 'text',
 	],
+	"fisheye_plex_db_path" => [
+		'label' => 'Plex Library Database Path',
+		'note' => 'Full path to Plex\'s own com.plexapp.plugins.library.db (read-only lookup, for backfilling genre/director/writer/star/rating/duration when importing a film already known to Plex). Leave blank to skip Plex metadata lookup entirely.',
+		'type' => 'text',
+	],
+	"fisheye_plex_token" => [
+		'label' => 'Plex API Token',
+		'note' => 'From Plex\'s own Preferences.xml (PlexOnlineToken) - only needed for external ID lookups (IMDB/TMDB/TheTVDB/MusicBrainz) via Plex\'s local API, since those aren\'t stored in the database itself. Leave blank to skip external-id lookup only (genre/director/etc still works without it).',
+		'type' => 'text',
+	],
 ];
 if( !$gBitSystem->isPackageActive( 'gigaupload' ) ) {
 	$formGalleryGeneral["fisheye_extended_upload_slots"] = [
