@@ -35,12 +35,14 @@
 					{/legend}
 
 					{if $gXrefInfo->mGroups}
-						{foreach $gXrefInfo->mGroups as $xrefGroup}
-							{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
-								xrefGroup=$xrefGroup
-								allow_add=true
-								allow_edit=true}
-						{/foreach}
+						{jstabs}
+							{foreach $gXrefInfo->mGroups as $xrefGroup}
+								{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
+									xrefGroup=$xrefGroup
+									allow_add=true
+									allow_edit=true}
+							{/foreach}
+						{/jstabs}
 					{/if}
 				{/jstab}
 			{/jstabs}
