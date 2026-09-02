@@ -79,21 +79,68 @@ if( $seasonContentId ) {
 		exit( 1 );
 	}
 	print "Created season '$seasonTitle' - content_id={$season->mContentId}\n";
+}
+
+// Show-level "collection" gallery (e.g. "Inspector Morse") holding this show's seasons - just a
+// plain FisheyeGallery, no new content type needed (FisheyeGallery::addItem() takes any
+// content_id with no type check, and already cycle-guards nesting a gallery inside another
+// gallery - confirmed 2026-09-02, see fisheye.md's "collections idea" entry). Found or created by
+// title, same as everything else here. Runs every time (not just on first season creation) so an
+// already-existing season still ends up correctly nested under its show.
+$showGalleryContentId = $gBitDb->getOne(
+	"SELECT lc.content_id FROM liberty_content lc INNER JOIN fisheye_gallery fg ON fg.content_id = lc.content_id WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ?",
+	[ $showTitle ]
+);
+if( $showGalleryContentId ) {
+	$showGallery = new FisheyeGallery( null, $showGalleryContentId );
+	$showGallery->load();
+	print "Show gallery '$showTitle' already exists - content_id=$showGalleryContentId\n";
+} else {
+	$showGallery = new FisheyeGallery();
+	$showGalleryParamHash = [ 'title' => $showTitle ];
+	if( !$showGallery->store( $showGalleryParamHash ) ) {
+		print "ABORT: could not create show gallery - ".implode( '; ', $showGallery->mErrors )."\n";
+		exit( 1 );
+	}
+	print "Created show gallery '$showTitle' - content_id={$showGallery->mContentId}\n";
 
 	$tvShowsGallery = $gBitDb->getOne(
 		"SELECT lc.content_id FROM liberty_content lc INNER JOIN fisheye_gallery fg ON fg.content_id = lc.content_id WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ?",
 		[ 'TV Shows' ]
 	);
 	if( $tvShowsGallery ) {
-		$gallery = new FisheyeGallery( null, $tvShowsGallery );
-		$gallery->load();
-		if( $gallery->addItem( $season->mContentId ) ) {
-			print "Linked season into 'TV Shows' gallery.\n";
+		$tvShows = new FisheyeGallery( null, $tvShowsGallery );
+		$tvShows->load();
+		if( $tvShows->addItem( $showGallery->mContentId ) ) {
+			print "Linked show gallery into 'TV Shows' gallery.\n";
 		} else {
 			print "WARNING: addItem() to 'TV Shows' gallery failed.\n";
 		}
 	} else {
-		print "WARNING: no 'TV Shows' gallery found - season not linked into any gallery.\n";
+		print "WARNING: no 'TV Shows' gallery found - show gallery not linked into any gallery.\n";
+	}
+}
+
+if( $showGallery->isInGallery( $showGallery->mContentId, $season->mContentId ) ) {
+	print "Season already linked into '$showTitle' show gallery.\n";
+} elseif( $showGallery->addItem( $season->mContentId ) ) {
+	print "Linked season into '$showTitle' show gallery.\n";
+} else {
+	print "WARNING: addItem() of season to show gallery failed.\n";
+}
+
+// Migrate the season's old direct link into 'TV Shows' (from before the show-gallery existed) -
+// it now belongs one level down, under the show gallery, not also flat in 'TV Shows' itself.
+$tvShowsGallery = $tvShowsGallery ?? $gBitDb->getOne(
+	"SELECT lc.content_id FROM liberty_content lc INNER JOIN fisheye_gallery fg ON fg.content_id = lc.content_id WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ?",
+	[ 'TV Shows' ]
+);
+if( $tvShowsGallery ) {
+	$tvShows = new FisheyeGallery( null, $tvShowsGallery );
+	$tvShows->load();
+	if( $tvShows->isInGallery( $tvShowsGallery, $season->mContentId ) ) {
+		$tvShows->removeItem( $season->mContentId );
+		print "Removed season's old direct link from 'TV Shows' (now under the show gallery instead).\n";
 	}
 }
 
@@ -103,6 +150,17 @@ if( $seasonContentId ) {
 // isn't auto-filled from the calling object by storeXref() - must be passed explicitly here - and
 // the raw text/JSON blob is stored under the key 'edit', not 'data' (verify() only reads
 // $pParamHash['edit'] into xref_store['data'], line ~249).
+// Checked by xkey_ext (the file path) first - 'episode' is multiple=1, so storeXref() would
+// otherwise happily add a second identical row on every re-run (confirmed the hard way
+// 2026-09-02 restructuring the show-gallery linking above).
+$existingXrefId = $gBitDb->getOne(
+	"SELECT xref_id FROM liberty_xref WHERE content_id = ? AND item = 'episode' AND xkey_ext = ?",
+	[ $season->mContentId, $relativePath ]
+);
+if( $existingXrefId ) {
+	print "Episode already registered - xref_id=$existingXrefId\n";
+	exit( 0 );
+}
 $pParamHash = [
 	'content_id' => $season->mContentId,
 	'item'       => 'episode',
