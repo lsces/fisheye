@@ -12,11 +12,11 @@ A photo/media gallery package built on two base classes:
   slot, used by real "collection"-style content — see below).
 - **`FisheyeImage`** — a single item: a photo, or (via a phantom subclass) a film or a TV season.
 
-As of the 2026-09 media extension, fisheye also covers real media cataloguing (film/TV/music
-libraries scanned from disk, backed by a local Plex Media Server install as the metadata/artwork
-source) without a separate package — the gap over plain photo galleries was just extra mime types,
-extra `gallery_views` layouts, and per-content-type xref vocabulary, all of which the existing
-xref/gallery machinery already supports.
+Fisheye also covers real media cataloguing (film/TV/music libraries scanned from disk, backed by a
+local Plex Media Server install as the metadata/artwork source) without a separate package — the
+gap over plain photo galleries was just extra mime types, extra `gallery_views` layouts, and
+per-content-type xref vocabulary, all of which the existing xref/gallery machinery already
+supports.
 
 ## Content type hierarchy
 
