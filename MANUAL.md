@@ -40,6 +40,22 @@ with no `liberty_content` row of its own, same idea as `food`'s `FoodDay` patter
 not built — for now, a show is just a real `FisheyeProgram` gallery holding `FisheyeSeason`
 members.
 
+**Flat single-season shows** — some shows (a one-off documentary registered as a show rather than a
+film, e.g. to get real cast/episode metadata) have their episode file(s) sitting directly in the
+show folder, no `Season 01/` subfolder at all. `load_program.php` treats this as an implicit
+season using the sentinel folder name `'.'` (unambiguous — `scandir()` already skips it as a real
+entry); `FisheyeSeason::registerFromDisk()` resolves that sentinel to "season dir == show dir" and
+titles the season plainly `"<show> - Season 1"` rather than `"<show> - ."`.
+
+**Deleting a show** (`FisheyeProgram::expunge()`, an override — not the shared
+`FisheyeGallery::expunge()`, which only ever recurses into sub-*galleries*, never plain gallery
+items like a season) cascades: every season is expunged first (which itself cleans up its own
+episode xrefs and images via the normal `FisheyeImage`/`LibertyMime` expunge path), then the show's
+own gallery/content rows. Scoped to `FisheyeProgram` deliberately, not the shared base class — a
+season is never meaningfully linked into more than one show the way a photo can be linked into more
+than one gallery, so there's no case here needing the "keep it if it's still in another gallery"
+check `FisheyeGallery::expunge()`'s sub-gallery recursion already does.
+
 **Collections** (a franchise, or a show grouping its seasons) don't need a new content type —
 `FisheyeGallery::addItem()` takes any `content_id` with no content-type check, and its own
 `isInGallery()` guard already checks both directions before inserting, so nesting a gallery inside
@@ -101,6 +117,48 @@ below) must call this polymorphically on the content object, never hardcode eith
 (making a hardcoded call look like it works) but diverge in general — this has been a real,
 repeated bug source.
 
+## Bulk import (`load_film.php` / `load_program.php`)
+
+Discover-and-pick admin pages, capped (`LOAD_FILM_LIMIT`/`LOAD_PROGRAM_LIMIT`, both 20) — not a
+"scan and register everything" tool. Each registration is cheap (a `store()`/gallery-link/Plex
+backfill), the one genuinely expensive step (thumbnail generation) is never triggered here, only
+lazily per item on first view.
+
+- `load_film.php` — flat: pick a folder under `Films/` (or a real subfolder standing in for a
+  collection), pick films from a checkbox list, `$pFetchImages` opt-in (a bulk 20-film import
+  paying for N image downloads at once is a real cost worth choosing explicitly).
+- `load_program.php` — two levels, matching the real show → season → episode structure: pick an
+  unregistered show folder (registers the show, cheap, no images fetched yet — see the halt below),
+  then pick season folders under it (each selected season is created, seeded with one real episode
+  file, and immediately synced against Plex for its full episode list — no separate "fetch episodes
+  later" step, since a season with no episodes at all isn't useful). Handles the flat single-season
+  case (no `Season 01/` subfolder) via the `'.'` sentinel described above.
+
+Both pages resolve their own "top level, not a real collection/show" gallery id via
+`FisheyeGallery::getTopGalleryId( $pTitle )` (a plain title lookup against `fisheye_gallery`/
+`liberty_content`) rather than a hardcoded, install-order-dependent gallery_id constant — the very
+first two galleries created on a given install happen to be "Films"/"TV Shows", so a literal `1`/`2`
+worked by coincidence but wasn't a safe assumption for another install.
+
+**`FisheyeProgram::registerFromDisk()` halts before fetching metadata/images if there's no Plex
+match** (case/spacing mismatches like Plex's own `"Dinnerladies"` vs an on-disk `"Dinner Ladies"`
+folder are common, and a folder name genuinely can't hold a colon Plex's own title might have) —
+the show record itself still gets created (cheap, and gives the manual-match tools below something
+to attach a match to), but no metadata/image fetch runs until a match is actually confirmed,
+automatic or manual. `load_program.tpl` surfaces this with a link straight to the show's edit page
+to fix it.
+
+**Manual Plex match** (`edit_program.php`, shown whenever `$gContent->hasPlexMatch()` is false) —
+`FisheyeProgram::searchPlexShows( $pQuery )` runs a plain `LIKE` search against the local Plex
+SQLite db (same one every other Plex lookup in this class already reads directly — no need for
+Plex's own HTTP search API); picking a result calls `setPlexMatchOverride( $pMetadataItemId )`,
+which stores it as a `plex_match` xref (`xkey` = the Plex `metadata_items.id`) that
+`matchPlexShowMetadataItem()` checks first from then on, ahead of the automatic title lookup.
+`plex_match` is a purely internal bookkeeping value — never shown through the generic xref grid, no
+`liberty_xref_item` config row registered for it, read/written via plain direct SQL rather than the
+generic `lookupXrefByItem()`/`loadXrefInfo()` helpers (both require that config row to exist).
+Confirming a match immediately runs the metadata/image fetch that was held back by the halt above.
+
 ## Xref-based metadata
 
 Standard `liberty_xref_group`/`liberty_xref_item` vocabulary per content type — genre/director/
@@ -128,6 +186,24 @@ path relative to the owning object's storage root, in a shared `images/` folder 
 file; `xorder` gives display order. Rendered via the shared, collapsible `images_strip_inc.tpl`
 (starts closed) — a stopgap presentation layer, expected to eventually be replaced by real
 cast/crew imagery once that data exists.
+
+**The Images tab has its own group-tab override**, `templates/xref/view_images_group.tpl` (Film/
+Season/Program all share the one file — identical to liberty's generic `list_xref.tpl` except the
+Add link), which replaces the generic add-a-bare-row-then-edit-it flow with a real one-step upload
+(`add_image_xref.php` + `FisheyeBase::addImageXrefFile()`) and, where supported, a "Grab Thumbnail
+from Video" action (see below). **This only fires when `liberty_xref_group.template = 'images'`
+for the `images` x_group row on each of the three content types** — that's a per-site DB config
+value (same table the Xref Groups admin page itself writes to directly, no history/schema-file
+tracking), not something schema/install files set, so a fresh install or another server needs it
+applied by hand:
+```sql
+UPDATE liberty_xref_group SET template='images'
+WHERE x_group='images' AND content_type_guid IN ('fisheyefilm','fisheyeseason','fisheyeprogram');
+```
+**Templates here can't call a bare PHP function inside `{if}`** (`{if method_exists(...)}` fails as
+"unknown modifier" on this Smarty setup) — only a real method call on an object works. Capability
+checks (`$gContent->supportsAddImage()`, `$gContent->canGrabVideoFrame()`) are real `FisheyeBase`
+methods for exactly this reason, not a `method_exists()` call inlined into the template.
 
 ## Real thumbnail attachments (Season/Program)
 
@@ -192,9 +268,33 @@ weight/frequency, not one action doing everything):
   if every existing row of that type has first been deleted, so tidying one type down to empty
   doesn't block ever re-fetching it without also wiping the other type. Also auto-attaches Plex's
   own currently-`selected="1"` poster as the real thumbnail attachment the first time it runs
-  (checked via an empty attachment slot, so a later manual override is never clobbered).
+  (checked via an empty attachment slot, so a later manual override is never clobbered). **Season
+  only**: if Plex genuinely has zero photos (no match, no `fisheye_plex_token` configured, or a
+  real match with no artwork at all — not uncommon for a barebones single-episode entry), falls
+  back to grabbing a video frame — see below.
 - **Load Episodes** (season only) — pulls the season's full episode list from Plex, including each
   episode's own text metadata and its own Plex-generated screenshot thumbnail.
+
+## Video frame-grab fallback
+
+`\Bitweaver\Liberty\mime_film_grab_video_frame( $pSourceFile, $pDestJpegPath, $pSeekSeconds=60 )`
+(`liberty/plugins/mime.film.php`) — ffmpegthumbnailer first, falling back to a plain `ffmpeg` seek-
+and-grab. Originally built for a plain film's own attachment thumbnail
+(`mime_film_get_thumbnail_url()`), factored out so fisheye content types with no attachment of
+their own can call it directly against a video file.
+
+`FisheyeBase::grabVideoFrameIntoImageXref( $pVideoFile )` — the shared "grab a frame from this
+video and store it as a new `image` xref on this content object" engine (resize, next-`xorder`,
+`storeXref()`). Two callers, both public and exposed as an on-demand "Grab Thumbnail from Video"
+link on the Images tab (`$gContent->canGrabVideoFrame()` gates it — see above) as well as internally
+by Reload Images' own automatic fallback:
+- `FisheyeSeason::grabVideoFrameImage()` — grabs from its own seed episode file.
+- `FisheyeProgram::grabVideoFrameImage()` — a show has no video of its own, so walks its seasons
+  (`loadImages()`) for the first one with a usable episode file.
+
+A manual click always grabs a fresh one (no "already has an image" check — a deliberate "add one
+more", same as uploading via Add Image); the automatic fallback inside Reload Images checks first
+and is a no-op once a real `image` xref already exists.
 
 ## Generic xref-file hooks (`liberty/edit_xref.php`)
 
@@ -202,13 +302,22 @@ The shared xref controller knows nothing about fisheye specifically — three `m
 gated hooks let a content class handle its own file lifecycle for an xref row that references a
 file:
 - `replaceXrefFile( $pItem, $pXkeyExt, $pTmpPath )` — an uploaded file replaces what an xref row
-  already references, in place (the row's own `xkey_ext` never changes).
+  already references, in place (the row's own `xkey_ext` never changes). **Refuses when
+  `$pXkeyExt` is empty** — correct for its actual job, but means a row with no file yet (e.g. one
+  created via the old generic add-then-edit flow, before Add Image existed) can never be fixed
+  through this route; use Add Image to create a fresh row instead of trying to "edit" a blank one.
 - `deleteXrefFile( $pItem, $pXkeyExt )` — cleans up the physical file on a real hard-delete
   (`expunge=3`) of the row, distinguished from an Archive (soft-delete via `update` permission).
 - `promoteImageToThumbnail( $pRelativePath )` — see above.
 
 Each content class implements these against its own storage root and its own understanding of
 which `item` values apply — the controller just calls them generically if they exist.
+
+**`FisheyeBase::addImageXrefFile( $pTmpPath, $pOriginalName )` is a related but separate
+mechanism** — not one of `edit_xref.php`'s three hooks (it *creates* a new row rather than acting
+on an existing one), called instead from the dedicated `add_image_xref.php` page the Images tab's
+own group-tab override links to. Guarded by `method_exists( $this, 'getImageStorageRoot' )`
+internally, and by `$gContent->supportsAddImage()` for the template-visible check (see above).
 
 ## Video playback
 
@@ -285,8 +394,9 @@ Gallery description text is **plain text**, not wiki/rich text — use `data|esc
 - Show/Artist/Composer as a genuine top-level browsable type (the `FoodDay`-pattern computed
   listing) — not built; a show today is a real gallery object, browsed by drilling down from a
   parent gallery rather than any kind of aggregated cross-show view.
-- Bulk "scan the whole storage root and register anything new" import — not built; would need
-  staging/batching to avoid a single request timing out against a real library's size.
+- Fully-automatic "scan the whole storage root and register anything new, no picking" import —
+  `load_film.php`/`load_program.php` (see above) cover discover-and-pick, capped at 20 at a time;
+  nothing yet walks a whole library unattended.
 - Season-level Plex metadata reload — deliberately not built; Plex's own data model has nothing
   at that level to fetch for this kind of content.
 - A UI for managing the xref vocabulary itself (add/edit groups and items through bitweaver,
@@ -294,3 +404,11 @@ Gallery description text is **plain text**, not wiki/rich text — use `data|esc
   work, not started.
 - Music/album/track build-out — `FisheyeAlbum` is registered with its own xref vocabulary, but no
   view/edit pages, Plex integration, or playback UI exist for it yet, unlike film/TV.
+- A one-off single-video show is currently registered as a full show/season/episode, faking an
+  `S01E01`-style episode number just to fit the model — a plain "Videos" gallery (load_film.php-
+  style, no season/episode modeling at all) would fit these better. Not started.
+- Shows with only one season still get a full show → dummy "Season 1" → episodes click-through,
+  even though a single season is common. A display-level merge (`view_program.php`/
+  `edit_program.php` list episodes directly when there's exactly one season, no separate page) is
+  the intended fix — keeping the real `FisheyeSeason` object underneath, not a storage change. Not
+  started.

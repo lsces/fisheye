@@ -39,6 +39,11 @@ entirely once real local metadata/artwork exists for everything it's fed.
   at the show and episode level, not the season level, and the UI reflects that rather than
   synthesizing something that isn't there); a "Load Episodes" action pulls a season's full episode
   list including each episode's own cast/rating/duration and screenshot thumbnail
+- **Discover-and-import pages** for both films and shows — scan a storage folder for what isn't
+  registered yet and pick a batch to bring in, rather than a manual per-item process
+- **Falls back gracefully when Plex has nothing** — a manual title search to fix a mismatched
+  automatic match, and a video-frame-grab fallback (on demand or automatic) when Plex genuinely has
+  no artwork for something
 - **Direct playback links** for episode video files with real HTTP Range support, rather than
   requiring a separate media player for the underlying files
 
@@ -51,10 +56,12 @@ storage roots and Plex matching work, and the complete list of what isn't built 
   but has no view/edit pages or Plex integration yet)
 - A "Show"/"Artist" browsing level that isn't itself a stored record — computed live from its
   seasons/albums, rather than the real gallery object a show currently has to be
-- A bulk "scan the whole library and register anything new" importer, staged/batched for a
-  real-sized library rather than one request per item
+- A fully-unattended "scan the whole library and register anything new" importer — today's
+  discover-and-import pages are pick-a-batch, capped, not a walk-the-whole-library tool
 - Managing the metadata vocabulary (which fields exist per content type) through a bitweaver admin
   UI, rather than a hand-authored scheme file applied once
+- A plain "Videos" gallery for one-off single-episode shows, and a combined show/season page for
+  the common case of a show with only one season
 
 ## Requirements
 
