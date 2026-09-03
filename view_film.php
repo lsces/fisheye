@@ -71,19 +71,6 @@ $gBitSmarty->assign( 'durationMs', $durationMs );
 $gBitSmarty->assign( 'externalLinks', $externalLinks );
 $gBitSmarty->assign( 'filmImages', $filmImages );
 
-// gallery for the breadcrumb/creator line only now (gallery_breadcrumb_inc.tpl) - the foot-of-page
-// strip used to show sibling films from this same gallery as a placeholder; replaced by this
-// film's own images above, per Lester 2026-09-02, so the gallery's own image list is no longer
-// needed here.
-$gGallery = null;
-if( !empty( $_REQUEST['gallery_id'] ) && is_numeric( $_REQUEST['gallery_id'] )) {
-	$gGallery = FisheyeGallery::lookup( $_REQUEST );
-} elseif( $parents = $gContent->getParentGalleries() ) {
-	$gal = current( $parents );
-	$gGallery = new FisheyeGallery( $gal['gallery_id'] );
-	$gGallery->load();
-}
-$gBitSmarty->assign( 'gGallery', $gGallery );
 $gBitSmarty->assign( 'gContent', $gContent );
 
 $gBitSystem->setCanonicalLink( $gContent->getDisplayUrl() );

@@ -272,6 +272,57 @@ class FisheyeProgram extends FisheyeGallery {
 	 *
 	 * @return array{db:\PDO,id:int}|null  null if unconfigured or no match found
 	 */
+	/**
+	 * Register a show (found or created by title - no file attachment, a show is a pure gallery
+	 * record), link it into the "TV Shows" gallery, and backfill Plex metadata - the show-level
+	 * equivalent of FisheyeFilm::registerFromDisk(), shared by load_program.php. Unlike a film,
+	 * there's no disk path to validate here - the show "exists" the moment its folder is picked
+	 * from load_program.php's listing; matching real season/episode files happens one level down,
+	 * in FisheyeSeason::registerFromDisk().
+	 *
+	 * gallery_id is always returned alongside content_id (both branches) - load_program.php scopes
+	 * by gallery_id throughout, same convention load_film.php already settled on, so a caller
+	 * never needs a second lookup just to get it.
+	 *
+	 * @return array 'already'=>content_id + 'gallery_id' if already registered, or
+	 *               'created'=>content_id + 'gallery_id'/'linked'/'plex' on success, or
+	 *               'error'=>string on failure.
+	 */
+	public static function registerFromDisk( string $pShowTitle ): array {
+		global $gBitDb;
+
+		$existingContentId = $gBitDb->getOne(
+			"SELECT content_id FROM liberty_content WHERE content_type_guid = 'fisheyeprogram' AND title = ?",
+			[ $pShowTitle ]
+		);
+		if( $existingContentId ) {
+			$existing = new FisheyeProgram( null, $existingContentId );
+			$existing->load();
+			return [ 'already' => $existingContentId, 'gallery_id' => $existing->mGalleryId ];
+		}
+
+		$program = new FisheyeProgram();
+		// store() takes its param by reference - can't pass an array literal directly.
+		$storeHash = [ 'title' => $pShowTitle ];
+		if( !$program->store( $storeHash ) ) {
+			return [ 'error' => implode( '; ', $program->mErrors ) ];
+		}
+
+		$galleryContentId = $gBitDb->getOne(
+			"SELECT lc.content_id FROM liberty_content lc INNER JOIN fisheye_gallery fg ON fg.content_id = lc.content_id WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ?",
+			[ 'TV Shows' ]
+		);
+		$linked = false;
+		if( $galleryContentId ) {
+			$gallery = new FisheyeGallery( null, $galleryContentId );
+			$gallery->load();
+			$linked = $gallery->addItem( $program->mContentId );
+		}
+		$plexMeta = $program->reloadPlexMetadata();
+
+		return [ 'created' => $program->mContentId, 'gallery_id' => $program->mGalleryId, 'linked' => $linked, 'plex' => $plexMeta ];
+	}
+
 	private function matchPlexShowMetadataItem(): ?array {
 		global $gBitSystem;
 

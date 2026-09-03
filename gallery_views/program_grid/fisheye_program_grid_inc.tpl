@@ -1,12 +1,20 @@
-{* Placeholder base for TV Show galleries - currently identical to fixed_grid, own gallery_views
-   folder so it can diverge (floaticons, empty-state message, etc.) once that need is scoped,
-   same pattern as film_grid. *}
+{* TV Show galleries - same grid rendering as fixed_grid, own floaticon set
+   (program_gallery_icons_inc.tpl - Load Seasons instead of Download/Upload, seasons come from
+   disk registration via load_program.php not browser upload) and breadcrumb, same framework as
+   film_grid. *}
 {strip}
 <div class="display fisheye">
 	<header>
-		{include file="bitpackage:fisheye/gallery_icons_inc.tpl"}
-		<h1>{$gContent->getTitle()|escape}</h1>
-		{include file="bitpackage:fisheye/gallery_breadcrumb_inc.tpl"}
+		{include file="bitpackage:fisheye/program_gallery_icons_inc.tpl"}
+		{* Own breadcrumb instead of the shared gallery_breadcrumb_inc.tpl - same reasoning as
+		   film_grid's own header. getBreadcrumbTrail() walks the real ancestor chain via
+		   fisheye_gallery_image_map - "TV Shows" leads for any registered show gallery. *}
+		<h1>
+			{foreach from=$gContent->getBreadcrumbTrail() item=crumb}
+				<a href="{$crumb.url|escape}">{$crumb.title|escape}</a> -
+			{/foreach}
+			{$gContent->getTitle()|escape}
+		</h1>
 	</header>
 
 	{if $gContent->mInfo.data && $gContent->getPreference('show_description') ne 'n'}
@@ -50,7 +58,7 @@
 			{/if}
 
 		{foreachelse}
-			<tr><td class="norecords">{tr}This gallery is empty{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}upload.php?gallery_id={$gContent->mGalleryId ?? 0}">Upload pictures!</a></td></tr>
+			<tr><td class="norecords">{tr}This gallery is empty{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}load_program.php?gallery_id={$gContent->mGalleryId ?? 0}">Load seasons!</a></td></tr>
 		{/foreach}
 
 		{if $imageCount % $cols != 0}</tr>{/if}

@@ -226,6 +226,33 @@ not ready for primetime
 		return $ret;
 	}
 
+	/**
+	 * getBreadcrumbLinks() above returns raw gallery_id=>title pairs - fine for the old
+	 * gallery_breadcrumb_inc.tpl's own hardcoded 'gallery/<id>' pretty-url links, but that link
+	 * shape always lands on the generic gallery view regardless of a gallery's own type/style
+	 * (film_grid vs fixed_grid etc.) - wrong once type-specific gallery_views exist. This wraps
+	 * the same ancestor walk with FisheyeGallery::getDisplayUrlFromHash() (a static call, no need
+	 * to load a full object per ancestor) so every real gallery view template (view_film.tpl,
+	 * fisheye_film_grid_inc.tpl, ...) can render a correct "Films - Collection - " breadcrumb
+	 * trail without duplicating this logic. Never includes the current item itself - callers
+	 * render their own title as the trailing plain-text segment (Lester, 2026-09-03).
+	 *
+	 * @return array List of ['title'=>string, 'url'=>string], oldest ancestor first.
+	 */
+	public function getBreadcrumbTrail(): array {
+		$trail = [];
+		foreach( $this->getBreadcrumbLinks( false ) as $galleryId => $title ) {
+			// getDisplayUrlFromHash() takes its param by reference - can't pass an array literal
+			// directly, needs a real variable first.
+			$urlParamHash = [ 'gallery_id' => $galleryId ];
+			$trail[] = [
+				'title' => $title,
+				'url'   => FisheyeGallery::getDisplayUrlFromHash( $urlParamHash ),
+			];
+		}
+		return $trail;
+	}
+
 	public function addToGalleries( $pGalleryArray ) {
 		global $gBitSystem;
 		if( $this->isValid() ) {

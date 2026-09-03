@@ -8,12 +8,13 @@
 		{* Own breadcrumb instead of the shared gallery_breadcrumb_inc.tpl - that one hardcodes
 		   a pretty-url 'gallery/<id>' link that always lands on the generic gallery view
 		   regardless of type, same reasoning view_season.tpl's own title-link already worked
-		   around. Currently one ancestor segment ($gGallery, "Films" itself until a film sits
-		   inside a Collection sub-gallery) - once collections exist, $gGallery will be the
-		   collection and its own parent would need walking too, to still show "Films" ahead of
-		   it; not built yet, no real collection data to build/test against. *}
+		   around. getBreadcrumbTrail() (FisheyeBase, 2026-09-03) walks the real ancestor chain -
+		   "Films" always leads, then any Collection sub-gallery the film actually sits in, each
+		   segment's own URL type-correct (film_grid galleries route the same as any other). *}
 		<h1>
-			{if $gGallery}<a href="{$gGallery->getDisplayUrl()|escape}">{$gGallery->getTitle()|escape}</a> - {/if}
+			{foreach from=$gContent->getBreadcrumbTrail() item=crumb}
+				<a href="{$crumb.url|escape}">{$crumb.title|escape}</a> -
+			{/foreach}
 			{$gContent->getTitle()|escape}
 		</h1>
 	</header>

@@ -4,8 +4,17 @@
 <div class="display fisheye">
 	<header>
 		{include file="bitpackage:fisheye/film_gallery_icons_inc.tpl"}
-		<h1>{$gContent->getTitle()|escape}</h1>
-		{include file="bitpackage:fisheye/gallery_breadcrumb_inc.tpl"}
+		{* Own breadcrumb instead of the shared gallery_breadcrumb_inc.tpl - same reasoning as
+		   view_film.tpl's own header (that one hardcodes a pretty-url link that always lands on
+		   the generic gallery view regardless of type). getBreadcrumbTrail() walks the real
+		   ancestor chain via fisheye_gallery_image_map - "Films" leads for any real collection
+		   sub-gallery, each segment's own URL type-correct. *}
+		<h1>
+			{foreach from=$gContent->getBreadcrumbTrail() item=crumb}
+				<a href="{$crumb.url|escape}">{$crumb.title|escape}</a> -
+			{/foreach}
+			{$gContent->getTitle()|escape}
+		</h1>
 	</header>
 
 	{if $gContent->mInfo.data && $gContent->getPreference('show_description') ne 'n'}

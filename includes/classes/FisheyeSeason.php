@@ -2,9 +2,12 @@
 /**
  * TV season — extends FisheyeImage with content_type_guid='fisheyeseason'.
  *
- * The real, folder-leaf content_id in the show->season->episode tree (a "show" itself has no
- * content_id at all - it's a computed, FoodDay-pattern browsing level over its seasons, not yet
- * built - see fisheye.md's 2026-09-02 entry). Ring-fences season-level metadata (genre/director/
+ * The real, folder-leaf content_id in the show->season->episode tree - an episode itself is one
+ * level further down still, a plain 'episode' liberty_xref row under its season's own content_id,
+ * not a content object of its own. (Stale note this replaces: a show was originally meant to be a
+ * computed, FoodDay-pattern browsing level with no content_id of its own - superseded once
+ * FisheyeProgram was built, which gives every show a genuine content_id/gallery, see that class's
+ * own docblock.) Ring-fences season-level metadata (genre/director/
  * writer/star/content_rating/duration, IMDB+TheTVDB links) plus the EPISODE xref item away from
  * plain fisheyeimage photo rows and from FisheyeFilm/FisheyeAlbum's own item sets - no other
  * behavioural difference from FisheyeImage, same pattern as Contact/ContactPerson/ContactBusiness.
@@ -247,6 +250,97 @@ class FisheyeSeason extends FisheyeImage {
 	 *
 	 * @return array{db:\PDO,id:int,root:string}|null  null if unconfigured or no match found
 	 */
+	/**
+	 * Register a season under an already-registered show, seed it with one real episode file (the
+	 * one thing matchPlexSeasonMetadataItem() needs to find the right Plex season - it matches by
+	 * an existing 'episode' xref's own file path, chicken-and-egg otherwise), then immediately call
+	 * reloadPlexEpisodes() to replace that single seed row with the show's real full episode list
+	 * from Plex. Mirrors import_episode_test.php's proven manual sequence (the one-off smoke test
+	 * this supersedes - see that file's own docblock) rather than reinventing it, with the season
+	 * linked into a real FisheyeProgram gallery instead of that script's plain-FisheyeGallery
+	 * fallback (FisheyeProgram didn't exist yet when it was written).
+	 *
+	 * Season title convention: "<show title> - <season folder name>" (e.g. "Inspector Morse -
+	 * Season 1", "Inspector Morse - Specials") - the folder name is used verbatim rather than
+	 * trying to normalize "Specials" into a numbered series, since it already reads correctly and
+	 * Plex's own season match doesn't depend on this title at all (only on the seeded file path).
+	 *
+	 * @param string $pShowTitle        Real show title, used to resolve the TV storage root and
+	 *                                   build the season title.
+	 * @param string $pSeasonFolderName Real subfolder name under the show's own folder, e.g.
+	 *                                   "Season 1" or "Specials".
+	 * @param int    $pShowContentId    The already-registered FisheyeProgram's content_id to link
+	 *                                   this season into.
+	 * @return array 'already'=>content_id if a real episode was already seeded (re-running just
+	 *               re-syncs from Plex), or 'created'/'episodes' on success, or 'error'=>string on
+	 *               failure (including "no episode files found in this folder").
+	 */
+	public static function registerFromDisk( string $pShowTitle, string $pSeasonFolderName, int $pShowContentId ): array {
+		global $gBitDb;
+
+		$seasonTitle = $pShowTitle.' - '.$pSeasonFolderName;
+		$alreadySeeded = false;
+
+		$existingContentId = $gBitDb->getOne(
+			"SELECT content_id FROM liberty_content WHERE content_type_guid = 'fisheyeseason' AND title = ?",
+			[ $seasonTitle ]
+		);
+		if( $existingContentId ) {
+			$season = new FisheyeSeason( null, $existingContentId );
+			$season->load();
+			$alreadySeeded = (bool)$gBitDb->getOne(
+				"SELECT xref_id FROM liberty_xref WHERE content_id = ? AND item = 'episode'",
+				[ $existingContentId ]
+			);
+		} else {
+			$season = new FisheyeSeason();
+			// store() takes its param by reference - can't pass an array literal directly.
+			$storeHash = [ 'title' => $seasonTitle ];
+			if( !$season->store( $storeHash ) ) {
+				return [ 'error' => implode( '; ', $season->mErrors ) ];
+			}
+		}
+
+		$showGallery = new FisheyeGallery( null, $pShowContentId );
+		$showGallery->load();
+		if( !$showGallery->isInGallery( $pShowContentId, $season->mContentId ) ) {
+			$showGallery->addItem( $season->mContentId );
+		}
+
+		if( !$alreadySeeded ) {
+			$root = \Bitweaver\Liberty\mime_film_get_tvshow_storage_root( $pShowTitle );
+			$seasonDir = $root.'TV Shows/'.$pShowTitle.'/'.$pSeasonFolderName.'/';
+			$seedFile = null;
+			if( !empty( $root ) && is_dir( $seasonDir ) ) {
+				foreach( scandir( $seasonDir ) as $file ) {
+					if( !is_file( $seasonDir.$file ) ) {
+						continue;
+					}
+					if( in_array( strtolower( pathinfo( $file, PATHINFO_EXTENSION ) ), [ 'mkv', 'mp4', 'm4v', 'avi' ], true ) ) {
+						$seedFile = $file;
+						break;
+					}
+				}
+			}
+			if( empty( $seedFile ) ) {
+				return [ 'error' => 'No episode files found in '.$seasonDir ];
+			}
+			// storeXref() also takes its param by reference - same reason as store() above.
+			$xrefHash = [
+				'content_id' => $season->mContentId,
+				'item'       => 'episode',
+				'xkey_ext'   => 'TV Shows/'.$pShowTitle.'/'.$pSeasonFolderName.'/'.$seedFile,
+				'edit'       => json_encode( [ 'title' => pathinfo( $seedFile, PATHINFO_FILENAME ) ] ),
+				'xorder'     => 1,
+			];
+			$season->storeXref( $xrefHash );
+		}
+
+		$episodes = $season->reloadPlexEpisodes();
+
+		return [ 'created' => $season->mContentId, 'episodes' => $episodes ];
+	}
+
 	private function matchPlexSeasonMetadataItem(): ?array {
 		global $gBitSystem;
 
