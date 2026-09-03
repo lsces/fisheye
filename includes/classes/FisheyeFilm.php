@@ -165,12 +165,19 @@ class FisheyeFilm extends FisheyeImage {
 	 * @return array{db:\PDO,id:int}|null  null if unconfigured or no match found
 	 */
 	/**
-	 * Register an already-on-disk film (no-copy attachment via mime.film.php), link it into the
-	 * "Films" gallery, and backfill Plex metadata - the one real per-film registration sequence,
-	 * shared by admin_import_film.php (single film) and load_film.php (bulk selection) so it
-	 * exists in exactly one place. Caller is responsible for validating $pRelativePath is a real
-	 * file under the configured storage root first - this only re-checks for an existing
-	 * registration (idempotent against being called twice for the same file).
+	 * Register an already-on-disk film (no-copy attachment via mime.film.php), link it into a
+	 * gallery, and backfill Plex metadata - the one real per-film registration sequence, shared
+	 * by admin_import_film.php (single film) and load_film.php (bulk selection) so it exists in
+	 * exactly one place. Caller is responsible for validating $pRelativePath is a real file under
+	 * the configured storage root first - this only re-checks for an existing registration
+	 * (idempotent against being called twice for the same file).
+	 *
+	 * $pGalleryTitle defaults to 'Films' (the flat top-level pool) - a collection is just another
+	 * gallery whose own title matches the on-disk subfolder name a film was found in (see
+	 * load_film.php's own folder-scoping doc), so passing that title here is all a caller needs
+	 * to do to link into it instead. No matching gallery (a folder browsed before its collection
+	 * gallery exists yet) degrades the same way 'Films' missing always has - $linked stays false,
+	 * not an error.
 	 *
 	 * $pFetchImages additionally calls reloadPlexImages() per film - off by default. Deliberately
 	 * opt-in, not folded into the metadata backfill above: downloading N posters/backdrops is the
@@ -181,7 +188,7 @@ class FisheyeFilm extends FisheyeImage {
 	 *               (/'images' if $pFetchImages) on success, or 'error'=>string on failure - same
 	 *               shape either caller can render.
 	 */
-	public static function registerFromDisk( string $pRelativePath, ?string $pTitle = null, bool $pFetchImages = false ): array {
+	public static function registerFromDisk( string $pRelativePath, ?string $pTitle = null, bool $pFetchImages = false, string $pGalleryTitle = 'Films' ): array {
 		global $gBitDb;
 
 		$title = trim( (string)$pTitle ) ?: pathinfo( $pRelativePath, PATHINFO_FILENAME );
@@ -207,7 +214,7 @@ class FisheyeFilm extends FisheyeImage {
 
 		$galleryContentId = $gBitDb->getOne(
 			"SELECT lc.content_id FROM liberty_content lc INNER JOIN fisheye_gallery fg ON fg.content_id = lc.content_id WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ?",
-			[ 'Films' ]
+			[ $pGalleryTitle ]
 		);
 		$linked = false;
 		if( $galleryContentId ) {
