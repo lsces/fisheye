@@ -12,6 +12,12 @@ use Bitweaver\BitBase;
 use Bitweaver\Liberty\LibertyContent;
 
 define( 'FISHEYE_PAGINATION_FIXED_GRID', 'fixed_grid' );
+// Content-type-specific grid variants - same rows*cols grid pagination as FIXED_GRID (see
+// getList()'s layout branch below), own gallery_views/ template so each swaps its floaticon set
+// for the type's own workflow (e.g. film_grid links to load_film.php instead of upload.php).
+define( 'FISHEYE_PAGINATION_FILM_GRID', 'film_grid' );
+define( 'FISHEYE_PAGINATION_PROGRAM_GRID', 'program_grid' );
+define( 'FISHEYE_PAGINATION_MUSIC_GRID', 'music_grid' );
 define( 'FISHEYE_PAGINATION_AUTO_FLOW', 'auto_flow' );
 define( 'FISHEYE_PAGINATION_POSITION_NUMBER', 'position_number' );
 define( 'FISHEYE_PAGINATION_SIMPLE_LIST', 'simple_list' );
@@ -248,7 +254,7 @@ class FisheyeGallery extends FisheyeBase {
 						$whereSql .= " AND floor(item_position)=? ";
 						array_push( $bindVars, $mantissa );
 					}
-				} elseif( $this->getLayout() == FISHEYE_PAGINATION_FIXED_GRID ) {
+				} elseif( in_array( $this->getLayout(), [ FISHEYE_PAGINATION_FIXED_GRID, FISHEYE_PAGINATION_FILM_GRID, FISHEYE_PAGINATION_PROGRAM_GRID, FISHEYE_PAGINATION_MUSIC_GRID ], true ) ) {
 					$rowCount = ($this->mInfo['rows_per_page'] ?? 3) * ($this->mInfo['cols_per_page'] ?? 3);
 					$offset = $rowCount * ( (int) $pListHash['page'] - 1);
 				} else {
@@ -645,6 +651,9 @@ class FisheyeGallery extends FisheyeBase {
 		return [
 			FISHEYE_PAGINATION_GALLERIFFIC     => 'Galleriffic',
 			FISHEYE_PAGINATION_FIXED_GRID      => 'Fixed Grid',
+			FISHEYE_PAGINATION_FILM_GRID       => 'Film Grid',
+			FISHEYE_PAGINATION_PROGRAM_GRID    => 'TV Show Grid',
+			FISHEYE_PAGINATION_MUSIC_GRID      => 'Music Grid',
 			FISHEYE_PAGINATION_AUTO_FLOW       => 'Auto-Flow Images',
 			FISHEYE_PAGINATION_POSITION_NUMBER => 'Image Order Page Number',
 			FISHEYE_PAGINATION_SIMPLE_LIST     => 'Simple List',

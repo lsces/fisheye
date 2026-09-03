@@ -2,6 +2,10 @@
 <script>//<![CDATA[
 function updateGalleryPagination() {
 	var paginationIds = ['fixed_grid','auto_flow','position_number','simple_list','matteo','galleriffic'];
+	// film_grid/program_grid/music_grid share fixed_grid's rows*cols settings panel - same
+	// underlying grid pagination math (see FisheyeGallery::getList()'s layout branch), just
+	// their own view template/floaticons - not worth a duplicate panel per style.
+	var styleGroup = { film_grid: 'fixed_grid', program_grid: 'fixed_grid', music_grid: 'fixed_grid' };
 	paginationIds.forEach(function(id) {
 		var div = document.getElementById(id+'-pagination');
 		div.style.display = 'none';
@@ -9,7 +13,7 @@ function updateGalleryPagination() {
 	});
 	var input = document.getElementById('editGalleryForm').gallery_pagination;
 	var select = input.options[input.selectedIndex].value;
-	var activeDiv = document.getElementById(select+'-pagination');
+	var activeDiv = document.getElementById((styleGroup[select] || select)+'-pagination');
 	activeDiv.style.display = 'block';
 	activeDiv.querySelectorAll('input, select').forEach(function(el) { el.disabled = false; });
 }

@@ -44,39 +44,10 @@ if( !empty( $_REQUEST['fImport'] ) ) {
 	} elseif( empty( $relativePath ) || !is_file( $root.$relativePath ) ) {
 		$result = [ 'error' => KernelTools::tra( 'File not found under the configured storage root: ' ).$relativePath ];
 	} else {
-		// Idempotent - check whether this exact file is already registered before creating a
-		// duplicate (a real gap in the earlier one-off scripts, found the hard way 2026-09-02).
-		$existingContentId = $gBitDb->getOne(
-			"SELECT la.content_id FROM liberty_attachments la INNER JOIN liberty_files lf ON lf.file_id = la.foreign_id WHERE la.attachment_plugin_guid = 'mimefilm' AND lf.file_name = ?",
-			[ $relativePath ]
-		);
-		if( $existingContentId ) {
-			$result = [ 'already' => $existingContentId ];
-		} else {
-			$film = new FisheyeFilm();
-			$pParamHash = [
-				'title' => $title,
-				'mimeplugin' => [
-					'mimefilm' => [ 'file_name' => $relativePath ],
-				],
-			];
-			if( $film->store( $pParamHash ) ) {
-				$galleryContentId = $gBitDb->getOne(
-					"SELECT lc.content_id FROM liberty_content lc INNER JOIN fisheye_gallery fg ON fg.content_id = lc.content_id WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ?",
-					[ 'Films' ]
-				);
-				$linked = false;
-				if( $galleryContentId ) {
-					$gallery = new FisheyeGallery( null, $galleryContentId );
-					$gallery->load();
-					$linked = $gallery->addItem( $film->mContentId );
-				}
-				$plexMeta = $film->reloadPlexMetadata();
-				$result = [ 'created' => $film->mContentId, 'linked' => $linked, 'plex' => $plexMeta ];
-			} else {
-				$result = [ 'error' => implode( '; ', $film->mErrors ) ];
-			}
-		}
+		// Idempotent - FisheyeFilm::registerFromDisk() re-checks whether this exact file is
+		// already registered before creating a duplicate (a real gap in the earlier one-off
+		// scripts, found the hard way 2026-09-02). Shared with load_film.php's bulk import.
+		$result = FisheyeFilm::registerFromDisk( $relativePath, $title );
 	}
 }
 

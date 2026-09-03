@@ -164,6 +164,66 @@ class FisheyeFilm extends FisheyeImage {
 	 *
 	 * @return array{db:\PDO,id:int}|null  null if unconfigured or no match found
 	 */
+	/**
+	 * Register an already-on-disk film (no-copy attachment via mime.film.php), link it into the
+	 * "Films" gallery, and backfill Plex metadata - the one real per-film registration sequence,
+	 * shared by admin_import_film.php (single film) and load_film.php (bulk selection) so it
+	 * exists in exactly one place. Caller is responsible for validating $pRelativePath is a real
+	 * file under the configured storage root first - this only re-checks for an existing
+	 * registration (idempotent against being called twice for the same file).
+	 *
+	 * $pFetchImages additionally calls reloadPlexImages() per film - off by default. Deliberately
+	 * opt-in, not folded into the metadata backfill above: downloading N posters/backdrops is the
+	 * heavier of the two Plex operations, and a bulk caller (load_film.php) importing many films
+	 * at once needs to be able to choose that cost explicitly rather than always paying it.
+	 *
+	 * @return array 'already'=>content_id if already registered, or 'created'/'linked'/'plex'
+	 *               (/'images' if $pFetchImages) on success, or 'error'=>string on failure - same
+	 *               shape either caller can render.
+	 */
+	public static function registerFromDisk( string $pRelativePath, ?string $pTitle = null, bool $pFetchImages = false ): array {
+		global $gBitDb;
+
+		$title = trim( (string)$pTitle ) ?: pathinfo( $pRelativePath, PATHINFO_FILENAME );
+
+		$existingContentId = $gBitDb->getOne(
+			"SELECT la.content_id FROM liberty_attachments la INNER JOIN liberty_files lf ON lf.file_id = la.foreign_id WHERE la.attachment_plugin_guid = 'mimefilm' AND lf.file_name = ?",
+			[ $pRelativePath ]
+		);
+		if( $existingContentId ) {
+			return [ 'already' => $existingContentId ];
+		}
+
+		$film = new FisheyeFilm();
+		$pParamHash = [
+			'title' => $title,
+			'mimeplugin' => [
+				'mimefilm' => [ 'file_name' => $pRelativePath ],
+			],
+		];
+		if( !$film->store( $pParamHash ) ) {
+			return [ 'error' => implode( '; ', $film->mErrors ) ];
+		}
+
+		$galleryContentId = $gBitDb->getOne(
+			"SELECT lc.content_id FROM liberty_content lc INNER JOIN fisheye_gallery fg ON fg.content_id = lc.content_id WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ?",
+			[ 'Films' ]
+		);
+		$linked = false;
+		if( $galleryContentId ) {
+			$gallery = new FisheyeGallery( null, $galleryContentId );
+			$gallery->load();
+			$linked = $gallery->addItem( $film->mContentId );
+		}
+		$plexMeta = $film->reloadPlexMetadata();
+
+		$ret = [ 'created' => $film->mContentId, 'linked' => $linked, 'plex' => $plexMeta ];
+		if( $pFetchImages ) {
+			$ret['images'] = $film->reloadPlexImages();
+		}
+		return $ret;
+	}
+
 	private function matchPlexMetadataItem(): ?array {
 		global $gBitSystem;
 
