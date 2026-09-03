@@ -14,7 +14,7 @@
  *
  * Folder scoping (Lester, 2026-09-03): a collection isn't modelled as anything more formal than
  * "a real subfolder under Films/ whose name matches a gallery's own title" - see the
- * LOAD_FILM_TOP_GALLERY_ID/gallery_id/folder handling below for the three ways this page ends up
+ * $topGalleryId/gallery_id/folder handling below for the three ways this page ends up
  * scoped to one.
  *
  * @package fisheye
@@ -37,11 +37,9 @@ if( !$gLibertySystem->isPluginActive( 'mimefilm' ) ) {
 
 const LOAD_FILM_LIMIT = 20;
 const LOAD_FILM_EXTENSIONS = [ 'mkv', 'mp4', 'm4v', 'avi' ];
-// Bodge, acknowledged: the very first gallery ever created on this install landed at gallery_id=1
-// and that's "Films" - used directly as the "top level, not a collection" sentinel rather than
-// looking it up by title every time, since a link's own gallery_id already tells us everything
-// needed (Lester, 2026-09-03).
-const LOAD_FILM_TOP_GALLERY_ID = 1;
+// Resolved by title, not hardcoded - see FisheyeGallery::getTopGalleryId()'s own docblock for
+// why (was a literal, install-order-dependent "1" here until 2026-09-03).
+$topGalleryId = FisheyeGallery::getTopGalleryId( 'Films' );
 
 $root = \Bitweaver\Liberty\mime_film_get_storage_root();
 $filmsDir = $root.'Films/';
@@ -63,7 +61,7 @@ $folderParam = trim( (string)( $_REQUEST['folder'] ?? '' ) );
 $folderName = $folderParam !== '' ? $folderParam : null;
 
 $scopeGallery = null;
-if( $galleryIdParam && $galleryIdParam !== LOAD_FILM_TOP_GALLERY_ID ) {
+if( $galleryIdParam && $galleryIdParam !== $topGalleryId ) {
 	$scopeGallery = new FisheyeGallery( $galleryIdParam );
 	$scopeGallery->load();
 	if( !$scopeGallery->isValid() ) {

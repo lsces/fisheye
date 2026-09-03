@@ -6,20 +6,24 @@
 
 <div class="admin liberty">
 	<div class="header">
-		<h1>
-			{tr}Load TV Shows{/tr}
-			{if $scopeShow}- <a href="{$smarty.const.FISHEYE_PKG_URL}load_program.php">{tr}Shows{/tr}</a> - {$scopeShow.title|escape}{/if}
-		</h1>
+		<h1><a href="{$topGalleryUrl|escape}">{tr}TV Shows{/tr}</a>{if $scopeShow} - <a href="{$smarty.const.FISHEYE_PKG_URL}load_program.php">{tr}Next{/tr}</a> - {$scopeShow.title|escape}{/if}</h1>
 	</div>
 
 	<div class="body">
 
 		{if $showResult.error}
 			<div class="alert alert-danger">{$showResult.error|escape}</div>
+		{elseif $showResult.no_match}
+			<div class="alert alert-warning">
+				{tr}Registered show{/tr} "{$scopeShow.title|escape}" -
+				{tr}no Plex match, so metadata/images were not fetched.{/tr}
+				<a href="{$smarty.const.FISHEYE_PKG_URL}edit_program.php?content_id={$showResult.created}">{tr}Search Plex to fix it{/tr}</a>
+			</div>
 		{elseif $showResult.created}
 			<div class="alert alert-success">
 				{tr}Registered show{/tr} "{$scopeShow.title|escape}"
-				{if $showResult.plex.matched}({tr}Plex metadata found{/tr}){else}({tr}no Plex match{/tr}){/if}
+				({tr}Plex metadata found{/tr})
+				- {if $showResult.images.items}{$showResult.images.items|@count} {tr}images{/tr}{else}{tr}no images fetched{/tr}{/if}
 			</div>
 		{/if}
 
@@ -29,7 +33,7 @@
 					<p>{tr}Seasons loaded{/tr}:</p>
 					<ul>
 						{foreach from=$seasonResult.created item=row}
-							<li>{$row.folder|escape} - {$row.episodes.items|@count} {tr}episodes from Plex{/tr}</li>
+							<li>{if $row.folder == '.'}{tr}Season 1{/tr}{else}{$row.folder|escape}{/if} - {$row.episodes.items|@count} {tr}episodes{/tr}, {if $row.images.items}{$row.images.items|@count} {tr}images{/tr}{else}{tr}no images fetched{/tr}{/if}</li>
 						{/foreach}
 					</ul>
 				</div>
@@ -62,7 +66,7 @@
 						<li>
 							<label>
 								<input type="checkbox" name="selected[]" value="{$season|escape}" checked="checked" />
-								{$season|escape}
+								{if $season == '.'}{tr}Season 1{/tr} ({tr}no season subfolder - files directly in show folder{/tr}){else}{$season|escape}{/if}
 							</label>
 						</li>
 					{/foreach}

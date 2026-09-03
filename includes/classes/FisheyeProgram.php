@@ -86,6 +86,32 @@ class FisheyeProgram extends FisheyeGallery {
 	}
 
 	/**
+	 * Deleting a show needs to take its seasons with it - FisheyeGallery::expunge()'s own
+	 * recursion only ever cascades into sub-*galleries*, never into plain gallery items, and a
+	 * season (FisheyeSeason extends FisheyeImage, not FisheyeGallery) is exactly that. Scoped
+	 * to FisheyeProgram rather than fixing this at the FisheyeGallery level - a show's seasons
+	 * are never meaningfully shared with another gallery the way a photo can be, so there's no
+	 * call to touch the shared base class's behaviour for every other gallery type in the
+	 * package (Films, Pictures, Library...) just to cover this one case.
+	 *
+	 * Each season's own expunge() (inherited from FisheyeImage) already cleans up its episode
+	 * xrefs and images via LibertyMime::expunge(), so no separate episode/image handling is
+	 * needed here.
+	 *
+	 * @return bool
+	 */
+	public function expunge(): bool {
+		if( $this->isValid() && $this->loadImages() ) {
+			foreach( $this->mItems as $season ) {
+				if( is_a( $season, '\Bitweaver\Fisheye\FisheyeSeason' ) ) {
+					$season->expunge();
+				}
+			}
+		}
+		return parent::expunge();
+	}
+
+	/**
 	 * A show's own selected thumbnail. Fixed properly 2026-09-02 (second attempt - see
 	 * fisheye.md's same-dated "real attachment" entry): FisheyeGallery descends from LibertyMime
 	 * just like a real photo does, so this show has its own unused attachment slot -
@@ -307,6 +333,13 @@ class FisheyeProgram extends FisheyeGallery {
 		if( !$program->store( $storeHash ) ) {
 			return [ 'error' => implode( '; ', $program->mErrors ) ];
 		}
+		// store() on a freshly-created object doesn't refresh its own in-memory fields - getTitle()
+		// would return '' from here on without this, same bug class as HealthDay's own
+		// findOrCreate() once had. Real, confirmed impact: reloadPlexMetadata()'s description-store
+		// below reads $this->getTitle() and needs a real value or FisheyeGallery::verifyGalleryData()
+		// silently fails it (title required) - reproduced live 2026-09-03, root cause of Andromeda's
+		// missing description despite everything else (genre/cast/episodes/images) loading fine.
+		$program->load();
 
 		$galleryContentId = $gBitDb->getOne(
 			"SELECT lc.content_id FROM liberty_content lc INNER JOIN fisheye_gallery fg ON fg.content_id = lc.content_id WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ?",
@@ -318,9 +351,88 @@ class FisheyeProgram extends FisheyeGallery {
 			$gallery->load();
 			$linked = $gallery->addItem( $program->mContentId );
 		}
+		// Halt here rather than blindly fetching metadata/images against a title match that may
+		// well be wrong or missing - exact title matching is fragile in both directions (Lester,
+		// 2026-09-03: "halt download if there is no match to plex so I can fix it... Dinnerladies
+		// failed because plex had dinnerladies and my stripping of : out of titles is also biting
+		// back" - confirmed live: Plex's own title is the single word "Dinnerladies", the on-disk
+		// folder is "Dinner Ladies"). The show record itself (above) still always gets created -
+		// cheap, and gives searchPlexShows()/setPlexMatchOverride() (the "Search Plex" action on
+		// edit_program.php) something to attach a manually-confirmed match to - but no metadata/
+		// image fetch runs until a match is actually confirmed, automatic or manual.
+		if( !$program->hasPlexMatch() ) {
+			return [ 'created' => $program->mContentId, 'gallery_id' => $program->mGalleryId, 'linked' => $linked, 'no_match' => true ];
+		}
 		$plexMeta = $program->reloadPlexMetadata();
+		// Unlike FisheyeFilm::registerFromDisk()'s opt-in $pFetchImages (a bulk 20-film import
+		// paying for N image downloads at once is a real cost worth choosing explicitly), shows
+		// are registered one at a time here - no reason to make images a separate manual step
+		// (Lester, 2026-09-03: "not pulling in the metadata or images, need to do that manually").
+		$plexImages = $program->reloadPlexImages();
 
-		return [ 'created' => $program->mContentId, 'gallery_id' => $program->mGalleryId, 'linked' => $linked, 'plex' => $plexMeta ];
+		return [ 'created' => $program->mContentId, 'gallery_id' => $program->mGalleryId, 'linked' => $linked, 'plex' => $plexMeta, 'images' => $plexImages ];
+	}
+
+	/**
+	 * Cheap public wrapper around matchPlexShowMetadataItem() for callers (registerFromDisk()
+	 * above) that only need to know whether a match exists, not the live PDO handle that method
+	 * also returns.
+	 *
+	 * @return bool
+	 */
+	public function hasPlexMatch(): bool {
+		return $this->matchPlexShowMetadataItem() !== null;
+	}
+
+	/**
+	 * Free-text search against Plex's own local library for a TV show, so a failed automatic
+	 * title match (see registerFromDisk()'s halt, and matchPlexShowMetadataItem()'s own docblock)
+	 * can be fixed by hand rather than requiring the on-disk folder or Plex's own title to be
+	 * edited to match exactly. Plain SQL LIKE against the same local Plex SQLite db every other
+	 * Plex lookup in this class already reads directly - no need for Plex's HTTP search API when
+	 * the db is already sitting right there and every other match in this file already queries
+	 * it this way.
+	 *
+	 * @param string $pQuery  free-text fragment of the show's title
+	 * @return array  list of ['id'=>, 'title'=>, 'year'=>], up to 20, title order
+	 */
+	public static function searchPlexShows( string $pQuery ): array {
+		global $gBitSystem;
+		$ret = [];
+		$pQuery = trim( $pQuery );
+		if( $pQuery === '' ) {
+			return $ret;
+		}
+		$dbPath = $gBitSystem->getConfig( 'fisheye_plex_db_path', '' );
+		if( empty( $dbPath ) || !is_file( $dbPath ) ) {
+			return $ret;
+		}
+		try {
+			$plexDb = new \PDO( 'sqlite:'.$dbPath );
+		} catch( \Exception $e ) {
+			return $ret;
+		}
+		$stmt = $plexDb->prepare( "SELECT id, title, year FROM metadata_items WHERE metadata_type = 2 AND title LIKE ? ORDER BY title LIMIT 20" );
+		$stmt->execute( [ '%'.$pQuery.'%' ] );
+		foreach( $stmt->fetchAll( \PDO::FETCH_ASSOC ) as $row ) {
+			$ret[] = [ 'id' => (int)$row['id'], 'title' => $row['title'], 'year' => $row['year'] ];
+		}
+		return $ret;
+	}
+
+	/**
+	 * Persist a manually-confirmed Plex match (one row picked from searchPlexShows() results),
+	 * so matchPlexShowMetadataItem() uses it directly from now on instead of re-deriving from
+	 * the (potentially mismatched) title string every time. Rebuild-not-diff, same convention as
+	 * every other single-cardinality reload* xref here - delete any prior override, then insert.
+	 *
+	 * @param int $pMetadataItemId  a Plex metadata_items.id, from searchPlexShows()
+	 * @return bool
+	 */
+	public function setPlexMatchOverride( int $pMetadataItemId ): bool {
+		self::deleteXrefByItem( $this->mContentId, [ 'plex_match' ] );
+		$xrefHash = [ 'content_id' => $this->mContentId, 'item' => 'plex_match', 'xkey' => (string)$pMetadataItemId ];
+		return $this->storeXref( $xrefHash );
 	}
 
 	private function matchPlexShowMetadataItem(): ?array {
@@ -335,6 +447,19 @@ class FisheyeProgram extends FisheyeGallery {
 			$plexDb = new \PDO( 'sqlite:'.$dbPath );
 		} catch( \Exception $e ) {
 			return null;
+		}
+
+		// A manually-confirmed match (setPlexMatchOverride() above) always wins over the
+		// automatic title lookup below. Plain direct SQL rather than the generic
+		// lookupXrefByItem()/loadXrefInfo() helpers - both require a registered
+		// liberty_xref_item config row, and this is a purely internal bookkeeping value, never
+		// shown through the generic xref grid, so it was never worth registering as one.
+		$overrideId = $this->mDb->getOne(
+			"SELECT `xkey` FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id` = ? AND `item` = 'plex_match'",
+			[ $this->mContentId ]
+		);
+		if( $overrideId ) {
+			return [ 'db' => $plexDb, 'id' => (int)$overrideId ];
 		}
 
 		$stmt = $plexDb->prepare( "SELECT id FROM metadata_items WHERE metadata_type = 2 AND title = ?" );

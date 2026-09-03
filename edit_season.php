@@ -35,7 +35,10 @@ $plexResultLabel = null;
 if( !empty( $_REQUEST['fCancel'] ) ) {
 	KernelTools::bit_redirect( $gContent->getDisplayUrl() );
 } elseif( !empty( $_REQUEST['fSave'] ) ) {
-	$storeHash = [ 'content_id' => $gContent->mContentId, 'title' => trim( $_REQUEST['title'] ?? '' ) ];
+	// No Plex-sourced season-level description exists to auto-fill this (Plex has nothing at
+	// season granularity - see this file's own docblock), but a manual note is still useful -
+	// same 'edit' field-name convention as edit_program.php's own description box.
+	$storeHash = [ 'content_id' => $gContent->mContentId, 'title' => trim( $_REQUEST['title'] ?? '' ), 'edit' => trim( $_REQUEST['edit'] ?? '' ) ];
 	if( $gContent->store( $storeHash ) ) {
 		KernelTools::bit_redirect( $gContent->getDisplayUrl() );
 	}

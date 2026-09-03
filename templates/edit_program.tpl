@@ -1,5 +1,10 @@
 {strip}
-<div class="floaticon">{bithelp}</div>
+<div class="floaticon">
+	{if $gContent->hasAdminPermission()}
+		<a title="{tr}Delete Show{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}edit_program.php?gallery_id={$gContent->mGalleryId}&amp;delete=1">{biticon ipackage="icons" iname="user-trash" iexplain="Delete Show"}</a>
+	{/if}
+	{bithelp}
+</div>
 
 <div class="admin fisheye">
 	<div class="header">
@@ -11,13 +16,45 @@
 
 		{if $plexResult}
 			<div class="alert alert-info">
-				{if $plexResult.matched}
+				{if $plexResult.items}
 					<p>{$plexResultLabel|escape}:</p>
 					<ul>{foreach from=$plexResult.items item=line}<li>{$line|escape}</li>{/foreach}</ul>
 				{else}
 					<p>{tr}No matching Plex entry found for this show.{/tr}</p>
 				{/if}
 			</div>
+		{/if}
+
+		{if !$plexHasMatch}
+			<div class="alert alert-warning">
+				<p>{tr}No Plex match for this show - metadata and images have not been fetched.{/tr}</p>
+			</div>
+
+			{form id="searchPlexForm"}
+				<input type="hidden" name="content_id" value="{$gContent->mContentId}" />
+				<div class="form-group">
+					{formlabel label="Search Plex" for="plex_query"}
+					{forminput}
+						<input type="text" class="form-control" name="plex_query" id="plex_query" value="{$plexSearchQuery|escape}" style="width:auto;display:inline-block;" />
+						<input type="submit" class="btn btn-secondary" name="fSearchPlex" value="{tr}Search{/tr}" />
+					{/forminput}
+				</div>
+			{/form}
+
+			{if $plexSearchResults !== null}
+				{if $plexSearchResults}
+					<ul>
+						{foreach from=$plexSearchResults item=row}
+							<li>
+								{$row.title|escape}{if $row.year} ({$row.year|escape}){/if}
+								- <a href="{$smarty.const.FISHEYE_PKG_URL}edit_program.php?content_id={$gContent->mContentId}&amp;fSetPlexMatch=1&amp;plex_metadata_item_id={$row.id}">{tr}Use this{/tr}</a>
+							</li>
+						{/foreach}
+					</ul>
+				{else}
+					<p>{tr}No Plex shows matched that search.{/tr}</p>
+				{/if}
+			{/if}
 		{/if}
 
 		{form id="editProgramForm"}
@@ -30,6 +67,13 @@
 							{formlabel label="Title" for="title"}
 							{forminput}
 								<input type="text" class="form-control" name="title" id="title" value="{$gContent->getTitle()|escape}" />
+							{/forminput}
+						</div>
+						<div class="form-group">
+							{formlabel label="Description" for="edit"}
+							{forminput}
+								<textarea class="form-control" name="edit" id="edit" rows="4">{$gContent->mInfo.data|default:''|escape}</textarea>
+								{formhelp note="Auto-filled from Plex's own summary on Reload Metadata, if it finds a match - edit here directly for a show Plex doesn't have (or to override it)."}
 							{/forminput}
 						</div>
 					{/legend}

@@ -32,10 +32,16 @@ $gContent->verifyUpdatePermission();
 
 $plexResult = null;
 $plexResultLabel = null;
+$plexSearchQuery = null;
+$plexSearchResults = null;
 if( !empty( $_REQUEST['fCancel'] ) ) {
 	KernelTools::bit_redirect( $gContent->getDisplayUrl() );
 } elseif( !empty( $_REQUEST['fSave'] ) ) {
-	$storeHash = [ 'content_id' => $gContent->mContentId, 'title' => trim( $_REQUEST['title'] ?? '' ) ];
+	// Form field itself is named 'edit' directly (same convention edit_gallery.tpl's own
+	// description textarea already uses) - LibertyContent::verify() only maps
+	// content_store['data'] from $pParamHash['edit'] (same gotcha reloadPlexMetadata()'s own
+	// description-store hit), so this needs no translation, just pass it through.
+	$storeHash = [ 'content_id' => $gContent->mContentId, 'title' => trim( $_REQUEST['title'] ?? '' ), 'edit' => trim( $_REQUEST['edit'] ?? '' ) ];
 	if( $gContent->store( $storeHash ) ) {
 		KernelTools::bit_redirect( $gContent->getDisplayUrl() );
 	}
@@ -46,6 +52,49 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 } elseif( !empty( $_REQUEST['fReloadImages'] ) ) {
 	$plexResult = $gContent->reloadPlexImages();
 	$plexResultLabel = KernelTools::tra( 'Images reloaded from Plex' );
+} elseif( !empty( $_REQUEST['fSearchPlex'] ) ) {
+	// The manual recovery path for a failed/wrong automatic title match (see
+	// FisheyeProgram::registerFromDisk()'s halt and matchPlexShowMetadataItem()'s own docblock) -
+	// free-text search against Plex's own local library rather than requiring the folder name or
+	// Plex's own title to be edited to match exactly.
+	$plexSearchQuery = trim( (string)( $_REQUEST['plex_query'] ?? '' ) );
+	$plexSearchResults = FisheyeProgram::searchPlexShows( $plexSearchQuery );
+} elseif( !empty( $_REQUEST['fSetPlexMatch'] ) ) {
+	$metadataItemId = (int)( $_REQUEST['plex_metadata_item_id'] ?? 0 );
+	if( $metadataItemId && $gContent->setPlexMatchOverride( $metadataItemId ) ) {
+		// Confirming a match is the point where the halted metadata/image fetch finally runs -
+		// fold both into the one alert box edit_program.tpl already shows, rather than needing
+		// two separate "now click Reload Metadata, then Reload Images" steps after this.
+		$plexResult = $gContent->reloadPlexMetadata();
+		$plexResultLabel = KernelTools::tra( 'Plex match confirmed - metadata and images reloaded' );
+		$imagesResult = $gContent->reloadPlexImages();
+		$plexResult['items'] = array_merge( $plexResult['items'], array_map( fn( $line ) => "image: $line", $imagesResult['items'] ) );
+	}
+} elseif( !empty( $_REQUEST['delete'] ) ) {
+	$gContent->hasUserPermission( 'p_fisheye_admin', true );
+
+	if( !empty( $_REQUEST['cancel'] ) ) {
+		// user cancelled - just continue on, doing nothing
+	} elseif( empty( $_REQUEST['confirm'] ) ) {
+		// Same confirmDialog warning flow edit.php uses for a plain gallery - no recurse
+		// choice here though, unlike edit.php's: a show only exists to hold its seasons, so
+		// "delete this show" always means the whole tree (seasons, episodes, images), never
+		// just delisting them.
+		$formHash['delete'] = true;
+		$formHash['gallery_id'] = $gContent->mGalleryId;
+		$gBitSystem->confirmDialog( $formHash,
+			[
+				'warning' => KernelTools::tra( 'Are you sure you want to delete this show, including all its seasons, episodes and images?' ) . ' ' . $gContent->getTitle(),
+				'error' => KernelTools::tra( 'This cannot be undone!' ),
+			],
+		);
+	} else {
+		$userId = $gContent->getField( 'user_id' );
+		$gContent->pRecursiveDelete = true;
+		if( $gContent->expunge() ) {
+			KernelTools::bit_redirect( FISHEYE_PKG_URL.'?user_id='.$userId );
+		}
+	}
 }
 
 $gBitSmarty->assign( 'errors', $gContent->mErrors );
@@ -55,5 +104,8 @@ $gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
 $gBitSmarty->assign( 'gContent', $gContent );
 $gBitSmarty->assign( 'plexResult', $plexResult );
 $gBitSmarty->assign( 'plexResultLabel', $plexResultLabel );
+$gBitSmarty->assign( 'plexSearchQuery', $plexSearchQuery );
+$gBitSmarty->assign( 'plexSearchResults', $plexSearchResults );
+$gBitSmarty->assign( 'plexHasMatch', $gContent->hasPlexMatch() );
 
 $gBitSystem->display( 'bitpackage:fisheye/edit_program.tpl', KernelTools::tra( 'Edit Show: ' ).$gContent->getTitle(), [ 'display_mode' => 'edit' ] );

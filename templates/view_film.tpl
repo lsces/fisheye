@@ -11,12 +11,7 @@
 		   around. getBreadcrumbTrail() (FisheyeBase, 2026-09-03) walks the real ancestor chain -
 		   "Films" always leads, then any Collection sub-gallery the film actually sits in, each
 		   segment's own URL type-correct (film_grid galleries route the same as any other). *}
-		<h1>
-			{foreach from=$gContent->getBreadcrumbTrail() item=crumb}
-				<a href="{$crumb.url|escape}">{$crumb.title|escape}</a> -
-			{/foreach}
-			{$gContent->getTitle()|escape}
-		</h1>
+		<h1>{foreach from=$gContent->getBreadcrumbTrail() item=crumb}<a href="{$crumb.url|escape}">{$crumb.title|escape}</a> - {/foreach}{$gContent->getTitle()|escape}</h1>
 	</header>
 
 	<section class="body">

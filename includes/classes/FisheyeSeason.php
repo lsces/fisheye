@@ -278,7 +278,12 @@ class FisheyeSeason extends FisheyeImage {
 	public static function registerFromDisk( string $pShowTitle, string $pSeasonFolderName, int $pShowContentId ): array {
 		global $gBitDb;
 
-		$seasonTitle = $pShowTitle.' - '.$pSeasonFolderName;
+		// '.' is load_program.php's sentinel for "no season subfolder at all - episode files
+		// sit directly in the show folder" (a flat single-season show, e.g. a one-off
+		// documentary with no Season 01/ subfolder). Treat it as season dir == show dir, and
+		// title it plainly as Season 1 rather than "<show> - ." .
+		$isFlatSeason = ( $pSeasonFolderName === '.' );
+		$seasonTitle = $isFlatSeason ? $pShowTitle.' - Season 1' : $pShowTitle.' - '.$pSeasonFolderName;
 		$alreadySeeded = false;
 
 		$existingContentId = $gBitDb->getOne(
@@ -299,6 +304,12 @@ class FisheyeSeason extends FisheyeImage {
 			if( !$season->store( $storeHash ) ) {
 				return [ 'error' => implode( '; ', $season->mErrors ) ];
 			}
+			// store() on a freshly-created object doesn't refresh its own in-memory fields -
+			// getTitle() would return '' from here on without this. Real, confirmed impact (same
+			// bug just fixed in FisheyeProgram::registerFromDisk()): reloadPlexImages() below
+			// builds each stored image's filename from $this->getTitle() - would silently produce
+			// " - episode-N.jpg"-style broken filenames for a freshly-created season otherwise.
+			$season->load();
 		}
 
 		$showGallery = new FisheyeGallery( null, $pShowContentId );
@@ -309,7 +320,9 @@ class FisheyeSeason extends FisheyeImage {
 
 		if( !$alreadySeeded ) {
 			$root = \Bitweaver\Liberty\mime_film_get_tvshow_storage_root( $pShowTitle );
-			$seasonDir = $root.'TV Shows/'.$pShowTitle.'/'.$pSeasonFolderName.'/';
+			$seasonDir = $isFlatSeason
+				? $root.'TV Shows/'.$pShowTitle.'/'
+				: $root.'TV Shows/'.$pShowTitle.'/'.$pSeasonFolderName.'/';
 			$seedFile = null;
 			if( !empty( $root ) && is_dir( $seasonDir ) ) {
 				foreach( scandir( $seasonDir ) as $file ) {
@@ -326,10 +339,13 @@ class FisheyeSeason extends FisheyeImage {
 				return [ 'error' => 'No episode files found in '.$seasonDir ];
 			}
 			// storeXref() also takes its param by reference - same reason as store() above.
+			$xkeyExt = $isFlatSeason
+				? 'TV Shows/'.$pShowTitle.'/'.$seedFile
+				: 'TV Shows/'.$pShowTitle.'/'.$pSeasonFolderName.'/'.$seedFile;
 			$xrefHash = [
 				'content_id' => $season->mContentId,
 				'item'       => 'episode',
-				'xkey_ext'   => 'TV Shows/'.$pShowTitle.'/'.$pSeasonFolderName.'/'.$seedFile,
+				'xkey_ext'   => $xkeyExt,
 				'edit'       => json_encode( [ 'title' => pathinfo( $seedFile, PATHINFO_FILENAME ) ] ),
 				'xorder'     => 1,
 			];
@@ -337,8 +353,13 @@ class FisheyeSeason extends FisheyeImage {
 		}
 
 		$episodes = $season->reloadPlexEpisodes();
+		// Same reasoning as FisheyeProgram::registerFromDisk() - not opt-in the way film's bulk
+		// import needs it to be, and reloadPlexImages() is already idempotent per-type internally
+		// so calling it every time (including a re-run against an already-registered season) is
+		// safe, not wasted re-downloading.
+		$images = $season->reloadPlexImages();
 
-		return [ 'created' => $season->mContentId, 'episodes' => $episodes ];
+		return [ 'created' => $season->mContentId, 'episodes' => $episodes, 'images' => $images ];
 	}
 
 	private function matchPlexSeasonMetadataItem(): ?array {
@@ -536,6 +557,60 @@ class FisheyeSeason extends FisheyeImage {
 	}
 
 	/**
+	 * Shared fallback used at every exit point of reloadPlexImages() below - if nothing usable
+	 * came back from Plex (no season match at all, no fisheye_plex_token configured, or a real
+	 * match that simply has zero photos - seen live 2026-09-03: "Cities of the Underworld" S4
+	 * and the flat "4472 Flying Scotsman" season both matched fine but came back with zero
+	 * photos), grab a frame from this season's own seed episode file instead of leaving the
+	 * gallery grid with no thumbnail at all. Reuses mime_film_grab_video_frame() - the same
+	 * ffmpegthumbnailer/ffmpeg chain a plain film's own attachment thumbnail already falls back
+	 * to, factored out so this can call it directly against an episode file (a season has no
+	 * attachment of its own for the normal mime-plugin pipeline to hook into).
+	 *
+	 * A no-op once a real 'image' xref row already exists (checked directly against this
+	 * season's own xref state, not $summary - several exit points push informational text
+	 * into $summary['items'] that isn't an actual image, e.g. the "token not configured"
+	 * message, so that array alone isn't a reliable signal), so it's safe to call
+	 * unconditionally at every exit point rather than needing each call site to work out for
+	 * itself whether the fallback is still needed.
+	 *
+	 * @param array $summary  reloadPlexImages()'s own summary array, appended to in place
+	 */
+	private function fallbackFrameGrabImage( array &$summary ): void {
+		$this->loadXrefInfo();
+		if( $this->mXrefInfo ) {
+			foreach( $this->mXrefInfo->allXrefs() as $xref ) {
+				if( $xref['item'] === 'image' ) {
+					return;
+				}
+			}
+		}
+		$root = $this->getImageStorageRoot();
+		$episodeXref = $this->mXrefInfo ? $this->mXrefInfo->findRowByItem( 'episode' ) : null;
+		if( empty( $root ) || !$episodeXref || empty( $episodeXref['xkey_ext'] ) ) {
+			return;
+		}
+		$videoFile = $root.$episodeXref['xkey_ext'];
+		if( !is_file( $videoFile ) ) {
+			return;
+		}
+		$imagesDir = $root.'images/';
+		KernelTools::mkdir_p( $imagesDir );
+		$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_frame_' );
+		if( \Bitweaver\Liberty\mime_film_grab_video_frame( $videoFile, $tmpFile ) ) {
+			$fileName = $this->getTitle().'-frame-1.jpg';
+			if( self::resizeImageFile( $tmpFile, $imagesDir.$fileName, 400 ) ) {
+				$relativePath = 'images/'.$fileName;
+				$xrefParamHash = [ 'content_id' => $this->mContentId, 'item' => 'image', 'xkey_ext' => $relativePath, 'xorder' => 1 ];
+				$this->storeXref( $xrefParamHash );
+				$summary['items'][] = "frame grab: $relativePath";
+				$this->attachThumbnail( $imagesDir.$fileName );
+			}
+		}
+		@unlink( $tmpFile );
+	}
+
+	/**
 	 * Fetch alternate poster/backdrop images from Plex for this season, same shape as
 	 * FisheyeFilm::reloadPlexImages() (per-type idempotency, w342/w780 TMDB sizes, 5-per-type
 	 * cap, xref-based storage - see that method's own docblock and fisheye.md's 2026-09-02
@@ -553,6 +628,7 @@ class FisheyeSeason extends FisheyeImage {
 
 		$plexMatch = $this->matchPlexSeasonMetadataItem();
 		if( !$plexMatch ) {
+			$this->fallbackFrameGrabImage( $summary );
 			return $summary;
 		}
 		$summary['matched'] = true;
@@ -571,6 +647,7 @@ class FisheyeSeason extends FisheyeImage {
 		$plexToken = $gBitSystem->getConfig( 'fisheye_plex_token', '' );
 		if( empty( $plexToken ) ) {
 			$summary['items'][] = 'fisheye_plex_token is not configured - the posters/arts endpoints need it.';
+			$this->fallbackFrameGrabImage( $summary );
 			return $summary;
 		}
 
@@ -655,6 +732,7 @@ class FisheyeSeason extends FisheyeImage {
 			}
 		}
 
+		$this->fallbackFrameGrabImage( $summary );
 		return $summary;
 	}
 }

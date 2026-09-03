@@ -11,7 +11,7 @@
 
 		{if $plexResult}
 			<div class="alert alert-info">
-				{if $plexResult.matched}
+				{if $plexResult.items}
 					<p>{$plexResultLabel|escape}:</p>
 					<ul>{foreach from=$plexResult.items item=line}<li>{$line|escape}</li>{/foreach}</ul>
 				{else}
@@ -30,6 +30,13 @@
 							{formlabel label="Title" for="title"}
 							{forminput}
 								<input type="text" class="form-control" name="title" id="title" value="{$gContent->getTitle()|escape}" />
+							{/forminput}
+						</div>
+						<div class="form-group">
+							{formlabel label="Description" for="edit"}
+							{forminput}
+								<textarea class="form-control" name="edit" id="edit" rows="4">{$gContent->mInfo.data|default:''|escape}</textarea>
+								{formhelp note="Plex has no season-level description to auto-fill this - manual only."}
 							{/forminput}
 						</div>
 					{/legend}

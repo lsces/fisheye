@@ -678,6 +678,31 @@ class FisheyeGallery extends FisheyeBase {
 	}
 
 	/**
+	 * Resolve a top-level pool gallery's id by its own title (e.g. "Films", "TV Shows", "Music") -
+	 * the real source of truth for the "bodge, acknowledged" LOAD_FILM_TOP_GALLERY_ID /
+	 * LOAD_PROGRAM_TOP_GALLERY_ID sentinels load_film.php/load_program.php each used to hardcode
+	 * as a literal 1/2, install-order-dependent and only ever "confirmed live" by eyeballing this
+	 * one install's data (Lester, 2026-09-03: "should possibly be part of a media info structure"
+	 * rather than a magic number per file). Plain title lookup, same query shape
+	 * FisheyeProgram::registerFromDisk() already runs to find "TV Shows" to link a new show into -
+	 * this just gives every caller one shared place to ask the same question instead of
+	 * hardcoding (or re-deriving) the answer themselves.
+	 *
+	 * @param string $pTitle  the pool gallery's own title, e.g. "Films" or "TV Shows"
+	 * @return int|null  null if no gallery with that title exists
+	 */
+	public static function getTopGalleryId( string $pTitle ): ?int {
+		global $gBitDb;
+		$galleryId = $gBitDb->getOne(
+			"SELECT fg.gallery_id FROM `".BIT_DB_PREFIX."fisheye_gallery` fg
+			 JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.content_id = fg.content_id
+			 WHERE lc.title = ?",
+			[ $pTitle ]
+		);
+		return $galleryId ? (int)$galleryId : null;
+	}
+
+	/**
 	* Function that returns link to display a piece of content
 	* @param array pGalleryId id of gallery to link
 	* @return string the url to display the gallery.

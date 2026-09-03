@@ -9,12 +9,7 @@
 		{* Own breadcrumb instead of the shared gallery_breadcrumb_inc.tpl - same reasoning as
 		   film_grid's own header. getBreadcrumbTrail() walks the real ancestor chain via
 		   fisheye_gallery_image_map - "TV Shows" leads for any registered show gallery. *}
-		<h1>
-			{foreach from=$gContent->getBreadcrumbTrail() item=crumb}
-				<a href="{$crumb.url|escape}">{$crumb.title|escape}</a> -
-			{/foreach}
-			{$gContent->getTitle()|escape}
-		</h1>
+		<h1>{foreach from=$gContent->getBreadcrumbTrail() item=crumb}<a href="{$crumb.url|escape}">{$crumb.title|escape}</a> - {/foreach}{$gContent->getTitle()|escape}</h1>
 	</header>
 
 	{if $gContent->mInfo.data && $gContent->getPreference('show_description') ne 'n'}

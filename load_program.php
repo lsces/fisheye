@@ -20,8 +20,9 @@
  * Scoped two ways, same split as load_film.php ended up with after the same mistake there:
  * - ?gallery_id=N (program_gallery_icons_inc.tpl's "Load Seasons" icon on an already-registered
  *   show's own page) - N gets *loaded*, not re-registered, so revisiting an existing show doesn't
- *   waste a Plex lookup every time. N == LOAD_PROGRAM_TOP_GALLERY_ID ("TV Shows" itself, the pool
- *   gallery every show lives inside) falls through to the top-level discovery view instead of
+ *   waste a Plex lookup every time. N == $topGalleryId ("TV Shows" itself, the pool gallery every
+ *   show lives inside, resolved by title via FisheyeGallery::getTopGalleryId()) falls through to
+ *   the top-level discovery view instead of
  *   trying to register "TV Shows" as if it were a show - found the hard way 2026-09-03 when "TV
  *   Shows" got set to program_grid too (same as "Films" did) and its own icon had no such
  *   sentinel, registering a bogus show literally titled "TV Shows".
@@ -45,9 +46,15 @@ require_once dirname( __DIR__ ).'/liberty/plugins/mime.film.php';
 
 const LOAD_PROGRAM_LIMIT = 20;
 const LOAD_PROGRAM_EXTENSIONS = [ 'mkv', 'mp4', 'm4v', 'avi' ];
-// Bodge, acknowledged, same convention as load_film.php's own LOAD_FILM_TOP_GALLERY_ID - "TV
-// Shows" is gallery_id=2 on this install (confirmed live, second gallery ever created).
-const LOAD_PROGRAM_TOP_GALLERY_ID = 2;
+// Sentinel season-folder value meaning "no season subfolder at all - episode files sit directly
+// in the show folder" (seen live: "4472 - Flying Scotsman (1968)", a single-episode show with no
+// Season 01/ subfolder). '.' is unambiguous (scandir() already skips it as a real entry) and
+// FisheyeSeason::registerFromDisk() treats it as "season dir == show dir", titling it
+// "<show> - Season 1".
+const LOAD_PROGRAM_FLAT_SEASON = '.';
+// Resolved by title, not hardcoded - see FisheyeGallery::getTopGalleryId()'s own docblock for
+// why (was a literal, install-order-dependent "2" here until 2026-09-03).
+$topGalleryId = FisheyeGallery::getTopGalleryId( 'TV Shows' );
 
 $galleryIdParam = (int)( $_REQUEST['gallery_id'] ?? 0 );
 $showParam = trim( (string)( $_REQUEST['show'] ?? '' ) );
@@ -57,7 +64,7 @@ $showResult = null;     // registerFromDisk() result, only shown the first time 
 $seasonResult = null;
 $candidates = [];       // either show-folder names (top level) or season-folder names (scoped)
 
-if( $galleryIdParam && $galleryIdParam !== LOAD_PROGRAM_TOP_GALLERY_ID ) {
+if( $galleryIdParam && $galleryIdParam !== $topGalleryId ) {
 	$program = new FisheyeProgram( $galleryIdParam );
 	$program->load();
 	if( $program->isValid() ) {
@@ -131,7 +138,7 @@ if( $scopeShow === null ) {
 			if( !empty( $row['error'] ) ) {
 				$seasonResult['errors'][] = [ 'folder' => $seasonFolder, 'error' => $row['error'] ];
 			} else {
-				$seasonResult['created'][] = [ 'folder' => $seasonFolder, 'content_id' => $row['created'], 'episodes' => $row['episodes'] ];
+				$seasonResult['created'][] = [ 'folder' => $seasonFolder, 'content_id' => $row['created'], 'episodes' => $row['episodes'], 'images' => $row['images'] ];
 			}
 		}
 	}
@@ -158,8 +165,33 @@ if( $scopeShow === null ) {
 			}
 			$candidates[] = $entry;
 		}
+
+		// No season subfolders at all - check whether episode files sit directly in the show
+		// folder instead (a flat single-season show) before giving up.
+		if( empty( $candidates ) ) {
+			$flatSeasonTitle = $showTitle.' - Season 1';
+			$existingFlatContentId = $gBitDb->getOne(
+				"SELECT content_id FROM liberty_content WHERE content_type_guid = 'fisheyeseason' AND title = ?",
+				[ $flatSeasonTitle ]
+			);
+			if( !$existingFlatContentId ) {
+				foreach( $entries as $entry ) {
+					if( is_file( $showDir.$entry ) && in_array( strtolower( pathinfo( $entry, PATHINFO_EXTENSION ) ), LOAD_PROGRAM_EXTENSIONS, true ) ) {
+						$candidates[] = LOAD_PROGRAM_FLAT_SEASON;
+						break;
+					}
+				}
+			}
+		}
 	}
 }
+
+// The page heading's own "TV Shows" text doubles as a link back to the real gallery (Lester,
+// 2026-09-03: "the Prior TV Shows would be nice if it linked back to the gallery to see what
+// had just loaded") - getDisplayUrlFromHash() just needs the id, no need to load the whole
+// object for a URL.
+$topGalleryUrlHash = [ 'gallery_id' => $topGalleryId ];
+$gBitSmarty->assign( 'topGalleryUrl', FisheyeGallery::getDisplayUrlFromHash( $topGalleryUrlHash ) );
 
 $gBitSmarty->assign( 'candidateLimit', LOAD_PROGRAM_LIMIT );
 $gBitSmarty->assign( 'candidates', $candidates );
