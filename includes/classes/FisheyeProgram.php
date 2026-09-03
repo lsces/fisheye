@@ -385,6 +385,42 @@ class FisheyeProgram extends FisheyeGallery {
 	}
 
 	/**
+	 * @return bool  always true - see FisheyeBase::canGrabVideoFrame()'s own docblock
+	 */
+	public function canGrabVideoFrame(): bool {
+		return true;
+	}
+
+	/**
+	 * A show has no video file of its own to grab a frame from - unlike FisheyeSeason's own
+	 * version, walks this show's own seasons (loadImages(), the same gallery-item mechanism
+	 * every other gallery uses) looking for the first one with a real seed episode file, and
+	 * grabs from that instead. Lester, 2026-09-03, on Flying Scotsman's show-level image gap
+	 * specifically (as distinct from the season-level gap this was first built for): "where
+	 * does the video grab pop in, It's that which needs to pop up to the program image gap".
+	 *
+	 * @return string|null  the new xref row's xkey_ext, or null if no season has a usable
+	 *                       episode file, or the grab/resize/store itself failed
+	 */
+	public function grabVideoFrameImage(): ?string {
+		$root = $this->getImageStorageRoot();
+		if( empty( $root ) || !$this->loadImages() ) {
+			return null;
+		}
+		foreach( $this->mItems as $season ) {
+			if( !is_a( $season, '\Bitweaver\Fisheye\FisheyeSeason' ) ) {
+				continue;
+			}
+			$season->loadXrefInfo();
+			$episodeXref = $season->mXrefInfo ? $season->mXrefInfo->findRowByItem( 'episode' ) : null;
+			if( $episodeXref && !empty( $episodeXref['xkey_ext'] ) && is_file( $root.$episodeXref['xkey_ext'] ) ) {
+				return $this->grabVideoFrameIntoImageXref( $root.$episodeXref['xkey_ext'] );
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * Free-text search against Plex's own local library for a TV show, so a failed automatic
 	 * title match (see registerFromDisk()'s halt, and matchPlexShowMetadataItem()'s own docblock)
 	 * can be fixed by hand rather than requiring the on-disk folder or Plex's own title to be

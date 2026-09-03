@@ -70,6 +70,15 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 		$imagesResult = $gContent->reloadPlexImages();
 		$plexResult['items'] = array_merge( $plexResult['items'], array_map( fn( $line ) => "image: $line", $imagesResult['items'] ) );
 	}
+} elseif( !empty( $_REQUEST['fGrabFrame'] ) ) {
+	// The "Grab Thumbnail from Video" action on the Images tab (templates/xref/
+	// view_images_group.tpl) - same on-demand action as edit_season.php's own fGrabFrame, but
+	// grabs from the show's first season with a usable episode file (a show has no video of its
+	// own) - Lester, 2026-09-03: "where does the video grab pop in, It's that which needs to
+	// pop up to the program image gap".
+	$relativePath = $gContent->grabVideoFrameImage();
+	$plexResult = [ 'items' => $relativePath ? [ "frame grab: $relativePath" ] : [] ];
+	$plexResultLabel = KernelTools::tra( 'Grabbed a frame from a season episode video' );
 } elseif( !empty( $_REQUEST['delete'] ) ) {
 	$gContent->hasUserPermission( 'p_fisheye_admin', true );
 

@@ -49,6 +49,13 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 } elseif( !empty( $_REQUEST['fReloadEpisodes'] ) ) {
 	$plexResult = $gContent->reloadPlexEpisodes();
 	$plexResultLabel = KernelTools::tra( 'Episodes loaded from Plex' );
+} elseif( !empty( $_REQUEST['fGrabFrame'] ) ) {
+	// The "Grab Thumbnail from Video" action on the Images tab (templates/xref/
+	// view_images_group.tpl) - on-demand version of reloadPlexImages()'s own automatic fallback,
+	// callable even when Plex images already exist (a deliberate "add one more" click).
+	$relativePath = $gContent->grabVideoFrameImage();
+	$plexResult = [ 'items' => $relativePath ? [ "frame grab: $relativePath" ] : [] ];
+	$plexResultLabel = KernelTools::tra( 'Grabbed a frame from the episode video' );
 }
 
 $gBitSmarty->assign( 'errors', $gContent->mErrors );

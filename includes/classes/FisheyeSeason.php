@@ -557,15 +557,48 @@ class FisheyeSeason extends FisheyeImage {
 	}
 
 	/**
+	 * @return bool  always true - see FisheyeBase::canGrabVideoFrame()'s own docblock
+	 */
+	public function canGrabVideoFrame(): bool {
+		return true;
+	}
+
+	/**
+	 * Grab a frame from this season's own seed episode video and store it as a new 'image' xref -
+	 * the engine behind fallbackFrameGrabImage()'s automatic no-Plex-images fallback below, and
+	 * also exposed directly as the "Grab Thumbnail from Video" action on the Images tab
+	 * (templates/xref/view_images_group.tpl's own group-tab override, edit_season.php's
+	 * fGrabFrame handler) - Lester, 2026-09-03, on manually fixing Flying Scotsman's missing
+	 * images: "IS perhaps the point where a grab thumbnail could be an option?". The actual grab
+	 * is FisheyeBase::grabVideoFrameIntoImageXref() - this just resolves which video file to
+	 * grab from (its own seed episode).
+	 *
+	 * Always grabs a fresh one - does not check whether an image already exists, unlike the
+	 * automatic fallback below (whose own caller does that check itself before calling this). A
+	 * deliberate manual click is an "add one more" action, same as uploading via Add Image, not
+	 * a "only if nothing else worked" one.
+	 *
+	 * @return string|null  the new xref row's xkey_ext, or null if there's no episode file to
+	 *                       grab from (or on disk), or the grab/resize/store itself failed
+	 */
+	public function grabVideoFrameImage(): ?string {
+		$root = $this->getImageStorageRoot();
+		$this->loadXrefInfo();
+		$episodeXref = $this->mXrefInfo ? $this->mXrefInfo->findRowByItem( 'episode' ) : null;
+		if( empty( $root ) || !$episodeXref || empty( $episodeXref['xkey_ext'] ) ) {
+			return null;
+		}
+		return $this->grabVideoFrameIntoImageXref( $root.$episodeXref['xkey_ext'] );
+	}
+
+	/**
 	 * Shared fallback used at every exit point of reloadPlexImages() below - if nothing usable
 	 * came back from Plex (no season match at all, no fisheye_plex_token configured, or a real
 	 * match that simply has zero photos - seen live 2026-09-03: "Cities of the Underworld" S4
 	 * and the flat "4472 Flying Scotsman" season both matched fine but came back with zero
 	 * photos), grab a frame from this season's own seed episode file instead of leaving the
-	 * gallery grid with no thumbnail at all. Reuses mime_film_grab_video_frame() - the same
-	 * ffmpegthumbnailer/ffmpeg chain a plain film's own attachment thumbnail already falls back
-	 * to, factored out so this can call it directly against an episode file (a season has no
-	 * attachment of its own for the normal mime-plugin pipeline to hook into).
+	 * gallery grid with no thumbnail at all - see grabVideoFrameImage() above for the actual
+	 * grab.
 	 *
 	 * A no-op once a real 'image' xref row already exists (checked directly against this
 	 * season's own xref state, not $summary - several exit points push informational text
@@ -585,29 +618,12 @@ class FisheyeSeason extends FisheyeImage {
 				}
 			}
 		}
-		$root = $this->getImageStorageRoot();
-		$episodeXref = $this->mXrefInfo ? $this->mXrefInfo->findRowByItem( 'episode' ) : null;
-		if( empty( $root ) || !$episodeXref || empty( $episodeXref['xkey_ext'] ) ) {
-			return;
+		$relativePath = $this->grabVideoFrameImage();
+		if( $relativePath ) {
+			$summary['items'][] = "frame grab: $relativePath";
+			$root = $this->getImageStorageRoot();
+			$this->attachThumbnail( $root.$relativePath );
 		}
-		$videoFile = $root.$episodeXref['xkey_ext'];
-		if( !is_file( $videoFile ) ) {
-			return;
-		}
-		$imagesDir = $root.'images/';
-		KernelTools::mkdir_p( $imagesDir );
-		$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_frame_' );
-		if( \Bitweaver\Liberty\mime_film_grab_video_frame( $videoFile, $tmpFile ) ) {
-			$fileName = $this->getTitle().'-frame-1.jpg';
-			if( self::resizeImageFile( $tmpFile, $imagesDir.$fileName, 400 ) ) {
-				$relativePath = 'images/'.$fileName;
-				$xrefParamHash = [ 'content_id' => $this->mContentId, 'item' => 'image', 'xkey_ext' => $relativePath, 'xorder' => 1 ];
-				$this->storeXref( $xrefParamHash );
-				$summary['items'][] = "frame grab: $relativePath";
-				$this->attachThumbnail( $imagesDir.$fileName );
-			}
-		}
-		@unlink( $tmpFile );
 	}
 
 	/**
