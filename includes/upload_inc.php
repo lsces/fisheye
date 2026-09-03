@@ -126,7 +126,13 @@ function fisheye_store_upload( &$pFileHash, $pImageData = [], $pAutoRotate=true 
 		if( !isset( $pImageData['protector']['role_id'] ) && !empty( $pImageData['gallery_additions'] ) ) {
 			$parentGalleryId = reset( $pImageData['gallery_additions'] );
 			if( $parentContentId = $image->mDb->GetOne( "SELECT `content_id` FROM `".BIT_DB_PREFIX."fisheye_gallery` WHERE `gallery_id`=?", [ $parentGalleryId ] ) ) {
-				if( ( $parentRole = $image->mDb->GetOne( "SELECT `role_id` FROM `".BIT_DB_PREFIX."liberty_content_role_map` WHERE `content_id`=?", [ $parentContentId ] ) ) !== false ) {
+				// GetOne() returns null, not false, on no matching row - the common case (target
+				// gallery has no explicit role restriction) previously passed a `!== false` check
+				// and injected a literal null into protector.role_id, fatalling in
+				// LibertyProtector::storeProtection() the same way fisheye/edit.php's copy of
+				// this same logic did (fixed there 2026-09-03, same root cause here).
+				$parentRole = $image->mDb->GetOne( "SELECT `role_id` FROM `".BIT_DB_PREFIX."liberty_content_role_map` WHERE `content_id`=?", [ $parentContentId ] );
+				if( $parentRole !== null ) {
 					$pImageData['protector']['role_id'] = $parentRole;
 				}
 			}

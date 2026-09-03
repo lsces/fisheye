@@ -5,8 +5,17 @@
 		   upload/permissions icons all key off $gContent->mGalleryId, which a plain film content
 		   item doesn't have; a film only ever needs the one Edit icon. *}
 		{include file="bitpackage:fisheye/film_icons_inc.tpl"}
-		<h1>{$gContent->getTitle()|escape}</h1>
-		{include file="bitpackage:fisheye/gallery_breadcrumb_inc.tpl"}
+		{* Own breadcrumb instead of the shared gallery_breadcrumb_inc.tpl - that one hardcodes
+		   a pretty-url 'gallery/<id>' link that always lands on the generic gallery view
+		   regardless of type, same reasoning view_season.tpl's own title-link already worked
+		   around. Currently one ancestor segment ($gGallery, "Films" itself until a film sits
+		   inside a Collection sub-gallery) - once collections exist, $gGallery will be the
+		   collection and its own parent would need walking too, to still show "Films" ahead of
+		   it; not built yet, no real collection data to build/test against. *}
+		<h1>
+			{if $gGallery}<a href="{$gGallery->getDisplayUrl()|escape}">{$gGallery->getTitle()|escape}</a> - {/if}
+			{$gContent->getTitle()|escape}
+		</h1>
 	</header>
 
 	<section class="body">

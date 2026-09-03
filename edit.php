@@ -35,7 +35,15 @@ if( !empty( $_REQUEST['savegallery'] ) ) {
 	if( !$gContent->isValid() && !empty( $_REQUEST['gallery_additions'] ) && ( !isset( $_REQUEST['protector']['role_id'] ) || $_REQUEST['protector']['role_id'] == -1 ) ) {
 		$parentGalleryId = reset( $_REQUEST['gallery_additions'] );
 		if( $parentContentId = $gContent->mDb->GetOne( "SELECT `content_id` FROM `".BIT_DB_PREFIX."fisheye_gallery` WHERE `gallery_id`=?", [ $parentGalleryId ] ) ) {
-			if( ( $parentRole = $gContent->mDb->GetOne( "SELECT `role_id` FROM `".BIT_DB_PREFIX."liberty_content_role_map` WHERE `content_id`=?", [ $parentContentId ] ) ) !== false ) {
+			// GetOne() returns null (ADODB_GETONE_EOF's default), not false, when no row
+			// matches - the parent gallery having no liberty_content_role_map row at all (the
+			// common case: default/anonymous access, nothing explicitly restricted) previously
+			// passed a `!== false` check and injected a literal null into
+			// $_REQUEST['protector']['role_id'], fatalling downstream in
+			// LibertyProtector::storeProtection() on liberty_content_role_map's NOT NULL
+			// role_id column. Found 2026-09-03 creating a new top-level-adjacent gallery.
+			$parentRole = $gContent->mDb->GetOne( "SELECT `role_id` FROM `".BIT_DB_PREFIX."liberty_content_role_map` WHERE `content_id`=?", [ $parentContentId ] );
+			if( $parentRole !== null ) {
 				$_REQUEST['protector']['role_id'] = $parentRole;
 			}
 		}
