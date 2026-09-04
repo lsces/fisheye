@@ -259,7 +259,12 @@ foreach( $batch as $c ) {
 	// combination that actually constrains it.
 	$threads = max( 1, (int)( shell_exec( 'nproc' ) ?: 4 ) );
 	$halfThreads = max( 1, intdiv( $threads, 2 ) );
-	$cmd = 'nice -n 19 timeout 3600 ffmpeg -y -i '.escapeshellarg( $c['full'] )
+	// nice alone only deprioritises CPU scheduling - a multi-hour transcode reading a multi-GB
+	// source file competes for real disk I/O bandwidth too, which nice does nothing about.
+	// ionice -c3 (idle class - only get disk I/O when nothing else wants it) found needed live
+	// 2026-09-04: a transcode running on desktop noticeably slowed down loading a film's own
+	// video stream on the same machine at the same time, even with CPU nice'd down already.
+	$cmd = 'ionice -c3 nice -n 19 timeout 3600 ffmpeg -y -i '.escapeshellarg( $c['full'] )
 		.' -map 0:v:0 -map 0:a:0? -c:v libx264 -preset medium -crf 20 -x264-params threads='.$halfThreads
 		.' -c:a aac -b:a 192k -movflags +faststart '
 		.escapeshellarg( $tmpOut ).' 2>&1';
