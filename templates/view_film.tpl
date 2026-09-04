@@ -69,48 +69,65 @@
 		   Falls through to a real page navigation (target="_blank") if JS doesn't run or the
 		   player element isn't there for some reason. *}
 		<section class="film-featurettes">
-			<h2>{tr}Featurettes{/tr} <a href="#" id="fisheye-back-to-film" style="display:none; font-size:0.6em;" onclick="fisheyeBackToFilm(); return false;">&#9664; {tr}Back to Film{/tr}</a></h2>
+			<h2>{tr}Featurettes{/tr}</h2>
 			<ul>
-				{foreach from=$featurettes item=featurette}
-					<li><a href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$featurette.xref_id}" target="_blank" rel="noopener" onclick="return fisheyePlayInPagePlayer(this.href);">{$featurette.title|escape}</a></li>
+				{foreach from=$featurettes item=featurette name=featurettes}
+					<li><a class="btn btn-default" id="featurette-btn-{$smarty.foreach.featurettes.index}" href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$featurette.xref_id}" target="_blank" rel="noopener" onclick="return fisheyeToggleFeaturette(this, this.href);">{$featurette.title|escape}</a></li>
 				{/foreach}
 			</ul>
 		</section>
 		<script>
-			// Original film source captured lazily (not at page load) so a page with no <source>
-			// child yet (shouldn't happen here, but keeps this robust) doesn't break the capture.
+			{* Same "the button itself is the back control" treatment as episode_detail_panels_inc.tpl's
+			   Play Episode -> Stop toggle - Lester, 2026-09-04: "Same treatment on the featurette
+			   Back to Film link ... Featurettes <> Film". Only one featurette link is ever in
+			   "playing" state at a time (fisheyePlayingFeaturetteBtn); clicking it again, or
+			   another featurette's link, goes back to the film first. Original film source
+			   captured lazily off the player's own <source> the first time any featurette plays. *}
 			var fisheyeFilmSourceUrl = null;
+			var fisheyePlayingFeaturetteBtn = null;
 
-			function fisheyePlayInPagePlayer( url ) {
+			function fisheyeResetToFilm() {
+				var player = document.getElementById( 'liberty-video-player' );
+				var source = player ? player.querySelector( 'source' ) : null;
+				if( player && source && fisheyeFilmSourceUrl !== null ) {
+					player.pause();
+					source.src = fisheyeFilmSourceUrl;
+					player.load();
+					player.play();
+				}
+				if( fisheyePlayingFeaturetteBtn ) {
+					fisheyePlayingFeaturetteBtn.textContent = fisheyePlayingFeaturetteBtn.dataset.title;
+					fisheyePlayingFeaturetteBtn = null;
+				}
+			}
+
+			function fisheyeToggleFeaturette( btn, url ) {
 				var player = document.getElementById( 'liberty-video-player' );
 				var source = player ? player.querySelector( 'source' ) : null;
 				if( !player || !source ) {
 					return true;
 				}
+				if( !btn.dataset.title ) {
+					btn.dataset.title = btn.textContent;
+				}
+				if( btn === fisheyePlayingFeaturetteBtn ) {
+					fisheyeResetToFilm();
+					return false;
+				}
 				if( fisheyeFilmSourceUrl === null ) {
 					fisheyeFilmSourceUrl = source.src;
+				}
+				if( fisheyePlayingFeaturetteBtn ) {
+					fisheyePlayingFeaturetteBtn.textContent = fisheyePlayingFeaturetteBtn.dataset.title;
 				}
 				player.pause();
 				source.src = url;
 				player.load();
 				player.play();
-				document.getElementById( 'fisheye-back-to-film' ).style.display = '';
+				btn.textContent = '◀ {tr}Film{/tr}';
+				fisheyePlayingFeaturetteBtn = btn;
 				player.scrollIntoView( { behavior: 'smooth', block: 'center' } );
 				return false;
-			}
-
-			function fisheyeBackToFilm() {
-				var player = document.getElementById( 'liberty-video-player' );
-				var source = player ? player.querySelector( 'source' ) : null;
-				if( !player || !source || fisheyeFilmSourceUrl === null ) {
-					return;
-				}
-				player.pause();
-				source.src = fisheyeFilmSourceUrl;
-				player.load();
-				player.play();
-				document.getElementById( 'fisheye-back-to-film' ).style.display = 'none';
-				player.scrollIntoView( { behavior: 'smooth', block: 'center' } );
 			}
 		</script>
 	{/if}
