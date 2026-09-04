@@ -19,6 +19,8 @@ global $gBitSystem, $gBitSmarty, $gFisheyeGallery;
 require_once LIBERTY_PKG_PATH.'plugins/mime.image.php';
 $gFisheyeGallery = new FisheyeGallery();
 
+$gBitThemes->loadCss( FISHEYE_PKG_PATH.'css/fisheye.css' );
+
 /* Get a list of galleries which matches the input parameters (default is to list every gallery in the system) */
 $_REQUEST['root_only'] = true;
 /* Process the input parameters this page accepts */
