@@ -80,7 +80,7 @@
 				{if $folderName}<input type="hidden" name="folder" value="{$folderName|escape}" />{/if}
 				<p>{tr}Showing up to{/tr} {$candidateLimit} {tr}not-yet-loaded films.{/tr}</p>
 				<div class="form-group">
-					<label><input type="checkbox" name="fetch_images" value="1" /> {tr}Also fetch Plex poster/backdrop images per film (slower - only text metadata is fetched otherwise){/tr}</label>
+					<label><input type="checkbox" name="fetch_images" value="1" checked="checked" /> {tr}Also fetch Plex poster/backdrop images per film (slower - only text metadata is fetched otherwise){/tr}</label>
 				</div>
 				<table class="table">
 					<thead><tr>
