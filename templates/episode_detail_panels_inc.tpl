@@ -15,7 +15,7 @@
 			{if $episode.durationMs}<dt>{tr}Duration{/tr}</dt><dd>{($episode.durationMs/1000)|display_duration}</dd>{/if}
 		</dl>
 		<p class="episode-play-action">
-			<a class="btn btn-primary" href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$episode.xref_id}" target="_blank" rel="noopener" onclick="return fisheyePlayEpisodeInline(this.href);">&#9658; {tr}Play Episode{/tr}</a>
+			<a class="btn btn-primary" id="episode-play-btn-{$smarty.foreach.episodeDetails.index}" href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$episode.xref_id}" target="_blank" rel="noopener" onclick="return fisheyeToggleEpisodePlayback(this, this.href);">&#9658; {tr}Play Episode{/tr}</a>
 		</p>
 	</div>
 {/foreach}
@@ -33,13 +33,50 @@
 	// 2026-09-04: "it could do with using both of the left panels so it's more like the other
 	// player". Neither id exists on view_season.tpl (a single col-md-6 poster column already),
 	// so those two lookups just no-op there.
-	function fisheyePlayEpisodeInline( url ) {
+	//
+	// The button itself doubles as the back control - Lester, 2026-09-04: "back button next ...
+	// Play episode -> Stop?" - clicking the same (or any other) episode's button while one is
+	// playing stops it and restores the poster/facts columns; only one button is ever in "Stop"
+	// state at a time, tracked via fisheyePlayingBtn so switching to a different episode's button
+	// resets whichever one was previously showing "Stop" back to "Play Episode".
+	var fisheyePlayingBtn = null;
+	var FISHEYE_PLAY_LABEL = '&#9658; {tr}Play Episode{/tr}';
+	var FISHEYE_STOP_LABEL = '&#9632; {tr}Stop{/tr}';
+
+	function fisheyeResetEpisodePlayer() {
+		var poster = document.getElementById( 'fisheye-episode-poster' );
+		var player = document.getElementById( 'fisheye-episode-player' );
+		if( player ) {
+			player.pause();
+			player.style.display = 'none';
+		}
+		if( poster ) {
+			poster.style.display = '';
+		}
+		[ 'fisheye-episode-poster-col', 'fisheye-episode-facts-col' ].forEach( function( id ) {
+			var col = document.getElementById( id );
+			if( col ) {
+				col.style.display = '';
+			}
+		} );
+		if( fisheyePlayingBtn ) {
+			fisheyePlayingBtn.innerHTML = FISHEYE_PLAY_LABEL;
+			fisheyePlayingBtn = null;
+		}
+	}
+
+	function fisheyeToggleEpisodePlayback( btn, url ) {
 		var poster = document.getElementById( 'fisheye-episode-poster' );
 		var player = document.getElementById( 'fisheye-episode-player' );
 		var source = player ? player.querySelector( 'source' ) : null;
 		if( !poster || !player || !source ) {
 			return true;
 		}
+		if( btn === fisheyePlayingBtn ) {
+			fisheyeResetEpisodePlayer();
+			return false;
+		}
+		fisheyeResetEpisodePlayer();
 		source.src = url;
 		player.load();
 		player.play();
@@ -51,6 +88,8 @@
 				col.style.display = 'none';
 			}
 		} );
+		btn.innerHTML = FISHEYE_STOP_LABEL;
+		fisheyePlayingBtn = btn;
 		return false;
 	}
 </script>
