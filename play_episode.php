@@ -55,52 +55,6 @@ if( empty( $root ) || !is_file( $path ) ) {
 	$gBitSystem->fatalError( KernelTools::tra( 'Video file not found' ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
 }
 
-$fileSize = filesize( $path );
 $mimeType = $gBitSystem->verifyMimeType( $path );
-$start = 0;
-$end = $fileSize - 1;
-$status = HttpStatusCodes::HTTP_OK;
-
-header( 'Accept-Ranges: bytes' );
-header( 'Content-Type: '.$mimeType );
 header( 'Content-Disposition: inline; filename="'.basename( $path ).'"' );
-
-if( !empty( $_SERVER['HTTP_RANGE'] ) && preg_match( '/^bytes=(\d*)-(\d*)$/', $_SERVER['HTTP_RANGE'], $m ) ) {
-	if( $m[1] === '' && $m[2] !== '' ) {
-		// suffix range, e.g. 'bytes=-500' - last 500 bytes.
-		$start = max( 0, $fileSize - (int)$m[2] );
-	} else {
-		if( $m[1] !== '' ) {
-			$start = (int)$m[1];
-		}
-		if( $m[2] !== '' ) {
-			$end = (int)$m[2];
-		}
-	}
-	$end = min( $end, $fileSize - 1 );
-	if( $start > $end ) {
-		header( 'Content-Range: bytes */'.$fileSize );
-		http_response_code( HttpStatusCodes::HTTP_REQUESTED_RANGE_NOT_SATISFIABLE );
-		exit;
-	}
-	$status = HttpStatusCodes::HTTP_PARTIAL_CONTENT;
-	header( 'Content-Range: bytes '.$start.'-'.$end.'/'.$fileSize );
-}
-
-http_response_code( $status );
-header( 'Content-Length: '.( $end - $start + 1 ) );
-
-while( ob_get_level() > 0 ) {
-	ob_end_clean();
-}
-
-$handle = fopen( $path, 'rb' );
-fseek( $handle, $start );
-$bytesRemaining = $end - $start + 1;
-while( $bytesRemaining > 0 && !feof( $handle ) ) {
-	$chunk = min( 8192, $bytesRemaining );
-	echo fread( $handle, $chunk );
-	$bytesRemaining -= $chunk;
-	flush();
-}
-fclose( $handle );
+\Bitweaver\Liberty\liberty_serve_range_file( $path, $mimeType );
