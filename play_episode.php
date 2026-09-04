@@ -1,9 +1,13 @@
 <?php
 /**
- * Streams one episode's own video file, for the "play button" on view_season.php's episode grid
- * (Lester, 2026-09-02). Same "no nginx location for that tree yet, no LibertyMime attachment
- * either" situation view_extra_image.php is already in - an 'episode' xref row's xkey_ext is a
- * raw filesystem path, not a liberty_files attachment, so there is no existing serving route.
+ * Streams one episode's (or film Featurette's - "Featurettes/ is no different to Season/",
+ * Lester, 2026-09-04, same shape one level shallower: a bonus xref row living on its parent
+ * content's own content_id) own video file, for the "play button" on view_season.php's episode
+ * grid (Lester, 2026-09-02) and view_film.php's Featurettes section. Same "no nginx location for
+ * that tree yet, no LibertyMime attachment either" situation view_extra_image.php is already in -
+ * neither an 'episode' nor a 'featurette' xref row's xkey_ext is a liberty_files attachment, so
+ * there is no existing serving route for either. Kept this name despite covering both - Lester
+ * explicitly chose not to rename it once the episode/Featurette parallel was clear.
  *
  * Takes xref_id only, never a raw path - same no-path-traversal-surface reasoning as
  * view_extra_image.php.
@@ -32,23 +36,23 @@ $gBitSystem->verifyPackage( 'fisheye' );
 
 $xrefId = (int)( $_REQUEST['xref_id'] ?? 0 );
 $row = $xrefId ? $gBitDb->getRow(
-	"SELECT content_id, xkey_ext FROM `".BIT_DB_PREFIX."liberty_xref` WHERE xref_id = ? AND item = 'episode'",
+	"SELECT content_id, xkey_ext FROM `".BIT_DB_PREFIX."liberty_xref` WHERE xref_id = ? AND item IN ('episode', 'featurette')",
 	[ $xrefId ]
 ) : null;
 if( !$row ) {
-	$gBitSystem->fatalError( KernelTools::tra( 'No such episode' ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
+	$gBitSystem->fatalError( KernelTools::tra( 'No such video' ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
 }
 
 $gContent = FisheyeImage::lookup( [ 'content_id' => $row['content_id'] ] );
 if( !$gContent || !$gContent->isValid() ) {
-	$gBitSystem->fatalError( KernelTools::tra( 'No such episode' ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
+	$gBitSystem->fatalError( KernelTools::tra( 'No such video' ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
 }
 $gContent->verifyViewPermission();
 
 $root = method_exists( $gContent, 'getImageStorageRoot' ) ? $gContent->getImageStorageRoot() : '';
 $path = $root.$row['xkey_ext'];
 if( empty( $root ) || !is_file( $path ) ) {
-	$gBitSystem->fatalError( KernelTools::tra( 'Episode file not found' ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
+	$gBitSystem->fatalError( KernelTools::tra( 'Video file not found' ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
 }
 
 $fileSize = filesize( $path );

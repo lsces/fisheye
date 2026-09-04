@@ -4,12 +4,7 @@
 
 <div class="admin liberty">
 	<div class="header">
-		<h1>
-			{tr}Load Films{/tr}
-			{if $folderName}
-				- <a href="{$smarty.const.FISHEYE_PKG_URL}load_film.php">{tr}Films{/tr}</a> - {$folderName|escape}
-			{/if}
-		</h1>
+		<h1><a href="{$topGalleryUrl|escape}">{tr}Films{/tr}</a>{if $folderName} - <a href="{$smarty.const.FISHEYE_PKG_URL}load_film.php">{tr}Next{/tr}</a> - <small>{$folderName|escape}</small>{/if}</h1>
 	</div>
 
 	<div class="body">

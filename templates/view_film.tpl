@@ -59,5 +59,19 @@
 	</section>
 
 	{include file="bitpackage:fisheye/images_strip_inc.tpl" images=$filmImages stripId="film-images-strip" stripTitle="Images"}
+
+	{if $featurettes|@count}
+		{* "Featurettes/ is no different to Season/" (Lester, 2026-09-04) - same play_episode.php
+		   link shape view_season.tpl's own episode grid already uses, just a plain list rather
+		   than a grid since a film's own Featurettes set is typically small. *}
+		<section class="film-featurettes">
+			<h2>{tr}Featurettes{/tr}</h2>
+			<ul>
+				{foreach from=$featurettes item=featurette}
+					<li><a href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$featurette.xref_id}" target="_blank" rel="noopener">{$featurette.title|escape}</a></li>
+				{/foreach}
+			</ul>
+		</section>
+	{/if}
 </div>
 {/strip}

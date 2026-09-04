@@ -39,6 +39,11 @@ $externalLinks = [];
 // script's own docblock for why) rather than a direct URL, since these files live outside
 // storage/attachments/ with no nginx location serving that tree yet.
 $filmImages = [];
+// this film's own bonus content, for a DVD-rip-with-extras style folder ("Featurettes/ is no
+// different to Season/" - Lester, 2026-09-04) - same xref-on-the-parent's-own-content_id shape
+// as a season's episodes, played via the same play_episode.php (xref_id only, widened to accept
+// either item).
+$featurettes = [];
 if( $gContent->mXrefInfo ) {
 	foreach( $gContent->mXrefInfo->allXrefs() as $xref ) {
 		switch( $xref['item'] ) {
@@ -49,6 +54,10 @@ if( $gContent->mXrefInfo ) {
 			case 'content_rating': $contentRating = $xref['xkey_ext']; break;
 			case 'duration':       $durationMs    = (int)$xref['xkey_ext']; break;
 			case 'image':          $filmImages[]  = [ 'xref_id' => $xref['xref_id'] ]; break;
+			case 'featurette':
+				$data = !empty( $xref['data'] ) ? json_decode( $xref['data'], true ) : [];
+				$featurettes[] = [ 'xref_id' => $xref['xref_id'], 'title' => $data['title'] ?? $xref['xkey_ext'] ];
+				break;
 		}
 		// external links (imdb/tvdb/tmdb/...) - identified by having a cross_ref_href
 		// (the href template's marker, loaded onto every xref row already, see
@@ -70,6 +79,7 @@ $gBitSmarty->assign( 'contentRating', $contentRating );
 $gBitSmarty->assign( 'durationMs', $durationMs );
 $gBitSmarty->assign( 'externalLinks', $externalLinks );
 $gBitSmarty->assign( 'filmImages', $filmImages );
+$gBitSmarty->assign( 'featurettes', $featurettes );
 
 $gBitSmarty->assign( 'gContent', $gContent );
 

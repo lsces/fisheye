@@ -36,7 +36,11 @@ $plexResultLabel = null;
 if( !empty( $_REQUEST['fCancel'] ) ) {
 	KernelTools::bit_redirect( $gContent->getDisplayUrl() );
 } elseif( !empty( $_REQUEST['fSave'] ) ) {
-	$storeHash = [ 'content_id' => $gContent->mContentId, 'title' => trim( $_REQUEST['title'] ?? '' ) ];
+	// Same "description box" tidy as edit_program.php's own fSave (Lester, 2026-09-04) - the
+	// 'edit' field is what LibertyContent::verify() maps into content_store['data'], already
+	// populated on Reload Metadata via reloadPlexMetadata()'s own description-store hash, but
+	// edit_film.tpl had no field for it and this handler dropped it silently on manual Save.
+	$storeHash = [ 'content_id' => $gContent->mContentId, 'title' => trim( $_REQUEST['title'] ?? '' ), 'edit' => trim( $_REQUEST['edit'] ?? '' ) ];
 	if( $gContent->store( $storeHash ) ) {
 		KernelTools::bit_redirect( $gContent->getDisplayUrl() );
 	}

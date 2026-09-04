@@ -223,12 +223,64 @@ class FisheyeFilm extends FisheyeImage {
 			$linked = $gallery->addItem( $film->mContentId );
 		}
 		$plexMeta = $film->reloadPlexMetadata();
+		$featurettes = $film->registerFeaturettesFromDisk( $pRelativePath );
 
-		$ret = [ 'created' => $film->mContentId, 'linked' => $linked, 'plex' => $plexMeta ];
+		$ret = [ 'created' => $film->mContentId, 'linked' => $linked, 'plex' => $plexMeta, 'featurettes' => $featurettes ];
 		if( $pFetchImages ) {
 			$ret['images'] = $film->reloadPlexImages();
 		}
 		return $ret;
+	}
+
+	/**
+	 * A film living in its own folder alongside a Featurettes/ subfolder (DVD-era bonus content -
+	 * "Featurettes/ is no different to Season/", Lester, 2026-09-04: same shape as an episode
+	 * living under a season, just one level shallower) gets each Featurettes file registered as a
+	 * 'featurette' xref on this film's own content_id - not a separate FisheyeFilm, not a gallery
+	 * of its own. Same rebuild-not-diff convention as every other xref-based reload* here.
+	 *
+	 * A bare single file directly under Films/ (no folder of its own) has nothing to check
+	 * against - $pRelativePath's own dirname() is 'Films' itself in that case, whose sibling
+	 * 'Featurettes' would only ever be the top-level Films/Featurettes/ that doesn't exist on
+	 * this install, so this is a safe no-op for the common case.
+	 *
+	 * @param string $pRelativePath  this film's own attachment path, relative to
+	 *                               getImageStorageRoot() (mime_film_get_storage_root())
+	 * @return array  Summary of what was found/stored, for the calling page's result display.
+	 */
+	public function registerFeaturettesFromDisk( string $pRelativePath ): array {
+		$summary = [ 'items' => [] ];
+		$root = $this->getImageStorageRoot();
+		if( empty( $root ) ) {
+			return $summary;
+		}
+		$featurettesDir = $root.dirname( $pRelativePath ).'/Featurettes/';
+		if( !is_dir( $featurettesDir ) ) {
+			return $summary;
+		}
+		self::deleteXrefByItem( $this->mContentId, [ 'featurette' ] );
+		$xorder = 0;
+		$files = scandir( $featurettesDir );
+		natsort( $files );
+		foreach( $files as $file ) {
+			if( !is_file( $featurettesDir.$file ) ) {
+				continue;
+			}
+			if( !in_array( strtolower( pathinfo( $file, PATHINFO_EXTENSION ) ), [ 'mkv', 'mp4', 'm4v', 'avi' ], true ) ) {
+				continue;
+			}
+			$xorder++;
+			$xrefHash = [
+				'content_id' => $this->mContentId,
+				'item'       => 'featurette',
+				'xkey_ext'   => dirname( $pRelativePath ).'/Featurettes/'.$file,
+				'edit'       => json_encode( [ 'title' => pathinfo( $file, PATHINFO_FILENAME ) ] ),
+				'xorder'     => $xorder,
+			];
+			$this->storeXref( $xrefHash );
+			$summary['items'][] = $file;
+		}
+		return $summary;
 	}
 
 	private function matchPlexMetadataItem(): ?array {

@@ -118,36 +118,67 @@ if( !empty( $_REQUEST['fImport'] ) ) {
 // Re-scan every time (including right after an import) so the list always reflects what's
 // actually still outstanding - cheap: a capped directory listing plus one indexed lookup per
 // candidate file, not a concern at this scale.
-$candidates = [];
+//
+// Two shapes live side by side under a collection folder (Lester, 2026-09-04, found live: "Alien
+// only showed the plain films" - Prometheus, packaged in its own subfolder with a Featurettes/
+// set, never appeared as a candidate): most films are flat files directly under $scanDir, but a
+// DVD-rip-with-extras film sits one level deeper in its own subfolder alongside its Featurettes/
+// (FisheyeFilm::registerFeaturettesFromDisk()'s own "film" shape). So this scans both - $scanDir's
+// own files, plus one level into any of its subfolders (Featurettes/ itself excluded, since its
+// contents are the bonus files, not separate films - they get attached automatically once the
+// main film file here is imported, not offered as their own candidates).
+$scanTargets = [];
 if( !empty( $root ) && $scanDir !== null && is_dir( $scanDir ) ) {
-	$files = scandir( $scanDir );
-	natsort( $files );
-	foreach( $files as $file ) {
-		if( count( $candidates ) >= LOAD_FILM_LIMIT ) {
-			break;
+	$topEntries = scandir( $scanDir );
+	natsort( $topEntries );
+	foreach( $topEntries as $entry ) {
+		$fullPath = $scanDir.$entry;
+		if( is_file( $fullPath ) ) {
+			$scanTargets[] = [ 'full' => $fullPath, 'relative' => $scanRelativePrefix.$entry, 'file' => $entry ];
+		} elseif( $folderName !== null && is_dir( $fullPath ) && $entry !== '.' && $entry !== '..' && $entry !== 'Featurettes' ) {
+			// Only descend a level once already scoped inside one collection folder - at the true
+			// top level every subfolder here is itself a whole other collection (Aardman, Alien,
+			// ...), browsed separately via $subfolders below, not flattened into this list (found
+			// live 2026-09-04: an earlier version of this descent ran unconditionally and pulled
+			// e.g. Films/Aardman/Shaun the Sheep Farmageddon (2019).mkv into the top-level scan).
+			$subEntries = scandir( $fullPath );
+			natsort( $subEntries );
+			foreach( $subEntries as $subEntry ) {
+				$subFullPath = $fullPath.'/'.$subEntry;
+				if( is_file( $subFullPath ) ) {
+					$scanTargets[] = [ 'full' => $subFullPath, 'relative' => $scanRelativePrefix.$entry.'/'.$subEntry, 'file' => $subEntry ];
+				}
+			}
 		}
-		$fullPath = $scanDir.$file;
-		if( !is_file( $fullPath ) ) {
-			continue;
-		}
-		$ext = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
-		if( !in_array( $ext, LOAD_FILM_EXTENSIONS, true ) ) {
-			continue;
-		}
-		$relativePath = $scanRelativePrefix.$file;
-		$existingContentId = $gBitDb->getOne(
-			"SELECT la.content_id FROM liberty_attachments la INNER JOIN liberty_files lf ON lf.file_id = la.foreign_id WHERE la.attachment_plugin_guid = 'mimefilm' AND lf.file_name = ?",
-			[ $relativePath ]
-		);
-		if( $existingContentId ) {
-			continue;
-		}
-		$candidates[] = [
-			'relative_path' => $relativePath,
-			'title'         => pathinfo( $file, PATHINFO_FILENAME ),
-		];
 	}
 }
+
+$candidates = [];
+foreach( $scanTargets as $target ) {
+	if( count( $candidates ) >= LOAD_FILM_LIMIT ) {
+		break;
+	}
+	$ext = strtolower( pathinfo( $target['file'], PATHINFO_EXTENSION ) );
+	if( !in_array( $ext, LOAD_FILM_EXTENSIONS, true ) ) {
+		continue;
+	}
+	$existingContentId = $gBitDb->getOne(
+		"SELECT la.content_id FROM liberty_attachments la INNER JOIN liberty_files lf ON lf.file_id = la.foreign_id WHERE la.attachment_plugin_guid = 'mimefilm' AND lf.file_name = ?",
+		[ $target['relative'] ]
+	);
+	if( $existingContentId ) {
+		continue;
+	}
+	$candidates[] = [
+		'relative_path' => $target['relative'],
+		'title'         => pathinfo( $target['file'], PATHINFO_FILENAME ),
+	];
+}
+
+// The page heading's own "Films" text doubles as a link back to the real gallery - same tidy as
+// load_program.php's "TV Shows" heading (Lester, 2026-09-03), applied here 2026-09-04.
+$topGalleryUrlHash = [ 'gallery_id' => $topGalleryId ];
+$gBitSmarty->assign( 'topGalleryUrl', FisheyeGallery::getDisplayUrlFromHash( $topGalleryUrlHash ) );
 
 $gBitSmarty->assign( 'storageRoot', $root );
 $gBitSmarty->assign( 'filmsDir', $scanDir );

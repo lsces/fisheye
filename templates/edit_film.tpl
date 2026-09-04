@@ -32,6 +32,13 @@
 								<input type="text" class="form-control" name="title" id="title" value="{$gContent->getTitle()|escape}" />
 							{/forminput}
 						</div>
+						<div class="form-group">
+							{formlabel label="Description" for="edit"}
+							{forminput}
+								<textarea class="form-control" name="edit" id="edit" rows="4">{$gContent->mInfo.data|default:''|escape}</textarea>
+								{formhelp note="Auto-filled from Plex's own summary on Reload Metadata, if it finds a match - edit here directly for a film Plex doesn't have (or to override it)."}
+							{/forminput}
+						</div>
 					{/legend}
 
 					{if $gXrefInfo->mGroups}
