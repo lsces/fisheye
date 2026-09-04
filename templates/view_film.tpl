@@ -68,11 +68,19 @@
 		   navigating away - Lester, 2026-09-04: "COULD pinch the player already on the page?".
 		   Falls through to a real page navigation (target="_blank") if JS doesn't run or the
 		   player element isn't there for some reason. *}
+		<style>
+			/* Same colours as the genre bar's own .label-default pills (#777/#fff, hover #5e5e5e)
+			   rather than .btn-default's plain white - too stark against the dark theme (Lester,
+			   2026-09-04: "the white is just too stark"). Scoped to .featurette-btn, not a
+			   site-wide .btn-default override. */
+			.featurette-btn, .featurette-btn:focus { color:#fff; background-color:#777; border-color:#777; }
+			.featurette-btn:hover { color:#fff; background-color:#5e5e5e; border-color:#5e5e5e; }
+		</style>
 		<section class="film-featurettes">
 			<h2>{tr}Featurettes{/tr}</h2>
 			<ul>
 				{foreach from=$featurettes item=featurette name=featurettes}
-					<li><a class="btn btn-default" id="featurette-btn-{$smarty.foreach.featurettes.index}" href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$featurette.xref_id}" target="_blank" rel="noopener" onclick="return fisheyeToggleFeaturette(this, this.href);">{$featurette.title|escape}</a></li>
+					<li><a class="btn btn-default featurette-btn" id="featurette-btn-{$smarty.foreach.featurettes.index}" href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$featurette.xref_id}" target="_blank" rel="noopener" onclick="return fisheyeToggleFeaturette(this, this.href);">{$featurette.title|escape}</a></li>
 				{/foreach}
 			</ul>
 		</section>
