@@ -38,23 +38,7 @@
 				   with no per-episode request - matching that highlight-swaps-the-panel interaction,
 				   positioned beside the poster the way view_film.tpl's own facts panel is (Lester:
 				   "Text block to top right"). *}
-				{foreach from=$episodes item=episode name=episodeDetails}
-					<div class="episode-detail" id="episode-detail-{$smarty.foreach.episodeDetails.index}"{if !$smarty.foreach.episodeDetails.first} style="display:none;"{/if}>
-						<h3>{$episode.title|escape}</h3>
-						{if $episode.air_date}<p class="episode-air-date"><small>{$episode.air_date|escape}</small></p>{/if}
-						{if $episode.summary}<p>{$episode.summary|escape}</p>{/if}
-						<dl>
-							{if $episode.directors|@count}<dt>{tr}Director{/tr}{if $episode.directors|@count > 1}s{/if}</dt><dd>{$episode.directors|@implode:", "|escape}</dd>{/if}
-							{if $episode.writers|@count}<dt>{tr}Writer{/tr}{if $episode.writers|@count > 1}s{/if}</dt><dd>{$episode.writers|@implode:", "|escape}</dd>{/if}
-							{if $episode.stars|@count}<dt>{tr}Starring{/tr}</dt><dd>{$episode.stars|@implode:", "|escape}</dd>{/if}
-							{if $episode.content_rating}<dt>{tr}Rating{/tr}</dt><dd>{$episode.content_rating|escape}</dd>{/if}
-							{if $episode.durationMs}<dt>{tr}Duration{/tr}</dt><dd>{($episode.durationMs/1000)|display_duration}</dd>{/if}
-						</dl>
-						<p class="episode-play-action">
-							<a class="btn btn-primary" href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$episode.xref_id}" target="_blank" rel="noopener">&#9658; {tr}Play Episode{/tr}</a>
-						</p>
-					</div>
-				{/foreach}
+				{include file="bitpackage:fisheye/episode_detail_panels_inc.tpl"}
 				{if !$episodes|@count}
 					{if $externalLinks|@count}
 						<p class="film-external-links">
@@ -71,43 +55,7 @@
 		</div>
 	</section>
 
-	{* Episode grid is purely the picker now - clicking a card swaps which detail block above is
-	   shown. Grid is 6-across at md+ (col-md-2 - Lester: "a block which I think follows the 6
-	   across style"). *}
-	{if $episodes|@count}
-		<section class="season-episodes">
-			<h2>{tr}Episodes{/tr}</h2>
-			<div class="row">
-				{foreach from=$episodes item=episode name=episodes}
-					<div class="col-md-2 col-sm-4 col-xs-6">
-						<div class="gallery-box episode-item{if $smarty.foreach.episodes.first} active{/if}" onclick="fisheyeShowEpisode({$smarty.foreach.episodes.index})" style="cursor:pointer;">
-							<div class="gallery-img">
-								{if $episode.thumb}
-									<img class="img-responsive thumb" src="{$smarty.const.FISHEYE_PKG_URL}view_extra_image.php?xref_id={$episode.xref_id}" alt="{$episode.title|escape}" />
-								{/if}
-							</div>
-							<div class="gallery-img-title center">
-								<small>{$episode.xorder}. {$episode.title|escape}{if $episode.air_date} &middot; {$episode.air_date|escape}{/if}</small>
-							</div>
-						</div>
-					</div>
-					{if $smarty.foreach.episodes.iteration % 2 == 0}<div class="clearfix visible-xs-block"></div>{/if}
-					{if $smarty.foreach.episodes.iteration % 3 == 0}<div class="clearfix visible-sm-block"></div>{/if}
-					{if $smarty.foreach.episodes.iteration % 6 == 0}<div class="clearfix visible-md-block visible-lg-block"></div>{/if}
-				{/foreach}
-			</div>
-		</section>
-		<script>
-			function fisheyeShowEpisode( idx ) {
-				document.querySelectorAll( '.episode-detail' ).forEach( function( el ) { el.style.display = 'none'; } );
-				document.querySelectorAll( '.episode-item' ).forEach( function( el ) { el.classList.remove( 'active' ); } );
-				var detail = document.getElementById( 'episode-detail-' + idx );
-				if( detail ) { detail.style.display = ''; }
-				var items = document.querySelectorAll( '.episode-item' );
-				if( items[idx] ) { items[idx].classList.add( 'active' ); }
-			}
-		</script>
-	{/if}
+	{include file="bitpackage:fisheye/episode_grid_inc.tpl"}
 
 	{include file="bitpackage:fisheye/images_strip_inc.tpl" images=$seasonImages stripId="season-images-strip" stripTitle="Images"}
 </div>

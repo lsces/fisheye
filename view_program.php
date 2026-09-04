@@ -86,8 +86,49 @@ foreach( (array)$gContent->mItems as $season ) {
 }
 $gBitSmarty->assign( 'seasonTitles', $seasonTitles );
 
+// Single-season shows skip the dummy "Season 1" click-through - view_program_single_season.tpl
+// merges the show's own facts (above) with that one season's episode grid/detail panel directly,
+// same data shape view_season.php itself loads. Real FisheyeSeason object still underneath, just
+// not a separate page - Lester, 2026-09-04: "just a different tpl when the single season state
+// is identified".
+$template = 'bitpackage:fisheye/view_program.tpl';
+if( count( (array)$gContent->mItems ) === 1 ) {
+	$season = current( $gContent->mItems );
+	$season->loadXrefInfo();
+	$seasonImages = [];
+	$episodes = [];
+	if( $season->mXrefInfo ) {
+		foreach( $season->mXrefInfo->allXrefs() as $xref ) {
+			switch( $xref['item'] ) {
+				case 'image':
+					$seasonImages[] = [ 'xref_id' => $xref['xref_id'] ];
+					break;
+				case 'episode':
+					$data = !empty( $xref['data'] ) ? json_decode( $xref['data'], true ) : [];
+					$episodes[] = [
+						'xref_id'       => $xref['xref_id'],
+						'xorder'        => (int)$xref['xorder'],
+						'title'         => $data['title'] ?? pathinfo( $xref['xkey_ext'], PATHINFO_FILENAME ),
+						'summary'       => $data['summary'] ?? '',
+						'air_date'      => $data['air_date'] ?? '',
+						'directors'     => $data['director'] ?? [],
+						'writers'       => $data['writer'] ?? [],
+						'stars'         => $data['star'] ?? [],
+						'content_rating'=> $data['content_rating'] ?? '',
+						'durationMs'    => $data['duration'] ?? null,
+						'thumb'         => $data['thumb'] ?? null,
+					];
+					break;
+			}
+		}
+	}
+	$gBitSmarty->assign( 'seasonImages', $seasonImages );
+	$gBitSmarty->assign( 'episodes', $episodes );
+	$template = 'bitpackage:fisheye/view_program_single_season.tpl';
+}
+
 $gBitSmarty->assign( 'gContent', $gContent );
 
 $gBitSystem->setCanonicalLink( $gContent->getDisplayUrl() );
 $gBitSystem->setBrowserTitle( $gContent->getTitle() );
-$gBitSystem->display( 'bitpackage:fisheye/view_program.tpl', null, [ 'display_mode' => 'display' ] );
+$gBitSystem->display( $template, null, [ 'display_mode' => 'display' ] );
