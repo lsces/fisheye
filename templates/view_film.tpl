@@ -68,17 +68,10 @@
 		   navigating away - Lester, 2026-09-04: "COULD pinch the player already on the page?".
 		   Falls through to a real page navigation (target="_blank") if JS doesn't run or the
 		   player element isn't there for some reason. *}
-		<style>
-			/* Layout only here - colour deliberately lives in the theme's own CSS instead
-			   (rdmcloud-dark.css), not hardcoded on the page, so a light theme can keep
-			   .btn-default's plain white rather than inheriting the dark theme's override
-			   (Lester, 2026-09-04: "so we can switch to white in the light theme"). Shorter
-			   vertical padding than a plain .btn's default (6px) - stacked one per line, the
-			   default was crowding them into each other ("the bars need to be narrower
-			   vertically so they don't crash into one another"). *}
-			.featurette-btn { padding-top:2px; padding-bottom:2px; }
-			.film-featurettes li { margin-bottom:4px; }
-		</style>
+		{* .featurette-btn layout lives in config.css (Bootstrap-level sizing tweak), colour in
+		   rdmcloud-dark.css (theme-specific) - Lester, 2026-09-04: "NO style stuff should be IN
+		   the templates ... all should be managed from .css so we CAN change them outside the
+		   code". *}
 		<section class="film-featurettes">
 			<h2>{tr}Featurettes{/tr}</h2>
 			<ul>
