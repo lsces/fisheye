@@ -98,6 +98,15 @@ class FisheyeProgram extends FisheyeGallery {
 	 * xrefs and images via LibertyMime::expunge(), so no separate episode/image handling is
 	 * needed here.
 	 *
+	 * Same "scope to FisheyeProgram, not the shared base" reasoning covers one more thing:
+	 * FisheyeGallery::expunge() (what parent::expunge() below reaches) calls
+	 * LibertyContent::expunge() directly rather than LibertyMime::expunge() - fine for every
+	 * other gallery, which never has a real attachment of its own, but this show might (its own
+	 * selected thumbnail, see getThumbnailUrl() below) - left alone, that attachment row would
+	 * still be sitting in liberty_attachments when the liberty_content DELETE runs, and the
+	 * LIBERTY_ATTACHMENTS_CON_REF foreign key would block it (found live 2026-09-04 deleting a
+	 * test show). Expunge it here first rather than touching FisheyeGallery's own behaviour.
+	 *
 	 * @return bool
 	 */
 	public function expunge(): bool {
@@ -107,6 +116,10 @@ class FisheyeProgram extends FisheyeGallery {
 					$season->expunge();
 				}
 			}
+		}
+		$query = "SELECT `attachment_id` FROM `".BIT_DB_PREFIX."liberty_attachments` WHERE `content_id`=?";
+		foreach( $this->mDb->getCol( $query, [ $this->mContentId ] ) as $attachmentId ) {
+			$this->expungeAttachment( $attachmentId );
 		}
 		return parent::expunge();
 	}
