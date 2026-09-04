@@ -69,12 +69,15 @@
 		   Falls through to a real page navigation (target="_blank") if JS doesn't run or the
 		   player element isn't there for some reason. *}
 		<style>
-			/* Same colours as the genre bar's own .label-default pills (#777/#fff, hover #5e5e5e)
-			   rather than .btn-default's plain white - too stark against the dark theme (Lester,
-			   2026-09-04: "the white is just too stark"). Scoped to .featurette-btn, not a
-			   site-wide .btn-default override. */
-			.featurette-btn, .featurette-btn:focus { color:#fff; background-color:#777; border-color:#777; }
-			.featurette-btn:hover { color:#fff; background-color:#5e5e5e; border-color:#5e5e5e; }
+			/* Layout only here - colour deliberately lives in the theme's own CSS instead
+			   (rdmcloud-dark.css), not hardcoded on the page, so a light theme can keep
+			   .btn-default's plain white rather than inheriting the dark theme's override
+			   (Lester, 2026-09-04: "so we can switch to white in the light theme"). Shorter
+			   vertical padding than a plain .btn's default (6px) - stacked one per line, the
+			   default was crowding them into each other ("the bars need to be narrower
+			   vertically so they don't crash into one another"). *}
+			.featurette-btn { padding-top:2px; padding-bottom:2px; }
+			.film-featurettes li { margin-bottom:4px; }
 		</style>
 		<section class="film-featurettes">
 			<h2>{tr}Featurettes{/tr}</h2>
