@@ -70,6 +70,16 @@ Each real media content type gets its own `view_X.php`/`edit_X.php` pair, replac
 - `view_program.php` / `edit_program.php`
 - `view_season.php` / `edit_season.php`
 
+**Single-season shows skip the season page entirely.** `view_program.php` checks the show's own
+season count; when there's exactly one, it loads that season's episode/image xref data itself
+(same shape `view_season.php` uses) and dispatches to `view_program_single_season.tpl` instead of
+the normal season-grid template — no click-through to a dummy "Season 1". Layout: show
+thumbnail/summary 50/50 on the left, the episode detail panel (swaps per-episode) on the right,
+episode grid along the bottom. The real `FisheyeSeason` object still exists underneath (`edit_season.php`
+still reachable directly if ever needed) — this is display-level only, not a storage change. The
+episode-detail-panel and episode-grid+JS blocks are shared includes (`episode_detail_panels_inc.tpl`,
+`episode_grid_inc.tpl`) used by both this template and `view_season.tpl`, not duplicated.
+
 **View pages are pure display** — no `$_REQUEST` action handling, no update-permission checks
 beyond what rendering needs. **Edit pages own every mutating action**: title edit via the generic
 `store()` call, the generic liberty xref table (`list_xref.tpl`/`add_xref.php`/`edit_xref.php` —
@@ -407,8 +417,3 @@ Gallery description text is **plain text**, not wiki/rich text — use `data|esc
 - A one-off single-video show is currently registered as a full show/season/episode, faking an
   `S01E01`-style episode number just to fit the model — a plain "Videos" gallery (load_film.php-
   style, no season/episode modeling at all) would fit these better. Not started.
-- Shows with only one season still get a full show → dummy "Season 1" → episodes click-through,
-  even though a single season is common. A display-level merge (`view_program.php`/
-  `edit_program.php` list episodes directly when there's exactly one season, no separate page) is
-  the intended fix — keeping the real `FisheyeSeason` object underneath, not a storage change. Not
-  started.
