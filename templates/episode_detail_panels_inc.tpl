@@ -15,7 +15,29 @@
 			{if $episode.durationMs}<dt>{tr}Duration{/tr}</dt><dd>{($episode.durationMs/1000)|display_duration}</dd>{/if}
 		</dl>
 		<p class="episode-play-action">
-			<a class="btn btn-primary" href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$episode.xref_id}" target="_blank" rel="noopener">&#9658; {tr}Play Episode{/tr}</a>
+			<a class="btn btn-primary" href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$episode.xref_id}" target="_blank" rel="noopener" onclick="return fisheyePlayEpisodeInline(this.href);">&#9658; {tr}Play Episode{/tr}</a>
 		</p>
 	</div>
 {/foreach}
+<script>
+	// Swaps the poster image (fisheye-episode-poster) for the hidden player
+	// (fisheye-episode-player, view_season.tpl/view_program_single_season.tpl's own left-hand
+	// poster column) rather than navigating away - Lester, 2026-09-04: "player hidden in the
+	// left hand half of the top area which is made visible when Play Episode is hit". Falls
+	// through to the real play_episode.php page (target="_blank") if JS doesn't run or either
+	// element isn't on this page for some reason.
+	function fisheyePlayEpisodeInline( url ) {
+		var poster = document.getElementById( 'fisheye-episode-poster' );
+		var player = document.getElementById( 'fisheye-episode-player' );
+		var source = player ? player.querySelector( 'source' ) : null;
+		if( !poster || !player || !source ) {
+			return true;
+		}
+		source.src = url;
+		player.load();
+		player.play();
+		poster.style.display = 'none';
+		player.style.display = '';
+		return false;
+	}
+</script>
