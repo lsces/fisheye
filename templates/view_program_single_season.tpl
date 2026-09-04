@@ -20,18 +20,21 @@
 
 	<section class="body">
 		<div class="row">
+			{* Player hidden until "Play Episode" (episode_detail_panels_inc.tpl) shows it -
+			   Lester, 2026-09-04: "player hidden in the left hand half of the top area which is
+			   made visible when Play Episode is hit", then: "it could do with using both of the
+			   left panels so it's more like the other player" - spans both col-md-3s below
+			   (col-md-6 combined) rather than being squeezed into just the poster's own column,
+			   hiding both when shown so the row's own column math still adds up to 12. *}
+			<video id="fisheye-episode-player" class="col-md-6" controls preload="metadata" style="display:none; max-height:600px;">
+				<source src="" type="video/mp4">
+			</video>
 			{if $gContent->getThumbnailUri('medium')}
-				<div class="col-md-3 film-poster">
-					{* Hidden until a "Play Episode" button (episode_detail_panels_inc.tpl) shows
-					   it in place of the poster - Lester, 2026-09-04: "player hidden in the left
-					   hand half of the top area which is made visible when Play Episode is hit". *}
+				<div class="col-md-3 film-poster" id="fisheye-episode-poster-col">
 					<img id="fisheye-episode-poster" class="img-responsive" src="{$gContent->getThumbnailUri('medium')}" alt="{$gContent->getTitle()|escape}" />
-					<video id="fisheye-episode-player" class="img-responsive" controls preload="metadata" style="display:none; width:100%; max-height:600px;">
-						<source src="" type="video/mp4">
-					</video>
 				</div>
 			{/if}
-			<div class="col-md-3 film-facts">
+			<div class="col-md-3 film-facts" id="fisheye-episode-facts-col">
 				{if $gContent->mInfo.data}
 					<p class="film-summary">{$gContent->mInfo.data|escape}</p>
 				{/if}
