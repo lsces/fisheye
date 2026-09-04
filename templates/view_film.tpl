@@ -69,7 +69,7 @@
 		   Falls through to a real page navigation (target="_blank") if JS doesn't run or the
 		   player element isn't there for some reason. *}
 		<section class="film-featurettes">
-			<h2>{tr}Featurettes{/tr}</h2>
+			<h2>{tr}Featurettes{/tr} <a href="#" id="fisheye-back-to-film" style="display:none; font-size:0.6em;" onclick="fisheyeBackToFilm(); return false;">&#9664; {tr}Back to Film{/tr}</a></h2>
 			<ul>
 				{foreach from=$featurettes item=featurette}
 					<li><a href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$featurette.xref_id}" target="_blank" rel="noopener" onclick="return fisheyePlayInPagePlayer(this.href);">{$featurette.title|escape}</a></li>
@@ -77,17 +77,40 @@
 			</ul>
 		</section>
 		<script>
+			// Original film source captured lazily (not at page load) so a page with no <source>
+			// child yet (shouldn't happen here, but keeps this robust) doesn't break the capture.
+			var fisheyeFilmSourceUrl = null;
+
 			function fisheyePlayInPagePlayer( url ) {
 				var player = document.getElementById( 'liberty-video-player' );
-				if( !player ) {
+				var source = player ? player.querySelector( 'source' ) : null;
+				if( !player || !source ) {
 					return true;
 				}
+				if( fisheyeFilmSourceUrl === null ) {
+					fisheyeFilmSourceUrl = source.src;
+				}
 				player.pause();
-				player.src = url;
+				source.src = url;
 				player.load();
 				player.play();
+				document.getElementById( 'fisheye-back-to-film' ).style.display = '';
 				player.scrollIntoView( { behavior: 'smooth', block: 'center' } );
 				return false;
+			}
+
+			function fisheyeBackToFilm() {
+				var player = document.getElementById( 'liberty-video-player' );
+				var source = player ? player.querySelector( 'source' ) : null;
+				if( !player || !source || fisheyeFilmSourceUrl === null ) {
+					return;
+				}
+				player.pause();
+				source.src = fisheyeFilmSourceUrl;
+				player.load();
+				player.play();
+				document.getElementById( 'fisheye-back-to-film' ).style.display = 'none';
+				player.scrollIntoView( { behavior: 'smooth', block: 'center' } );
 			}
 		</script>
 	{/if}
