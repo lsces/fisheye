@@ -109,7 +109,14 @@ if( !empty( $root ) && is_dir( $filmsDir ) ) {
 		if( load_collection_gallery_id_for_title( $entry ) ) {
 			continue;
 		}
-		$candidates[] = $entry;
+		// Surfaced here rather than discovered later via a silently-failing thumbnail promote
+		// (Lester, 2026-09-04: a batch of collection folders made via mkdir/os.makedirs() during
+		// this library's reorganisation landed at 755, owned by lester - php-fpm, running as
+		// nginx, can't write a sidecar poster file there, and can't chmod its way out either,
+		// since only the owner or root can change a directory's own mode). Not something this
+		// page can fix itself for the same reason - just flagged so it gets noticed and chmod'd
+		// (as lester, or root) before it bites.
+		$candidates[] = [ 'folder' => $entry, 'writable' => is_writable( $filmsDir.$entry ) ];
 	}
 }
 

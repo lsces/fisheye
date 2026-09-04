@@ -34,12 +34,15 @@
 			{form legend="" action="{$smarty.const.FISHEYE_PKG_URL}load_collection.php"}
 				<p>{tr}Real collection folders (more than one film) under Films/ with no gallery yet:{/tr}</p>
 				<ul>
-					{foreach from=$candidates item=folder}
+					{foreach from=$candidates item=candidate}
 						<li>
 							<label>
-								<input type="checkbox" name="selected[]" value="{$folder|escape}" />
-								{$folder|escape}
+								<input type="checkbox" name="selected[]" value="{$candidate.folder|escape}" />
+								{$candidate.folder|escape}
 							</label>
+							{if !$candidate.writable}
+								<span class="label label-warning" title="{tr}php-fpm (nginx) can't write here - thumbnail promotion and other on-disk writes will silently fail until this folder is chmod'd (as lester or root){/tr}">{tr}not nginx-writable{/tr}</span>
+							{/if}
 						</li>
 					{/foreach}
 				</ul>
