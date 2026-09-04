@@ -284,19 +284,31 @@ class FisheyeFilm extends FisheyeImage {
 	}
 
 	private function matchPlexMetadataItem(): ?array {
-		global $gBitSystem;
-
-		$dbPath = $gBitSystem->getConfig( 'fisheye_plex_db_path', '' );
-		if( empty( $dbPath ) || !is_file( $dbPath ) ) {
-			return null;
-		}
-
 		// refresh mStorage - needed when called right after store() on a just-created film,
 		// whose in-memory object hasn't necessarily loaded its attachment row yet.
 		$this->load();
 		$sourceFile = $this->mStorage[$this->mContentId]['source_file'] ?? null;
 		$realPath = $sourceFile ? realpath( $sourceFile ) : null;
 		if( empty( $realPath ) ) {
+			return null;
+		}
+		return self::matchPlexMetadataItemForPath( $realPath );
+	}
+
+	/**
+	 * The DB-query half of matchPlexMetadataItem(), split out so load_film.php can pre-check a
+	 * candidate file for a Plex match *before* registering it - matchPlexMetadataItem() itself
+	 * needs an already-stored film (its own mStorage/source_file), which doesn't exist yet at that
+	 * point in the batch-import flow.
+	 *
+	 * @param string $pAbsoluteRealPath  a real, already-resolved absolute path (realpath() output)
+	 * @return array{db:\PDO,id:int}|null  null if unconfigured or no match found
+	 */
+	public static function matchPlexMetadataItemForPath( string $pAbsoluteRealPath ): ?array {
+		global $gBitSystem;
+
+		$dbPath = $gBitSystem->getConfig( 'fisheye_plex_db_path', '' );
+		if( empty( $dbPath ) || !is_file( $dbPath ) || empty( $pAbsoluteRealPath ) ) {
 			return null;
 		}
 
@@ -312,7 +324,7 @@ class FisheyeFilm extends FisheyeImage {
 			 JOIN metadata_items mi ON mi.id = mi2.metadata_item_id
 			 WHERE mp.file = ? AND mi.metadata_type = 1"
 		);
-		$stmt->execute( [ $realPath ] );
+		$stmt->execute( [ $pAbsoluteRealPath ] );
 		$metadataItemId = $stmt->fetchColumn();
 		if( !$metadataItemId ) {
 			return null;

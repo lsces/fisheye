@@ -95,10 +95,24 @@ $result = null;
 if( !empty( $_REQUEST['fImport'] ) ) {
 	$fetchImages = !empty( $_REQUEST['fetch_images'] );
 	$batchStart = microtime( true );
-	$result = [ 'imported' => [], 'already' => [], 'errors' => [], 'fetch_images' => $fetchImages ];
+	$result = [ 'imported' => [], 'already' => [], 'skipped' => [], 'errors' => [], 'fetch_images' => $fetchImages ];
 	foreach( (array)( $_REQUEST['selected'] ?? [] ) as $relativePath ) {
 		$relativePath = trim( (string)$relativePath );
 		if( empty( $relativePath ) || !is_file( $root.$relativePath ) ) {
+			continue;
+		}
+		// Skip rather than register a film with no Plex match at all (Lester, 2026-09-04: "one
+		// does not know which ones have not actually loaded metadata" - e.g. Plex's own title
+		// having since changed to "2001: A Space Odyssey" while the file itself still reads "2001
+		// A Space Odyssey", so the automatic title-independent realpath match below never fires).
+		// Registering it anyway used to just leave a metadata-less film sitting in the library
+		// indistinguishable from a properly-loaded one; left un-imported instead, it stays in the
+		// candidate list every re-scan until the mismatch is actually fixed (rename the file, or
+		// fix Plex's own match) and a re-run picks it up. Checked here, before store(), rather than
+		// inside registerFromDisk() itself - matching needs a real absolute path, which a
+		// not-yet-registered file already has without needing a content_id first.
+		if( !FisheyeFilm::matchPlexMetadataItemForPath( realpath( $root.$relativePath ) ?: '' ) ) {
+			$result['skipped'][] = [ 'path' => $relativePath ];
 			continue;
 		}
 		$filmStart = microtime( true );

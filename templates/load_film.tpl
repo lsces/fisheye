@@ -56,8 +56,14 @@
 			{/if}
 			{if $result.already}
 				<div class="alert alert-warning">
-					<p>{tr}Already registered (skipped){/tr}:</p>
+					<p>{tr}Already registered - left as-is{/tr}:</p>
 					<ul>{foreach from=$result.already item=row}<li>{$row.path|escape}</li>{/foreach}</ul>
+				</div>
+			{/if}
+			{if $result.skipped}
+				<div class="alert alert-warning">
+					<p>{tr}No Plex match found - not imported{/tr} ({tr}fix the filename or the Plex match, then re-scan to pick it up{/tr}):</p>
+					<ul>{foreach from=$result.skipped item=row}<li>{$row.path|escape}</li>{/foreach}</ul>
 				</div>
 			{/if}
 			{if $result.errors}
