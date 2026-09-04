@@ -51,6 +51,31 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 } elseif( !empty( $_REQUEST['fReloadImages'] ) ) {
 	$plexResult = $gContent->reloadPlexImages();
 	$plexResultLabel = KernelTools::tra( 'Images reloaded from Plex' );
+} elseif( !empty( $_REQUEST['delete'] ) ) {
+	// Same delete flow as edit_program.php's own (Lester, 2026-09-02) - now safe to wire up
+	// properly, since LibertyMime::expunge() actually reaches LibertyContent::expunge() again
+	// (2026-09-04 regression fix). The video file itself is never touched either way - see
+	// deleteXrefFile()/replaceXrefFile()'s own docblocks, mimefilm's whole point is external,
+	// un-owned storage.
+	$gContent->hasUserPermission( 'p_fisheye_admin', true );
+
+	if( !empty( $_REQUEST['cancel'] ) ) {
+		// user cancelled - just continue on, doing nothing
+	} elseif( empty( $_REQUEST['confirm'] ) ) {
+		$formHash['delete'] = true;
+		$formHash['content_id'] = $gContent->mContentId;
+		$gBitSystem->confirmDialog( $formHash,
+			[
+				'warning' => KernelTools::tra( 'Are you sure you want to delete this film?' ) . ' ' . $gContent->getTitle() . ' ' . KernelTools::tra( '(the video file on disk will not be touched)' ),
+				'error' => KernelTools::tra( 'This cannot be undone!' ),
+			],
+		);
+	} else {
+		$userId = $gContent->getField( 'user_id' );
+		if( $gContent->expunge() ) {
+			KernelTools::bit_redirect( FISHEYE_PKG_URL.'?user_id='.$userId );
+		}
+	}
 }
 
 $gBitSmarty->assign( 'errors', $gContent->mErrors );

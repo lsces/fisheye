@@ -1,5 +1,10 @@
 {strip}
-<div class="floaticon">{bithelp}</div>
+<div class="floaticon">
+	{if $gContent->hasAdminPermission()}
+		<a title="{tr}Delete Film{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}edit_film.php?content_id={$gContent->mContentId}&amp;delete=1">{biticon ipackage="icons" iname="user-trash" iexplain="Delete Film"}</a>
+	{/if}
+	{bithelp}
+</div>
 
 <div class="admin fisheye">
 	<div class="header">
