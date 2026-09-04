@@ -99,9 +99,21 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 		);
 	} else {
 		$userId = $gContent->getField( 'user_id' );
+		// Grab the parent gallery (e.g. "TV Shows") before expunge() removes the membership row
+		// that getParentGalleries() itself reads - same generic top-level redirect edit.php uses
+		// for a plain gallery otherwise, which is jarring for a show buried a level down.
+		$parentGalleries = $gContent->getParentGalleries();
+		$redirectUrl = FISHEYE_PKG_URL.'?user_id='.$userId;
+		if( !empty( $parentGalleries ) ) {
+			// getDisplayUrlFromHash() takes its param by reference - can't pass an array literal
+			// directly, needs a real variable first (same gotcha already hit elsewhere in this
+			// codebase, e.g. FisheyeBase::getBreadcrumbTrail()).
+			$urlParamHash = [ 'gallery_id' => key( $parentGalleries ) ];
+			$redirectUrl = FisheyeGallery::getDisplayUrlFromHash( $urlParamHash );
+		}
 		$gContent->pRecursiveDelete = true;
 		if( $gContent->expunge() ) {
-			KernelTools::bit_redirect( FISHEYE_PKG_URL.'?user_id='.$userId );
+			KernelTools::bit_redirect( $redirectUrl );
 		}
 	}
 }
