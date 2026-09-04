@@ -50,6 +50,9 @@
 							{if $episode.content_rating}<dt>{tr}Rating{/tr}</dt><dd>{$episode.content_rating|escape}</dd>{/if}
 							{if $episode.durationMs}<dt>{tr}Duration{/tr}</dt><dd>{($episode.durationMs/1000)|display_duration}</dd>{/if}
 						</dl>
+						<p class="episode-play-action">
+							<a class="btn btn-primary" href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$episode.xref_id}" target="_blank" rel="noopener">&#9658; {tr}Play Episode{/tr}</a>
+						</p>
 					</div>
 				{/foreach}
 				{if !$episodes|@count}
@@ -82,7 +85,6 @@
 								{if $episode.thumb}
 									<img class="img-responsive thumb" src="{$smarty.const.FISHEYE_PKG_URL}view_extra_image.php?xref_id={$episode.xref_id}" alt="{$episode.title|escape}" />
 								{/if}
-								<a class="episode-play" href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$episode.xref_id}" target="_blank" rel="noopener" title="{tr}Play{/tr}" onclick="event.stopPropagation();">&#9658;</a>
 							</div>
 							<div class="gallery-img-title center">
 								<small>{$episode.xorder}. {$episode.title|escape}{if $episode.air_date} &middot; {$episode.air_date|escape}{/if}</small>
