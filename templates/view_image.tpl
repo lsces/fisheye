@@ -2,7 +2,15 @@
 <div class="display fisheye">
 	{if empty($liberty_preview)}
 	<header>
-		{include file="bitpackage:fisheye/gallery_icons_inc.tpl"}
+		{* image_icons_inc.tpl, not gallery_icons_inc.tpl - every icon there (Download Gallery,
+		   Image Order, Add Image, Delete Gallery) keys off $gContent->mGalleryId, which is
+		   meaningless on this page: $gContent here is the image itself, not the gallery it sits
+		   in. Found live 2026-09-04 testing a film's delete: this page's own "Delete" icon was
+		   silently deleting the gallery the item belonged to, not the item - same
+		   view_film.tpl-vs-gallery_icons_inc.tpl mismatch that page's own comment already flagged
+		   when it was built, just never fixed here since this was the only other page still
+		   including it. *}
+		{include file="bitpackage:fisheye/image_icons_inc.tpl"}
 		<h1>{$gContent->getTitle()|default:$gContent->mInfo.filename|escape}</h1>
 		{include file="bitpackage:fisheye/gallery_breadcrumb_inc.tpl"}
 	</header>
