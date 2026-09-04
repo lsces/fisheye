@@ -1,19 +1,22 @@
 <?php
 /**
- * Streams one of a film/season's own alternate images (FisheyeFilm/FisheyeSeason::
- * reloadPlexImages()'s shared images/ folder, or a season's own per-episode Plex thumb) - a small
- * PHP-mediated server, same "no nginx location for that tree yet" situation mime_film_download()
- * is already in (see mime.film.php's own note on this).
+ * Streams one of a film/season's own alternate images (FisheyeSeason::reloadPlexImages()'s
+ * shared images/ folder under the TV storage root, a season's own per-episode Plex thumb, or -
+ * since 2026-09-04 - FisheyeFilm's own downloaded Plex alternates, which live in
+ * storage/attachments/<branch>/ instead) - a small PHP-mediated server, same "no nginx location
+ * for that tree yet" situation mime_film_download() is already in for the external tree (see
+ * mime.film.php's own note on this).
  *
  * Takes xref_id only, never a raw path - the file actually served is always exactly what's
  * already stored server-side against that xref row, resolved after confirming the row is really
  * an 'image' or 'episode' item, so there is no path-traversal surface: nothing here ever builds a
- * filesystem path from user-supplied text. Storage root resolved via the owning content object's
- * own getImageStorageRoot() (not a hardcoded mime_film_get_storage_root() call) - a season's own
- * images/episode thumbs live under the TV-specific root, not the plain film one; the two only
- * coincide on desktop (both /media3/), a real bug this fixes (see fisheye.md's 2026-09-02
- * "content_id assumption"/"storage root" entries for the same category of mistake found earlier
- * in edit_xref.php).
+ * filesystem path from user-supplied text. Resolved via the owning content object's own
+ * getExtraImagePath() (FisheyeBase's default is getImageStorageRoot()-relative, correct for
+ * Season/Program; FisheyeFilm overrides it for its own different storage location) rather than
+ * building the path here directly - a season's own images/episode thumbs live under the
+ * TV-specific root, not the plain film one; the two only coincide on desktop (both /media3/), a
+ * real bug this fixes (see fisheye.md's 2026-09-02 "content_id assumption"/"storage root"
+ * entries for the same category of mistake found earlier in edit_xref.php).
  *
  * @package fisheye
  * @subpackage functions
@@ -59,9 +62,8 @@ if( empty( $relativePath ) ) {
 	$gBitSystem->fatalError( KernelTools::tra( 'No such image' ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
 }
 
-$root = method_exists( $gContent, 'getImageStorageRoot' ) ? $gContent->getImageStorageRoot() : '';
-$path = $root.$relativePath;
-if( empty( $root ) || !is_file( $path ) ) {
+$path = $gContent->getExtraImagePath( $relativePath );
+if( empty( $path ) || !is_file( $path ) ) {
 	$gBitSystem->fatalError( KernelTools::tra( 'Image file not found' ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
 }
 

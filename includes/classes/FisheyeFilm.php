@@ -89,11 +89,7 @@ class FisheyeFilm extends FisheyeImage {
 		if( $pItem !== 'image' || empty( $pXkeyExt ) ) {
 			return false;
 		}
-		$root = $this->getImageStorageRoot();
-		if( empty( $root ) ) {
-			return false;
-		}
-		return move_uploaded_file( $pTmpPath, $root.$pXkeyExt );
+		return move_uploaded_file( $pTmpPath, $this->getImageStorageBranchPath().$pXkeyExt );
 	}
 
 	/**
@@ -111,47 +107,63 @@ class FisheyeFilm extends FisheyeImage {
 		if( $pItem !== 'image' || empty( $pXkeyExt ) ) {
 			return false;
 		}
-		$root = $this->getImageStorageRoot();
-		if( empty( $root ) || !is_file( $root.$pXkeyExt ) ) {
+		$path = $this->getImageStorageBranchPath().$pXkeyExt;
+		if( !is_file( $path ) ) {
 			return false;
 		}
-		return @unlink( $root.$pXkeyExt );
+		return @unlink( $path );
+	}
+
+	/**
+	 * Override of FisheyeBase's own getImageStorageRoot()-relative default - a film's own
+	 * downloaded Plex alternates live in storage/attachments/<branch>/, not the external film
+	 * library tree (see getImageStorageBranchPath()'s own docblock).
+	 */
+	public function getExtraImagePath( string $pRelativePath ): string {
+		return $this->getImageStorageBranchPath().$pRelativePath;
+	}
+
+	/**
+	 * This film's own storage/attachments/<branch>/ path - home for its downloaded Plex image
+	 * alternates and any manual uploads (Lester, 2026-09-04: "storage/attachments/<branch>/ has
+	 * always been used as home for extras like the plex images and any manual uploads" - not a
+	 * new convention, this class just wasn't following it yet). Always nginx-writable by
+	 * construction, unlike the external film-library tree (getImageStorageRoot()) - found live:
+	 * collection folders made via mkdir/os.makedirs() during this library's reorganisation landed
+	 * at 755, not writable by php-fpm at all, and the film's own folder isn't guaranteed to be
+	 * either (only Films/ itself and hand-ripped per-film folders happened to be 777).
+	 *
+	 * @return string
+	 */
+	private function getImageStorageBranchPath(): string {
+		return STORAGE_PKG_PATH.\Bitweaver\Liberty\liberty_mime_get_storage_branch( [ 'attachment_id' => $this->mContentId ] );
 	}
 
 	/**
 	 * Promote one of this film's already-downloaded 'image' xref alternates into its actual
-	 * displayed thumbnail - unlike FisheyeSeason/FisheyeProgram (which have no attachment of
-	 * their own and gained a brand new real attachment slot for this), a film's single
-	 * attachment is already occupied by the video itself (mime.film.php), so there's no second
-	 * slot to store a thumbnail in. Reuses mime_film_get_thumbnail_url()'s own existing sidecar
-	 * convention instead: copies the chosen alternate to `<video basename>-poster.jpg` next to
-	 * the source video (the same filename that function already checks FIRST, before falling
-	 * back to an ffmpeg frame-grab), then clears the cached thumbs so the next load regenerates
-	 * from it rather than keeping whatever was cached before.
+	 * displayed thumbnail. No separate "which one is the thumbnail" bookkeeping needed -
+	 * mime_film_get_thumbnail_url() just reads whatever's in storage/attachments/<branch>/thumbs/
+	 * regardless of how it got there (Lester, 2026-09-04: "system always just reads the thumbnail
+	 * directory so as long as the 'promote' button actually loads the right set of thumbnails
+	 * everything else just works") - so this just regenerates thumbs/ directly from the chosen
+	 * alternate, already sitting in the same branch as the thumbs themselves.
 	 *
-	 * @param string $pRelativePath  an 'image' xref row's own xkey_ext value
+	 * @param string $pRelativePath  an 'image' xref row's own xkey_ext value (a bare filename)
 	 * @return bool
 	 */
 	public function promoteImageToThumbnail( string $pRelativePath ): bool {
-		$root = $this->getImageStorageRoot();
-		if( empty( $root ) || !is_file( $root.$pRelativePath ) ) {
+		$branchPath = $this->getImageStorageBranchPath();
+		$sourcePath = $branchPath.$pRelativePath;
+		if( !is_file( $sourcePath ) ) {
 			return false;
 		}
-		$this->load();
-		$sourceFile = $this->mStorage[$this->mContentId]['source_file'] ?? '';
-		if( empty( $sourceFile ) ) {
-			return false;
-		}
-		$sidecarPath = preg_replace( '/\.[^.\/]+$/', '', $sourceFile ).'-poster.jpg';
-		if( !copy( $root.$pRelativePath, $sidecarPath ) ) {
-			return false;
-		}
-		$destBranch = \Bitweaver\Liberty\liberty_mime_get_storage_branch( [ 'attachment_id' => $this->mContentId ] );
-		foreach( glob( STORAGE_PKG_PATH.$destBranch.'thumbs/*' ) ?: [] as $oldThumb ) {
+		foreach( glob( $branchPath.'thumbs/*' ) ?: [] as $oldThumb ) {
 			@unlink( $oldThumb );
 		}
+		$fileHash = [ 'type' => 'image/jpeg', 'source_file' => $sourcePath, 'dest_branch' => \Bitweaver\Liberty\liberty_mime_get_storage_branch( [ 'attachment_id' => $this->mContentId ] ) ];
+		$ok = \Bitweaver\Liberty\liberty_generate_thumbnails( $fileHash );
 		$this->load();
-		return true;
+		return $ok;
 	}
 
 	/**
@@ -470,12 +482,19 @@ class FisheyeFilm extends FisheyeImage {
 	 * against Casino Royale. A new fetch continues the existing xorder sequence rather than
 	 * restarting at 1, so a top-up run doesn't collide with rows the other type still has.
 	 *
-	 * Storage: a shared `images/` folder directly under fisheye_disk_storage_root, alongside
-	 * `Films/` itself (Films/ is currently flat, one file per film, not one directory per film -
-	 * see media.php's xref_schemes comment) - files named `<film file's own basename>-poster-N.jpg`
-	 * / `-art-N.jpg` to disambiguate between films sharing the one folder. xkey_ext holds the
-	 * path relative to fisheye_disk_storage_root (e.g. 'images/Elf (2003)-poster-1.jpg'); xorder
-	 * numbers posters first (1 = primary/poster), then backdrops continuing on.
+	 * Storage: this film's own storage/attachments/<branch>/ - alongside thumbs/, the same home
+	 * every other attachment already uses for its own conversions/extras (Lester, 2026-09-04:
+	 * "storage/attachments/<branch>/ has always been used as home for extras like the plex
+	 * images and any manual uploads"). Not the external film library tree - that folder's
+	 * ownership/permissions are Lester's own to manage (mkdir/os.makedirs() during a reorg
+	 * routinely lands at 755, not nginx-writable), where storage/attachments/ is always
+	 * nginx-owned by construction. Files named `<film file's own basename>-poster-N.jpg` /
+	 * `-art-N.jpg` (a leftover disambiguation habit from the old shared-folder days - harmless
+	 * now each branch is already per-content_id, kept for readability browsing the folder
+	 * directly). xkey_ext holds just the bare filename now, resolved against this branch (see
+	 * getImageStorageBranchPath()) rather than fisheye_disk_storage_root; xorder numbers posters
+	 * first (1 = primary/poster - also the one mime_film_get_thumbnail_url() picks as the
+	 * default thumbnail source), then backdrops continuing on.
 	 *
 	 * Capped at 5 of each type - same reasoning as reloadPlexMetadata()'s 5-star cap, a well-known
 	 * film's poster/art set from Plex can run into dozens and most are near-duplicates.
@@ -524,12 +543,15 @@ class FisheyeFilm extends FisheyeImage {
 			return $summary;
 		}
 
-		$root = \Bitweaver\Liberty\mime_film_get_storage_root();
-		if( empty( $root ) ) {
-			$summary['items'][] = 'fisheye_disk_storage_root is not configured.';
-			return $summary;
-		}
-		$imagesDir = $root.'images/';
+		// Lives in this film's own storage/attachments/<branch>/ - alongside thumbs/, same as
+		// every other conversion/derived file any liberty attachment already keeps there - not
+		// the external film-library tree (Lester, 2026-09-04: "storage/attachments/<branch>/ has
+		// always been used as home for extras like the plex images and any manual uploads").
+		// Always nginx-writable by construction, unlike the external tree (found live: collection
+		// folders made via mkdir/os.makedirs() during this library's reorganisation landed at 755,
+		// not writable by php-fpm at all).
+		$destBranch = \Bitweaver\Liberty\liberty_mime_get_storage_branch( [ 'attachment_id' => $this->mContentId ] );
+		$imagesDir = STORAGE_PKG_PATH.$destBranch;
 		KernelTools::mkdir_p( $imagesDir );
 
 		$sourceFile = $this->mStorage[$this->mContentId]['source_file'] ?? '';
@@ -574,7 +596,9 @@ class FisheyeFilm extends FisheyeImage {
 				}
 				$fetched++;
 				$fileName = "$baseName-$type-$fetched.jpg";
-				$relativePath = 'images/'.$fileName;
+				// xkey_ext is now just the bare filename, resolved against this film's own
+				// storage/attachments/<branch>/ rather than a fisheye_disk_storage_root-relative
+				// path - no directory component needed, the branch is already per-content_id.
 				$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_alt_' );
 				file_put_contents( $tmpFile, $imageData );
 				$resized = self::resizeImageFile( $tmpFile, $imagesDir.$fileName, 400 );
@@ -583,9 +607,9 @@ class FisheyeFilm extends FisheyeImage {
 					continue;
 				}
 				$xorder++;
-				$xrefParamHash = [ 'content_id' => $this->mContentId, 'item' => 'image', 'xkey_ext' => $relativePath, 'xorder' => $xorder ];
+				$xrefParamHash = [ 'content_id' => $this->mContentId, 'item' => 'image', 'xkey_ext' => $fileName, 'xorder' => $xorder ];
 				$this->storeXref( $xrefParamHash );
-				$summary['items'][] = "$type: $relativePath";
+				$summary['items'][] = "$type: $fileName";
 			}
 		}
 

@@ -388,6 +388,26 @@ not ready for primetime
 	}
 
 	/**
+	 * Resolve an 'image'/'episode' xref row's own relative path (xkey_ext, or an episode's
+	 * 'thumb' data key) to a real filesystem path - view_extra_image.php's own generic serving
+	 * hook. Default here: getImageStorageRoot()-relative, correct for Season/Program's own Plex
+	 * image alternates and per-episode thumbs, which still live under the external TV storage
+	 * root. FisheyeFilm overrides this - its own alternates moved into storage/attachments/
+	 * (2026-09-04), a different resolution root from getImageStorageRoot() (the film library
+	 * tree, used only for the video file itself now).
+	 *
+	 * @param string $pRelativePath
+	 * @return string  empty string if this content type has no image storage root
+	 */
+	public function getExtraImagePath( string $pRelativePath ): string {
+		if( !method_exists( $this, 'getImageStorageRoot' ) ) {
+			return '';
+		}
+		$root = $this->getImageStorageRoot();
+		return $root ? $root.$pRelativePath : '';
+	}
+
+	/**
 	 * Whether grabVideoFrameImage() exists and does anything for this content type - default
 	 * false here, overridden true on FisheyeSeason (the only type with an episode video to grab
 	 * a frame from). Same "real method call, not a bare function" reasoning as
