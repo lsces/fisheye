@@ -79,7 +79,10 @@ if( !empty( $_REQUEST['fCreate'] ) ) {
 			continue;
 		}
 		$gallery = new FisheyeGallery();
-		$storeHash = [ 'title' => $folderName ];
+		// gallery_pagination needs to be in the store hash itself, not just the storePreference()
+		// call below - FisheyeGallery::verifyGalleryData() branches on it to fix rows/cols_per_page
+		// at 4*8 for film_grid, and that only runs during store().
+		$storeHash = [ 'title' => $folderName, 'gallery_pagination' => FISHEYE_PAGINATION_FILM_GRID ];
 		if( $gallery->store( $storeHash ) ) {
 			$gallery->storePreference( 'gallery_pagination', FISHEYE_PAGINATION_FILM_GRID );
 			if( $topGalleryId ) {

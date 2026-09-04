@@ -1,11 +1,13 @@
 {literal}
 <script>//<![CDATA[
 function updateGalleryPagination() {
-	var paginationIds = ['fixed_grid','auto_flow','position_number','simple_list','matteo','galleriffic'];
-	// film_grid/program_grid/music_grid share fixed_grid's rows*cols settings panel - same
-	// underlying grid pagination math (see FisheyeGallery::getList()'s layout branch), just
-	// their own view template/floaticons - not worth a duplicate panel per style.
-	var styleGroup = { film_grid: 'fixed_grid', program_grid: 'fixed_grid', music_grid: 'fixed_grid' };
+	var paginationIds = ['fixed_grid','auto_flow','position_number','simple_list','matteo','galleriffic','film_grid','program_grid'];
+	// music_grid still shares fixed_grid's rows*cols settings panel - same underlying grid
+	// pagination math (see FisheyeGallery::getList()'s layout branch), just its own view
+	// template/floaticons - not worth a duplicate panel for it alone. film_grid/program_grid
+	// have their own (Lester, 2026-09-04) - fixed at 4*8=32 by FisheyeGallery::
+	// verifyGalleryData(), not admin-configurable, the visual column count is pure CSS now.
+	var styleGroup = { music_grid: 'fixed_grid' };
 	paginationIds.forEach(function(id) {
 		var div = document.getElementById(id+'-pagination');
 		div.style.display = 'none';
@@ -111,6 +113,14 @@ document.addEventListener('DOMContentLoaded', updateGalleryPagination);
 									<input type="text" id="galleriffic-num-thumbs" name="galleriffic_num_thumbs" size="3" maxlength="3" value="{$gContent->getPreference('galleriffic_num_thumbs', $gBitSystem->getConfig('fisheye_gallery_default_galleriffic_num_thumbs', 30))}"/> {tr}Thumbnails per page{/tr}<br/>
 									<input type="text" id="galleriffic-style" name="galleriffic_style" size="2" maxlength="2" value="{$gContent->mInfo.galleriffic_style|default:$gBitSystem->getConfig('fisheye_gallery_default_galleriffic_style')}"/> {tr}Galleriffic layout style{/tr}
 									{formhelp note="This option provides a javascript powered tabbed thumbnail list display using the galleriffic jquery library."}
+								</div>
+
+								<div id="film_grid-pagination">
+									{formhelp note="Fixed responsive grid - 8 films across on a wide monitor, folding to 4 then 2 on narrower screens. Not admin-configurable: 32 per page, matching a whole number of full-width rows."}
+								</div>
+
+								<div id="program_grid-pagination">
+									{formhelp note="Fixed responsive grid - 8 shows across on a wide monitor, folding to 4 then 2 on narrower screens. Not admin-configurable: 32 per page, matching a whole number of full-width rows."}
 								</div>
 							{/forminput}
 						</div>

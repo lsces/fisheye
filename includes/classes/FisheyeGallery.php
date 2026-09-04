@@ -385,12 +385,25 @@ class FisheyeGallery extends FisheyeBase {
 	public function verifyGalleryData(&$pParamHash) {
 		global $gBitSystem;
 
-		if (empty($pParamHash['rows_per_page'])) {
-			$pParamHash['rows_per_page'] = $gBitSystem->getConfig('fisheye_gallery_default_rows_per_page', !empty($this->mInfo['rows_per_page']) ? $this->mInfo['rows_per_page'] : FISHEYE_DEFAULT_ROWS_PER_PAGE);
-		}
+		// film_grid/program_grid's own row/column counts aren't admin-configurable (Lester,
+		// 2026-09-04 - "tvshows can get the same fix" once film_grid had it) - the visual column
+		// count (8 across on a wide monitor, folding to 4 then 2) is pure CSS in each style's own
+		// _inc.tpl now, decoupled from cols_per_page entirely (Bootstrap's 12-column grid doesn't
+		// divide evenly into eighths anyway). rows_per_page/cols_per_page still get set here
+		// regardless - images_per_page (= rows*cols) is what the existing shared pagination
+		// mechanism reads - fixed at 4*8=32, a page size that happens to fill a whole number of
+		// desktop-width rows.
+		if( in_array( $pParamHash['gallery_pagination'] ?? null, [ FISHEYE_PAGINATION_FILM_GRID, FISHEYE_PAGINATION_PROGRAM_GRID ], true ) ) {
+			$pParamHash['rows_per_page'] = 4;
+			$pParamHash['cols_per_page'] = 8;
+		} else {
+			if (empty($pParamHash['rows_per_page'])) {
+				$pParamHash['rows_per_page'] = $gBitSystem->getConfig('fisheye_gallery_default_rows_per_page', !empty($this->mInfo['rows_per_page']) ? $this->mInfo['rows_per_page'] : FISHEYE_DEFAULT_ROWS_PER_PAGE);
+			}
 
-		if (empty($pParamHash['cols_per_page'])) {
-			$pParamHash['cols_per_page'] = $gBitSystem->getConfig('fisheye_gallery_default_cols_per_page', !empty($this->mInfo['cols_per_page']) ? $this->mInfo['cols_per_page'] : FISHEYE_DEFAULT_COLS_PER_PAGE);
+			if (empty($pParamHash['cols_per_page'])) {
+				$pParamHash['cols_per_page'] = $gBitSystem->getConfig('fisheye_gallery_default_cols_per_page', !empty($this->mInfo['cols_per_page']) ? $this->mInfo['cols_per_page'] : FISHEYE_DEFAULT_COLS_PER_PAGE);
+			}
 		}
 
 		if (empty($pParamHash['thumbnail_size'])) {

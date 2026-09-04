@@ -23,16 +23,22 @@
 
 		{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='body' serviceHash=$gContent->mInfo}
 
-		{assign var="cols" value=$gContent->mInfo.cols_per_page|default:4}
-		{assign var="tdWidth" value="`100/$cols`"}
-		<table class="thumbnailblock" style="width:100%">
-		{counter assign="imageCount" start="0" print=false}
+		{* Responsive flex grid, not cols_per_page/Bootstrap-col driven (Lester, 2026-09-04: 8
+		   across on a wide monitor, folding to 4 then 2 - Bootstrap's 12-column grid has no clean
+		   class for eighths, so this is plain CSS keyed off the same pixel breakpoints Bootstrap 3
+		   itself uses elsewhere in this theme - lg >=1200px, sm/md 768-1199px, xs <768px).
+		   images_per_page (rows_per_page*cols_per_page, fixed at 4*8=32 by FisheyeGallery::
+		   verifyGalleryData() for this pagination style) still drives {pagination} below - that
+		   part's unrelated to the visual column count set here. *}
+		<style>
+			.film-grid { display: flex; flex-wrap: wrap; margin: 0 -5px; }
+			.film-grid-item { box-sizing: border-box; padding: 5px; text-align: center; width: 12.5%; }
+			@media (max-width: 1199px) { .film-grid-item { width: 25%; } }
+			@media (max-width: 767px) { .film-grid-item { width: 50%; } }
+		</style>
+		<div class="film-grid">
 		{foreach from=$gContent->mItems item=galItem key=itemContentId}
-			{if $imageCount % $cols == 0}
-				<tr><!-- Begin Image Row -->
-			{/if}
-
-			<td style="width:{$tdWidth}%; vertical-align:top; text-align:center;"><!-- Begin Image Cell -->
+			<div class="film-grid-item">
 				{box class="box `$galItem->mInfo.content_type_guid`" style="margin-left:0;"}
 					<a href="{$galItem->getDisplayUrl()|escape}">
 						<img class="thumb img-responsive center-block" src="{$galItem->getThumbnailUri($gContent->getField('thumbnail_size'))}" alt="{$galItem->mInfo.title|escape|default:'image'}" />
@@ -45,19 +51,11 @@
 						<p>{$galItem->mInfo.data|truncate:200:"..."|escape}</p>
 					{/if}
 				{/box}
-			</td><!-- End Image Cell -->
-			{counter}
-
-			{if $imageCount % $cols == 0}
-				</tr><!-- End Image Row -->
-			{/if}
-
+			</div>
 		{foreachelse}
-			<tr><td class="norecords">{tr}This gallery is empty{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}load_film.php">Load films!</a></td></tr>
+			<p class="norecords">{tr}This gallery is empty{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}load_film.php">Load films!</a></p>
 		{/foreach}
-
-		{if $imageCount % $cols != 0}</tr>{/if}
-		</table>
+		</div>
 		{pagination gallery_id=$gContent->mGalleryId ?? 0}
 	</div><!-- end .body -->
 
