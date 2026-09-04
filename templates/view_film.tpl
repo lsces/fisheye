@@ -63,15 +63,33 @@
 	{if $featurettes|@count}
 		{* "Featurettes/ is no different to Season/" (Lester, 2026-09-04) - same play_episode.php
 		   link shape view_season.tpl's own episode grid already uses, just a plain list rather
-		   than a grid since a film's own Featurettes set is typically small. *}
+		   than a grid since a film's own Featurettes set is typically small. Clicking one pinches
+		   the player already on this page (id="liberty-video-player", player.tpl) rather than
+		   navigating away - Lester, 2026-09-04: "COULD pinch the player already on the page?".
+		   Falls through to a real page navigation (target="_blank") if JS doesn't run or the
+		   player element isn't there for some reason. *}
 		<section class="film-featurettes">
 			<h2>{tr}Featurettes{/tr}</h2>
 			<ul>
 				{foreach from=$featurettes item=featurette}
-					<li><a href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$featurette.xref_id}" target="_blank" rel="noopener">{$featurette.title|escape}</a></li>
+					<li><a href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$featurette.xref_id}" target="_blank" rel="noopener" onclick="return fisheyePlayInPagePlayer(this.href);">{$featurette.title|escape}</a></li>
 				{/foreach}
 			</ul>
 		</section>
+		<script>
+			function fisheyePlayInPagePlayer( url ) {
+				var player = document.getElementById( 'liberty-video-player' );
+				if( !player ) {
+					return true;
+				}
+				player.pause();
+				player.src = url;
+				player.load();
+				player.play();
+				player.scrollIntoView( { behavior: 'smooth', block: 'center' } );
+				return false;
+			}
+		</script>
 	{/if}
 </div>
 {/strip}
