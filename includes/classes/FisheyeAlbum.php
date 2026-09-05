@@ -40,6 +40,34 @@ define( 'FISHEYEALBUM_CONTENT_TYPE_GUID', 'fisheyealbum' );
 const FISHEYEALBUM_TRACK_EXTENSIONS = [ 'mp3', 'flac', 'm4a', 'ogg', 'wav' ];
 const FISHEYEALBUM_COVER_NAMES = [ 'cover.jpg', 'folder.jpg', 'front.jpg', 'cover.png', 'folder.png' ];
 
+// Embedded tag name -> xref item, for tags that only ever make sense at album/disc level, not
+// per-track. Only promoted to a real xref if the value is identical across every track on the
+// album (see extractCommonTags()) - one that genuinely varies per track (an artist id on a
+// various-artists compilation, a disc id on a multi-disc set) stays out of these and in each
+// track's own data instead.
+const FISHEYEALBUM_COMMON_TAG_MAP = [
+	'GENRE'                      => 'genre',
+	'COMPOSER'                   => 'composer',
+	'LABEL'                      => 'label',
+	'CATALOGNUMBER'              => 'catalog_number',
+	'BARCODE'                    => 'barcode',
+	'RELEASECOUNTRY'             => 'country',
+	'RELEASETYPE'                => 'release_type',
+	'MEDIA'                      => 'format',
+	'MUSICBRAINZ_ALBUMID'        => 'mbid',
+	'MUSICBRAINZ_RELEASEGROUPID' => 'mb_releasegroupid',
+	'MUSICBRAINZ_DISCID'         => 'mb_discid',
+	'ASIN'                       => 'asin',
+];
+// A handful of xref items have more than one possible tag name (taggers disagree, or a fallback
+// makes sense) - first match wins, same preference order FisheyeSeason/FisheyeFilm's own Plex
+// metadata already uses elsewhere for "prefer the more specific field".
+const FISHEYEALBUM_COMMON_TAG_ALTERNATES = [
+	'release_date' => [ 'DATE', 'ORIGINALDATE', 'ORIGINALYEAR' ],
+	'mb_artistid'   => [ 'MUSICBRAINZ_ALBUMARTISTID', 'MUSICBRAINZ_ARTISTID' ],
+	'artist'        => [ 'ALBUM_ARTIST', 'ARTIST' ],
+];
+
 class FisheyeAlbum extends FisheyeImage {
 
 	public function __construct( $pImageId = null, $pContentId = null ) {
@@ -371,6 +399,89 @@ class FisheyeAlbum extends FisheyeImage {
 	}
 
 	/**
+	 * Split embedded tags into album-common (identical on every track - real MusicBrainz ids,
+	 * label/catalog/barcode/country/etc, genre/composer/artist) vs track-specific (everything
+	 * else, including a common-shaped tag that happens to vary per track this time - a various-
+	 * artists compilation, or a disc id that only applies within one disc of a multi-disc set).
+	 *
+	 * @param array $pTrackFiles  registerFromDisk()'s own $trackFiles, each with a 'tags' entry
+	 * @return array{0: array<string,string>, 1: array<string,true>}  [ xref item => value,
+	 *         uppercased tag name => true for every tag that got promoted (so the caller can
+	 *         strip exactly those out of each track's own data) ]
+	 */
+	private static function extractCommonTags( array $pTrackFiles ): array {
+		$common = [];
+		$promotedTagKeys = [];
+
+		foreach( FISHEYEALBUM_COMMON_TAG_MAP as $tagKey => $xrefItem ) {
+			$value = self::commonTagValue( $pTrackFiles, $tagKey );
+			if( $value !== null ) {
+				$common[$xrefItem] = $value;
+				$promotedTagKeys[$tagKey] = true;
+			}
+		}
+		foreach( FISHEYEALBUM_COMMON_TAG_ALTERNATES as $xrefItem => $tagKeys ) {
+			$matched = false;
+			foreach( $tagKeys as $tagKey ) {
+				$value = self::commonTagValue( $pTrackFiles, $tagKey );
+				if( $value !== null && !$matched ) {
+					$common[$xrefItem] = $value;
+					$matched = true;
+				}
+				// Every alternate gets marked as promoted once any one of them wins, not just the
+				// winner - a tagger commonly writes more than one of these redundantly (DATE and
+				// ORIGINALDATE with the same value, say), and a losing alternate still duplicates
+				// exactly what the winner already promoted, so it belongs out of track data too.
+				if( $value !== null ) {
+					$promotedTagKeys[$tagKey] = true;
+				}
+			}
+		}
+		return [ $common, $promotedTagKeys ];
+	}
+
+	/**
+	 * A single tag's value if present and identical across every track, null otherwise (missing
+	 * from any track, or differing between tracks - either way, not safe to treat as album-wide).
+	 *
+	 * @param array $pTrackFiles
+	 * @param string $pTagKey  uppercased embedded tag name
+	 * @return string|null
+	 */
+	private static function commonTagValue( array $pTrackFiles, string $pTagKey ): ?string {
+		$value = null;
+		foreach( $pTrackFiles as $track ) {
+			$trackValue = $track['tags'][$pTagKey] ?? null;
+			if( $trackValue === null || ( $value !== null && $trackValue !== $value ) ) {
+				return null;
+			}
+			$value = $trackValue;
+		}
+		return $value;
+	}
+
+	/**
+	 * Extract a track's own embedded cover art (FLAC METADATA_BLOCK_PICTURE, MP3 APIC, etc - the
+	 * same "picture" stream ffprobe already reports as a video/mjpeg stream alongside the real
+	 * audio one) into a temp file, for the common single-CD classical case where there's no
+	 * standalone cover.jpg/folder.jpg sitting in the album folder at all.
+	 *
+	 * @param string $pAbsolutePath
+	 * @return string|null  temp file path (caller's own to unlink), or null if there's no
+	 *                       embedded picture / extraction failed
+	 */
+	private static function extractEmbeddedCoverArt( string $pAbsolutePath ): ?string {
+		$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_embedded_cover_' );
+		$cmd = 'ffmpeg -y -i '.escapeshellarg( $pAbsolutePath ).' -an -c:v copy -update 1 -f image2 '.escapeshellarg( $tmpFile ).' 2>/dev/null';
+		shell_exec( $cmd );
+		if( is_file( $tmpFile ) && filesize( $tmpFile ) > 0 ) {
+			return $tmpFile;
+		}
+		@unlink( $tmpFile );
+		return null;
+	}
+
+	/**
 	 * Register one album folder - every track file inside becomes a 'track' xref (disc/track
 	 * number and title read from embedded tags when present, falling back to filename order and
 	 * the bare filename otherwise), and a real cover.jpg/folder.jpg (FISHEYEALBUM_COVER_NAMES)
@@ -468,7 +579,7 @@ class FisheyeAlbum extends FisheyeImage {
 		usort( $trackFiles, fn( $a, $b ) => [ $a['disc'], $a['track_num'] ] <=> [ $b['disc'], $b['track_num'] ] );
 
 		$album = new FisheyeAlbum();
-		$firstTags = $trackFiles[0]['tags'];
+		[ $commonTags, $promotedTagKeys ] = self::extractCommonTags( $trackFiles );
 		$storeHash = [ 'title' => $title ];
 		if( !$album->store( $storeHash ) ) {
 			return [ 'error' => implode( '; ', $album->mErrors ) ];
@@ -488,24 +599,26 @@ class FisheyeAlbum extends FisheyeImage {
 
 		$xorder = 0;
 		foreach( $trackFiles as $track ) {
-			// 'tags' carries every embedded format_tag verbatim (uppercased name => value, as
-			// ffprobe returns them) alongside the already-normalised title/disc - so a well-tagged
-			// track's own MUSICBRAINZ_*/COMPOSER/PERFORMER/etc. fields are preserved even though
-			// nothing reads them yet, rather than being read once by readTrackTags() and discarded.
+			// 'tags' here is track-specific only - anything identical across every track (real
+			// MusicBrainz ids, label/catalog/barcode/country/genre/composer/artist) has already
+			// been promoted to a real xref on the album itself instead (see extractCommonTags()),
+			// so it isn't duplicated into every single track's own data. A tag that happens to
+			// vary per track this time (a various-artists compilation's own per-track ARTIST, a
+			// disc id that only applies within one disc of a multi-disc set) stays here.
+			$trackTagsForData = array_diff_key( $track['tags'], $promotedTagKeys );
 			$xrefHash = [
 				'content_id' => $album->mContentId,
 				'item'       => 'track',
 				'xkey_ext'   => $folderPath.$track['relative'],
-				'edit'       => json_encode( [ 'title' => $track['title'], 'disc' => $track['disc'], 'tags' => $track['tags'] ] ),
+				'edit'       => json_encode( [ 'title' => $track['title'], 'disc' => $track['disc'], 'tags' => $trackTagsForData ] ),
 				'xorder'     => ++$xorder,
 			];
 			$album->storeXref( $xrefHash );
 		}
 
-		if( !empty( $firstTags['ARTIST'] ) || !empty( $firstTags['ALBUM_ARTIST'] ) ) {
-			$artist = $firstTags['ALBUM_ARTIST'] ?? $firstTags['ARTIST'];
-			$artistXrefHash = [ 'content_id' => $album->mContentId, 'item' => 'artist', 'xkey_ext' => $artist ];
-			$album->storeXref( $artistXrefHash );
+		foreach( $commonTags as $xrefItem => $value ) {
+			$commonXrefHash = [ 'content_id' => $album->mContentId, 'item' => $xrefItem, 'xkey_ext' => $value ];
+			$album->storeXref( $commonXrefHash );
 		}
 
 		$coverAttached = null;
@@ -515,6 +628,27 @@ class FisheyeAlbum extends FisheyeImage {
 					$coverAttached = $coverName;
 				}
 				break;
+			}
+		}
+		// No standalone cover file - a single-CD classical release commonly embeds its own cover
+		// art directly in the track (FLAC/MP3 METADATA_BLOCK_PICTURE/APIC) instead, extractable
+		// via ffmpeg the same way ffprobe already reads the rest of a track's own tags.
+		if( !$coverAttached ) {
+			$embeddedCover = self::extractEmbeddedCoverArt( $absoluteFolder.$trackFiles[0]['relative'] );
+			if( $embeddedCover ) {
+				if( $album->attachThumbnail( $embeddedCover ) ) {
+					$coverAttached = 'embedded';
+					// Also kept as a real 'image' xref alternate (same storage/attachments/<branch>/
+					// home as a Plex-fetched alternate) - attachThumbnail() above already deleted its
+					// own copy of the original once thumbs/ existed, so without this there would be no
+					// way back to the embedded art if the primary thumbnail later gets changed to
+					// something else (a Plex poster, a manual upload).
+					$embeddedFileName = 'embedded-cover.jpg';
+					copy( $embeddedCover, $album->getImageStorageBranchPath().$embeddedFileName );
+					$embeddedXrefHash = [ 'content_id' => $album->mContentId, 'item' => 'image', 'xkey_ext' => $embeddedFileName, 'xorder' => 1 ];
+					$album->storeXref( $embeddedXrefHash );
+				}
+				@unlink( $embeddedCover );
 			}
 		}
 

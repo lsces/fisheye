@@ -40,9 +40,6 @@
 								<input type="checkbox" name="selected[]" value="{$candidate.folder|escape}" />
 								{$candidate.folder|escape}
 							</label>
-							{if !$candidate.writable}
-								<span class="label label-warning" title="{tr}php-fpm (nginx) can't write here - thumbnail promotion and other on-disk writes will silently fail until this folder is chmod'd (as lester or root){/tr}">{tr}not nginx-writable{/tr}</span>
-							{/if}
 						</li>
 					{/foreach}
 				</ul>

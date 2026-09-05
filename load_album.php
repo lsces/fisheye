@@ -8,15 +8,15 @@
  * load_collection/load_discography plan this is the first piece of).
  *
  * No top-level discovery step the way load_program.php has one for shows - creating a NEW
- * collection gallery is "Add Music Collection" (load_music_collection.php, not yet built) on the
- * top-level gallery's own icon set instead; this page only ever lists album folders under an
- * *existing* collection gallery's own folder.
+ * collection gallery is "Add Music Collection" (load_music.php) on the top-level gallery's own
+ * icon set instead; this page only ever lists album folders under an *existing* collection
+ * gallery's own folder.
  *
  * Folder resolution: a collection gallery's title is expected to match a real folder directly
- * under one of the two on-disk music roots (fisheye_disk_storage_root's own "Music Modern/" or
- * "Music Classical/" - deliberately NOT split into separate config keys, per Lester 2026-09-05:
- * "no need to distinguish at all really it IS fisheye_disk_storage_root same as films"). Both are
- * checked; whichever actually contains a matching folder wins.
+ * under one of the base folders under fisheye_disk_storage_root's own Music/ (no separate config
+ * key for this - same fisheye_disk_storage_root as Films). All of Music/'s own subfolders are
+ * checked; whichever actually contains a matching folder wins - same generic "don't hardcode
+ * exactly two names" approach as load_music.php.
  *
  * @package fisheye
  * @subpackage functions
@@ -38,7 +38,6 @@ $gBitSystem->verifyPermission( 'p_fisheye_admin' );
 require_once dirname( __DIR__ ).'/liberty/plugins/mime.film.php';
 
 const LOAD_ALBUM_LIMIT = 40;
-const LOAD_ALBUM_ROOT_SUBDIRS = [ 'Music Modern', 'Music Classical' ];
 
 $galleryIdParam = (int)( $_REQUEST['gallery_id'] ?? 0 );
 if( !$galleryIdParam ) {
@@ -52,13 +51,17 @@ if( !$gallery->isValid() ) {
 $galleryTitle = $gallery->getTitle();
 
 $root = \Bitweaver\Liberty\mime_film_get_storage_root();
+$musicDir = $root.'Music/';
 $artistDir = null;
-if( !empty( $root ) ) {
-	foreach( LOAD_ALBUM_ROOT_SUBDIRS as $subDir ) {
-		$candidateDir = $root.$subDir.'/'.$galleryTitle.'/';
+if( !empty( $root ) && is_dir( $musicDir ) ) {
+	foreach( scandir( $musicDir ) ?: [] as $subDir ) {
+		if( $subDir === '.' || $subDir === '..' || !is_dir( $musicDir.$subDir ) ) {
+			continue;
+		}
+		$candidateDir = $musicDir.$subDir.'/'.$galleryTitle.'/';
 		if( is_dir( $candidateDir ) ) {
 			$artistDir = $candidateDir;
-			$artistRelative = $subDir.'/'.$galleryTitle.'/';
+			$artistRelative = 'Music/'.$subDir.'/'.$galleryTitle.'/';
 			break;
 		}
 	}

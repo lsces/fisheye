@@ -13,7 +13,7 @@
 		{if !$artistDir}
 			<div class="alert alert-warning">
 				{tr}No folder found on disk matching this gallery's title{/tr} ("{$galleryTitle|escape}")
-				{tr}under either Music Modern/ or Music Classical/.{/tr}
+				{tr}under any base folder inside Music/.{/tr}
 			</div>
 		{/if}
 
@@ -40,17 +40,23 @@
 			{form legend="" action="{$smarty.const.FISHEYE_PKG_URL}load_album.php"}
 				<input type="hidden" name="gallery_id" value="{$galleryIdParam}" />
 				<p>{tr}Showing up to{/tr} {$candidateLimit} {tr}not-yet-loaded albums for{/tr} "{$galleryTitle|escape}":</p>
+				<p><label><input type="checkbox" id="loadAlbumToggleAll" checked="checked" /> <strong>{tr}Select All{/tr}</strong></label></p>
 				<ul>
 					{foreach from=$candidates item=album}
 						<li>
 							<label>
-								<input type="checkbox" name="selected[]" value="{$album|escape}" checked="checked" />
+								<input type="checkbox" class="loadAlbumCheckbox" name="selected[]" value="{$album|escape}" checked="checked" />
 								{$album|escape}
 							</label>
 						</li>
 					{/foreach}
 				</ul>
 				<input type="submit" class="btn btn-primary" name="fImportAlbums" value="{tr}Load Selected Albums{/tr}" />
+				<script>
+					$('#loadAlbumToggleAll').on('change', function() {
+						$('.loadAlbumCheckbox').prop('checked', $(this).is(':checked'));
+					});
+				</script>
 			{/form}
 		{elseif $artistDir}
 			<p>{tr}Nothing to load - every album folder here is already registered.{/tr}</p>
