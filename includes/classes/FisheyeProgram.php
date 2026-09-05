@@ -192,50 +192,6 @@ class FisheyeProgram extends FisheyeGallery {
 	}
 
 	/**
-	 * Store real image bytes (fetched from a URL, or read from a local file - file_get_contents()
-	 * handles both transparently) as this show's own single image attachment - see
-	 * FisheyeSeason::attachThumbnail()'s identical docblock for the mechanism detail (synthetic
-	 * `_files_override` fed to LibertyMime's own upload path, explicit class scoping to bypass
-	 * FisheyeGallery's own store() override, which never touches attachments at all).
-	 *
-	 * Reuses the existing attachment slot if one's already there - see FisheyeSeason::
-	 * attachThumbnail()'s identical comment for why (a real bug found live 2026-09-02).
-	 *
-	 * @param string $pSourcePathOrUrl
-	 * @return bool
-	 */
-	private function attachThumbnail( string $pSourcePathOrUrl ): bool {
-		$imageData = @file_get_contents( $pSourcePathOrUrl );
-		if( empty( $imageData ) ) {
-			return false;
-		}
-		$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_thumb_' );
-		file_put_contents( $tmpFile, $imageData );
-
-		// Explicit class scoping - see getThumbnailUrl()'s comment for why $this->load() alone
-		// wouldn't populate mStorage here (FisheyeGallery::load() shortcuts past it).
-		\Bitweaver\Liberty\LibertyMime::load();
-		$existingAttachmentId = array_key_first( $this->mStorage ) ?: null;
-		$upload = [ 'name' => 'thumbnail.jpg', 'type' => 'image/jpeg', 'tmp_name' => $tmpFile, 'error' => 0, 'size' => filesize( $tmpFile ) ];
-		if( $existingAttachmentId ) {
-			$upload['attachment_id'] = $existingAttachmentId;
-		}
-		$pParamHash = [
-			'content_id' => $this->mContentId,
-			'skip_content_store' => true,
-			'_files_override' => [ $upload ],
-		];
-		$ret = \Bitweaver\Liberty\LibertyMime::store( $pParamHash );
-		@unlink( $tmpFile );
-		if( $ret ) {
-			// Explicit class scoping - see getThumbnailUrl()'s comment for why $this->load()
-			// alone wouldn't refresh mStorage here.
-			\Bitweaver\Liberty\LibertyMime::load();
-		}
-		return $ret;
-	}
-
-	/**
 	 * Promote one of this show's already-downloaded 'image' xref alternates (a local file under
 	 * the TV storage root's images/ folder) into the real, single thumbnail attachment - the
 	 * manual "change it" action Lester asked for, since the auto-picked (Plex's own currently-

@@ -1,12 +1,15 @@
-{* Placeholder base for Music Album galleries - currently identical to fixed_grid, own
-   gallery_views folder so it can diverge (floaticons, empty-state message, etc.) once that
-   need is scoped, same pattern as film_grid. *}
+{* Same responsive flex grid as film_grid (8 across on a wide monitor, folding to 4 then 2 - see
+   that template's own docblock for why this isn't cols_per_page/Bootstrap-col driven). Own
+   floaticon set (music_gallery_icons_inc.tpl - Edit/Image Order/Public/Delete, same shape as
+   program_gallery_icons_inc.tpl minus a "Load X" action - no load_music.php/load_collection.php
+   equivalent exists yet for music, registration is CLI-only via FisheyeAlbum::registerFromDisk()
+   for now) - same tidy film_grid/program_grid already had, the generic gallery_icons_inc.tpl's
+   own Download Gallery/Add Image actions don't apply to a top-level Music gallery. *}
 {strip}
 <div class="display fisheye">
 	<header>
-		{include file="bitpackage:fisheye/gallery_icons_inc.tpl"}
-		<h1>{$gContent->getTitle()|escape}</h1>
-		{include file="bitpackage:fisheye/gallery_breadcrumb_inc.tpl"}
+		{include file="bitpackage:fisheye/music_gallery_icons_inc.tpl"}
+		<h1>{foreach from=$gContent->getBreadcrumbTrail() item=crumb}<a href="{$crumb.url|escape}">{$crumb.title|escape}</a> - {/foreach}{$gContent->getTitle()|escape}</h1>
 	</header>
 
 	{if $gContent->mInfo.data && $gContent->getPreference('show_description') ne 'n'}
@@ -20,16 +23,15 @@
 
 		{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='body' serviceHash=$gContent->mInfo}
 
-		{assign var="cols" value=$gContent->mInfo.cols_per_page|default:4}
-		{assign var="tdWidth" value="`100/$cols`"}
-		<table class="thumbnailblock" style="width:100%">
-		{counter assign="imageCount" start="0" print=false}
+		<style>
+			.music-grid { display: flex; flex-wrap: wrap; margin: 0 -5px; }
+			.music-grid-item { box-sizing: border-box; padding: 5px; text-align: center; width: 12.5%; }
+			@media (max-width: 1199px) { .music-grid-item { width: 25%; } }
+			@media (max-width: 767px) { .music-grid-item { width: 50%; } }
+		</style>
+		<div class="music-grid">
 		{foreach from=$gContent->mItems item=galItem key=itemContentId}
-			{if $imageCount % $cols == 0}
-				<tr><!-- Begin Image Row -->
-			{/if}
-
-			<td style="width:{$tdWidth}%; vertical-align:top; text-align:center;"><!-- Begin Image Cell -->
+			<div class="music-grid-item">
 				{box class="box `$galItem->mInfo.content_type_guid`" style="margin-left:0;"}
 					<a href="{$galItem->getDisplayUrl()|escape}">
 						<img class="thumb img-responsive center-block" src="{$galItem->getThumbnailUri($gContent->getField('thumbnail_size'))}" alt="{$galItem->mInfo.title|escape|default:'image'}" />
@@ -42,19 +44,11 @@
 						<p>{$galItem->mInfo.data|truncate:200:"..."|escape}</p>
 					{/if}
 				{/box}
-			</td><!-- End Image Cell -->
-			{counter}
-
-			{if $imageCount % $cols == 0}
-				</tr><!-- End Image Row -->
-			{/if}
-
+			</div>
 		{foreachelse}
-			<tr><td class="norecords">{tr}This gallery is empty{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}upload.php?gallery_id={$gContent->mGalleryId ?? 0}">Upload pictures!</a></td></tr>
+			<p class="norecords">{tr}This gallery is empty{/tr}. <a href="{$smarty.const.FISHEYE_PKG_URL}upload.php?gallery_id={$gContent->mGalleryId ?? 0}">Upload pictures!</a></p>
 		{/foreach}
-
-		{if $imageCount % $cols != 0}</tr>{/if}
-		</table>
+		</div>
 		{pagination gallery_id=$gContent->mGalleryId ?? 0}
 	</div><!-- end .body -->
 

@@ -563,6 +563,45 @@ class FisheyeFilm extends FisheyeImage {
 		$sourceFile = $this->mStorage[$this->mContentId]['source_file'] ?? '';
 		$baseName = pathinfo( $sourceFile, PATHINFO_FILENAME ) ?: $this->getTitle();
 
+		// Auto-pick a real cover (Plex's own currently-selected poster) as the primary thumbnail
+		// in place of the video frame-grab fallback (mime_video_create_thumbnail(), via
+		// renderThumbnails()'s video-type branch) - Lester, 2026-09-05: "FisheyeFilm SHOULD have
+		// the option to attach a DVD image in place of the last resort screen grab". Once only -
+		// gated on $existingImagePaths being empty (this method's first-ever run for this film),
+		// same "don't silently override a later manual choice" reasoning as Season/Program/
+		// Album's own auto-pick gate (empty($this->mStorage) there - doesn't apply to Film, whose
+		// mStorage always already has one entry, the video's own mimefilm attachment).
+		//
+		// Deliberately NOT the shared FisheyeBase::attachThumbnail() Season/Program/Album use -
+		// that reuses array_key_first($this->mStorage) as the attachment to overwrite, which for
+		// a film would be the video's own mimefilm attachment (mStorage is keyed by content_id,
+		// same as the video's), corrupting the file reference entirely. promoteImageToThumbnail()
+		// is the safe mechanism already established here instead - it only ever touches files
+		// directly under storage/attachments/<branch>/, never the attachment/DB layer, so it
+		// can't collide with the video attachment no matter what's already in mStorage.
+		if( empty( $existingImagePaths ) ) {
+			$postersXml = @file_get_contents( "http://localhost:32400/library/metadata/$metadataItemId/posters?X-Plex-Token=".urlencode( $plexToken ) );
+			if( $postersXml !== false && preg_match_all( '#<Photo\b[^>]*/>#', $postersXml, $tagMatches ) ) {
+				foreach( $tagMatches[0] as $tag ) {
+					if( str_contains( $tag, 'selected="1"' ) && preg_match( '#\bthumb="([^"]+)"#', $tag, $m ) ) {
+						$thumb = html_entity_decode( $m[1] );
+						$thumbUrl = str_starts_with( $thumb, '/' )
+							? "http://localhost:32400$thumb".( str_contains( $thumb, '?' ) ? '&' : '?' )."X-Plex-Token=".urlencode( $plexToken )
+							: $thumb;
+						$imageData = @file_get_contents( $thumbUrl );
+						if( $imageData !== false ) {
+							$selectedFileName = "$baseName-poster-selected.jpg";
+							file_put_contents( $imagesDir.$selectedFileName, $imageData );
+							if( $this->promoteImageToThumbnail( $selectedFileName ) ) {
+								$summary['items'][] = 'thumbnail: attached from Plex\'s own selected poster (overrides the video frame-grab fallback)';
+							}
+						}
+						break;
+					}
+				}
+			}
+		}
+
 		// TMDB serves the same image at several pre-resized widths from a predictable URL (its
 		// own image CDN, not a Plex-specific thing) - swapping the 'key' attribute's '/original/'
 		// segment for one of these avoids downloading/storing full-resolution (1-4MB). w342/w780

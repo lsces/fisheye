@@ -117,52 +117,6 @@ class FisheyeSeason extends FisheyeImage {
 	}
 
 	/**
-	 * Store real image bytes (fetched from a URL, or read from a local file - file_get_contents()
-	 * handles both transparently) as this content's own single image attachment, via the normal
-	 * mime.image.php upload path fed a synthetic upload array (`_files_override`, the same
-	 * mechanism edit_image.php uses for a real HTTP upload - see LibertyMime::verify()'s own
-	 * comment on this). Called explicitly as \Bitweaver\Liberty\LibertyMime::store() (bypassing
-	 * FisheyeGallery/FisheyeImage's own store() overrides where relevant) since attachment
-	 * processing lives at that level; 'skip_content_store' avoids redundantly re-saving the
-	 * content row itself, this call is attachment-only.
-	 *
-	 * Reuses the existing attachment slot if one's already there (e.g. a manual
-	 * promoteImageToThumbnail() after the auto-pick already ran) rather than always creating a
-	 * fresh one - without an explicit attachment_id, LibertyMime::store() always takes the
-	 * create path, which collides on liberty_files' primary key the second time round (found
-	 * live 2026-09-02: mime_image_store() assumes no row exists yet at its computed file_id).
-	 *
-	 * @param string $pSourcePathOrUrl
-	 * @return bool
-	 */
-	private function attachThumbnail( string $pSourcePathOrUrl ): bool {
-		$imageData = @file_get_contents( $pSourcePathOrUrl );
-		if( empty( $imageData ) ) {
-			return false;
-		}
-		$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_thumb_' );
-		file_put_contents( $tmpFile, $imageData );
-
-		$this->load();
-		$existingAttachmentId = array_key_first( $this->mStorage ) ?: null;
-		$upload = [ 'name' => 'thumbnail.jpg', 'type' => 'image/jpeg', 'tmp_name' => $tmpFile, 'error' => 0, 'size' => filesize( $tmpFile ) ];
-		if( $existingAttachmentId ) {
-			$upload['attachment_id'] = $existingAttachmentId;
-		}
-		$pParamHash = [
-			'content_id' => $this->mContentId,
-			'skip_content_store' => true,
-			'_files_override' => [ $upload ],
-		];
-		$ret = \Bitweaver\Liberty\LibertyMime::store( $pParamHash );
-		@unlink( $tmpFile );
-		if( $ret ) {
-			$this->load();
-		}
-		return $ret;
-	}
-
-	/**
 	 * Promote one of this season's already-downloaded 'image' xref alternates (a local file
 	 * under the TV storage root's images/ folder) into the real, single thumbnail attachment -
 	 * the manual "change it" action Lester asked for, since the auto-picked (Plex's own

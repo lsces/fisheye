@@ -393,7 +393,7 @@ class FisheyeGallery extends FisheyeBase {
 		// regardless - images_per_page (= rows*cols) is what the existing shared pagination
 		// mechanism reads - fixed at 4*8=32, a page size that happens to fill a whole number of
 		// desktop-width rows.
-		if( in_array( $pParamHash['gallery_pagination'] ?? null, [ FISHEYE_PAGINATION_FILM_GRID, FISHEYE_PAGINATION_PROGRAM_GRID ], true ) ) {
+		if( in_array( $pParamHash['gallery_pagination'] ?? null, [ FISHEYE_PAGINATION_FILM_GRID, FISHEYE_PAGINATION_PROGRAM_GRID, FISHEYE_PAGINATION_MUSIC_GRID ], true ) ) {
 			$pParamHash['rows_per_page'] = 4;
 			$pParamHash['cols_per_page'] = 8;
 		} else {

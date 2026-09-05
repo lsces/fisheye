@@ -376,6 +376,74 @@ not ready for primetime
 	}
 
 	/**
+	 * Attach a real thumbnail image (a downloaded Plex poster, or a local cover.jpg/folder.jpg
+	 * read straight off disk) as this content's own primary LibertyMime attachment - shared here
+	 * rather than duplicated on FisheyeSeason/FisheyeProgram/FisheyeAlbum separately (found live
+	 * 2026-09-05 building the music feature: all three had grown byte-identical copies of this -
+	 * "this perhaps is why I would prefer a single set of code rather than reinventing the wheel
+	 * every time"). FisheyeFilm doesn't need this at all - its own thumbnail comes from a frame
+	 * grab of the real video file (mime_video_create_thumbnail(), via renderThumbnails()), not a
+	 * separately-attached cover image.
+	 *
+	 * Two fixes over the original per-class copies, found live 2026-09-05:
+	 * - Generates thumbs/ synchronously (calls renderThumbnails() directly) rather than leaving it
+	 *   to the async thumbnailer.php cron queue - a freshly-registered album/season/show otherwise
+	 *   showed the generic "generating_thumbnails.png" placeholder until that cron next ran.
+	 * - Deletes the just-stored original afterwards, once thumbs/ genuinely exist - bitweaver only
+	 *   ever displays the thumbs/ set, never the original, for this kind of synthetic cover
+	 *   attachment (unlike a real photo/video/PDF upload, where the original file *is* the actual
+	 *   content someone might want to view/download - mime_pdf_thumbnail() already establishes
+	 *   this same "keep only the derived thumbs, delete the intermediate render" convention for
+	 *   its own thumb.jpg). Leaving the original in place was harmless but pointless - out of place
+	 *   next to a bare thumbs/ set every other attachment on this content type keeps.
+	 *
+	 * @param string $pSourcePathOrUrl  a local file path or a fetchable URL (e.g. a Plex thumb URL)
+	 * @return bool
+	 */
+	protected function attachThumbnail( string $pSourcePathOrUrl ): bool {
+		$imageData = @file_get_contents( $pSourcePathOrUrl );
+		if( empty( $imageData ) ) {
+			return false;
+		}
+		$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_thumb_' );
+		file_put_contents( $tmpFile, $imageData );
+
+		// Explicit class scoping throughout (not $this->load()/getSourceFile()) - FisheyeGallery
+		// (FisheyeProgram's own parent) shortcuts its own load() past populating mStorage, and
+		// doesn't have renderThumbnails()/getSourceFile() at all (those are FisheyeImage-only,
+		// a sibling branch off FisheyeBase, not an ancestor of FisheyeProgram) - going straight to
+		// LibertyMime's own base implementation works correctly for both hierarchies alike.
+		\Bitweaver\Liberty\LibertyMime::load();
+		$existingAttachmentId = array_key_first( $this->mStorage ) ?: null;
+		$upload = [ 'name' => 'thumbnail.jpg', 'type' => 'image/jpeg', 'tmp_name' => $tmpFile, 'error' => 0, 'size' => filesize( $tmpFile ) ];
+		if( $existingAttachmentId ) {
+			$upload['attachment_id'] = $existingAttachmentId;
+		}
+		$pParamHash = [
+			'content_id' => $this->mContentId,
+			'skip_content_store' => true,
+			'_files_override' => [ $upload ],
+		];
+		$ret = \Bitweaver\Liberty\LibertyMime::store( $pParamHash );
+		@unlink( $tmpFile );
+		if( $ret ) {
+			\Bitweaver\Liberty\LibertyMime::load();
+			// method_exists guard - FisheyeProgram has no renderThumbnails()/getSourceFile() at
+			// all (see above), so it keeps the old async-cron/keep-original behaviour rather than
+			// fatalling; every FisheyeImage-descended caller (Season/Album) gets the synchronous
+			// generate-then-delete fix.
+			if( method_exists( $this, 'renderThumbnails' ) ) {
+				$this->renderThumbnails();
+				$sourceFile = $this->getSourceFile();
+				if( $sourceFile && is_file( $sourceFile ) ) {
+					@unlink( $sourceFile );
+				}
+			}
+		}
+		return $ret;
+	}
+
+	/**
 	 * Whether addImageXrefFile() below actually does anything for this content type - a real
 	 * method call, callable from a template (`{if $gContent->supportsAddImage()}`, templates/
 	 * xref/view_images_group.tpl), unlike a bare `method_exists(...)` call, which Smarty here
