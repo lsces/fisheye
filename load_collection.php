@@ -25,6 +25,7 @@ namespace Bitweaver\Fisheye;
 use Bitweaver\KernelTools;
 
 require_once '../kernel/includes/setup_inc.php';
+require_once dirname( __DIR__ ).'/liberty/plugins/mime.film.php';
 
 global $gBitSystem, $gBitSmarty, $gBitDb;
 

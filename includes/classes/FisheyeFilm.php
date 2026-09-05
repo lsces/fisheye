@@ -14,6 +14,12 @@ namespace Bitweaver\Fisheye;
 
 use Bitweaver\KernelTools;
 
+// mime_film_get_storage_root() below is only auto-loaded via the LibertyMime attachment-plugin
+// dispatch, which doesn't fire on every entry path - require it directly rather than depending on
+// some other content on the same page happening to trigger that loader first. Same fix as
+// FisheyeProgram.php/FisheyeSeason.php.
+require_once dirname( __DIR__, 3 ).'/liberty/plugins/mime.film.php';
+
 define( 'FISHEYEFILM_CONTENT_TYPE_GUID', 'fisheyefilm' );
 
 class FisheyeFilm extends FisheyeImage {
