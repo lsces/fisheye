@@ -92,7 +92,15 @@ if( $folderName === null && is_dir( $filmsDir ) ) {
 }
 
 $result = null;
-if( !empty( $_REQUEST['fImport'] ) ) {
+if( !empty( $_REQUEST['fImport'] ) && empty( $gBitSystem->getConfig( 'fisheye_plex_token', '' ) ) ) {
+	// registerFromDisk() -> reloadPlexMetadata() silently skips just the imdb/tmdb GUID lookup
+	// when this is unset (genre/cast/rating/duration still come from Plex's local db, no token
+	// needed there) - fine for a single film re-synced later via 'Reload Metadata', but a whole
+	// batch importing "successfully" while silently missing imdb/tmdb links for every film isn't
+	// something to only notice after the fact (Lester, 2026-09-05: a Plex reinstall had silently
+	// cleared this). Stop the batch outright rather than import anything with it unset.
+	$result = [ 'error' => KernelTools::tra( 'fisheye_plex_token is not configured - set it on the General Settings tab first (imdb/tmdb links would silently be skipped for every film in this batch otherwise).' ) ];
+} elseif( !empty( $_REQUEST['fImport'] ) ) {
 	$fetchImages = !empty( $_REQUEST['fetch_images'] );
 	$batchStart = microtime( true );
 	$result = [ 'imported' => [], 'already' => [], 'skipped' => [], 'errors' => [], 'fetch_images' => $fetchImages ];

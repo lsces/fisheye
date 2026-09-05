@@ -37,6 +37,9 @@
 		{/if}
 
 		{if $result}
+			{if $result.error}
+				<div class="alert alert-danger">{$result.error|escape}</div>
+			{/if}
 			{if $result.imported}
 				<div class="alert alert-success">
 					<p>{tr}Imported{/tr} {$result.imported|@count} {tr}in{/tr} {$result.total_seconds}s:</p>
