@@ -16,6 +16,8 @@
 		</dl>
 		<p class="episode-play-action">
 			<a class="btn btn-primary" id="episode-play-btn-{$smarty.foreach.episodeDetails.index}" href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$episode.xref_id}" target="_blank" rel="noopener" onclick="return fisheyeToggleEpisodePlayback(this, this.href);">&#9658; {tr}Play Episode{/tr}</a>
+			{* Experimental fallback for content the browser can't play inline (e.g. not yet mpeg2_tidy.php'd) - downloads a one-line .m3u handed off to VLC (or whatever's registered for it) rather than trying inline playback. *}
+			<a class="btn btn-secondary" href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$episode.xref_id}&vlc=1">VLC</a>
 		</p>
 	</div>
 {/foreach}

@@ -18,6 +18,12 @@ namespace Bitweaver\Fisheye;
 
 use Bitweaver\KernelTools;
 
+// mime_film_get_tvshow_storage_root() below is only auto-loaded via the LibertyMime
+// attachment-plugin dispatch, which never fires for a season (no video attachment of its own) -
+// require it directly rather than depending on some other content on the same page happening to
+// trigger that loader first. Same fix as FisheyeProgram.php.
+require_once dirname( __DIR__, 3 ).'/liberty/plugins/mime.film.php';
+
 define( 'FISHEYESEASON_CONTENT_TYPE_GUID', 'fisheyeseason' );
 
 class FisheyeSeason extends FisheyeImage {

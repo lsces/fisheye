@@ -208,13 +208,27 @@ function mpeg2_tidy_is_already_loaded( string $pRelativePath ): bool {
 }
 
 $scope = null;
+$show = null;
 foreach( $argv ?? [] as $arg ) {
 	if( str_starts_with( $arg, '--scope=' ) ) {
 		$scope = substr( $arg, strlen( '--scope=' ) );
+	} elseif( str_starts_with( $arg, '--show=' ) ) {
+		$show = substr( $arg, strlen( '--show=' ) );
 	}
 }
 
 $allEntries = mpeg2_tidy_scan_roots( $scope );
+// --show=<name> cherry-picks a single show/film by its top-level folder name (relative's 2nd
+// path segment, e.g. 'TV Shows/Blakes 7/...') - lets one machine be pointed at a specific
+// title (e.g. splitting the backlog across desktop/srv9/srv10 by hand) without also re-scanning
+// or re-probing the rest of the library. Filtered here, before ffprobe, not just at $candidates -
+// probing every other show's codec would be wasted work when only one is wanted.
+if( !empty( $show ) ) {
+	$allEntries = array_values( array_filter( $allEntries, function( $entry ) use ( $show ) {
+		$parts = explode( '/', $entry['relative'], 3 );
+		return ( $parts[1] ?? null ) === $show;
+	} ) );
+}
 $allPaths = array_map( fn( $e ) => $e['root'].$e['relative'], $allEntries );
 $codecs = mpeg2_tidy_video_codecs_parallel( $allPaths );
 

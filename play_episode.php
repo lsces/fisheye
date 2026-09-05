@@ -55,6 +55,25 @@ if( empty( $root ) || !is_file( $path ) ) {
 	$gBitSystem->fatalError( KernelTools::tra( 'Video file not found' ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
 }
 
+// Experimental "VLC" button fallback for content the browser's own <video> can't play (e.g. a
+// not-yet mpeg2_tidy.php'd original) - a one-line .m3u pointing back at this same URL (minus
+// &vlc=1), rather than the raw video bytes. Browsers don't handle audio/x-mpegurl inline, so this
+// downloads and hands off to whatever's registered for .m3u locally (VLC, by default on this
+// desktop) - sidesteps the Firefox "Open with VLC" addon entirely (it only offers its context
+// menu on links ending in a recognised media extension, which this endpoint's query-string URL
+// never did).
+if( !empty( $_REQUEST['vlc'] ) ) {
+	$scheme = ( !empty( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] !== 'off' ) ? 'https' : 'http';
+	$streamUrl = $scheme.'://'.$_SERVER['HTTP_HOST'].$_SERVER['PHP_SELF'].'?xref_id='.$xrefId;
+	// video/vnd.mpegurl, not the more common audio/x-mpegurl - this desktop's own mimeapps.list
+	// maps that exact string to vlc.desktop (confirmed live); audio/x-mpegurl falls back to
+	// brasero here instead, which is why the button downloaded fine but launched nothing.
+	header( 'Content-Type: video/vnd.mpegurl' );
+	header( 'Content-Disposition: attachment; filename="'.pathinfo( $path, PATHINFO_FILENAME ).'.m3u"' );
+	echo "#EXTM3U\n#EXTINF:-1,".$gContent->getTitle()."\n".$streamUrl."\n";
+	exit;
+}
+
 $mimeType = $gBitSystem->verifyMimeType( $path );
 header( 'Content-Disposition: inline; filename="'.basename( $path ).'"' );
 \Bitweaver\Liberty\liberty_serve_range_file( $path, $mimeType );
