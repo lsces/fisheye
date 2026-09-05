@@ -32,7 +32,7 @@ a Film, MusicBrainz doesn't show up on a Season, etc.
 | `FisheyeFilm` | `FisheyeImage` | A single film | Yes — the video itself, a real `LibertyMime` attachment |
 | `FisheyeSeason` | `FisheyeImage` | One season of a show | No — pure metadata container over its episodes' xref rows |
 | `FisheyeProgram` | `FisheyeGallery` | A TV show | No — but has its own attachment slot for a selected thumbnail (see below) |
-| `FisheyeAlbum` | `FisheyeImage` | A music album | Registered, xref vocabulary defined; playback/browsing UI not built out yet |
+| `FisheyeAlbum` | `FisheyeImage` | A music album | Yes — real thumbnail attachment (cover art), tracks are raw xrefs like Season's episodes |
 
 Hierarchy: **Show → Season → Episode** / **Artist → Album → Track**; a Film stands alone
 (single-level). Show/Artist/Composer as a genuine top-level browsable concept (a computed listing
@@ -412,8 +412,13 @@ Gallery description text is **plain text**, not wiki/rich text — use `data|esc
 - A UI for managing the xref vocabulary itself (add/edit groups and items through bitweaver,
   rather than a hand-authored scheme applied via `LibertyXrefScheme::apply()`) — real, separate
   work, not started.
-- Music/album/track build-out — `FisheyeAlbum` is registered with its own xref vocabulary, but no
-  view/edit pages, Plex integration, or playback UI exist for it yet, unlike film/TV.
+- Music/album/track build-out — `view_album.php`/`edit_album.php`/`load_album.php`/
+  `play_track.php` exist, `FisheyeAlbum::registerFromDisk()` reads embedded ffprobe tags as the
+  primary metadata source and `reloadPlexImages()` covers Plex cover/alternate-image fetch, same
+  shape as Film/Season/Program. Still not built: `load_collection.php`/`load_discography.php`
+  bulk importers (single-CD registration only so far, one folder at a time), Discogs as an actual
+  image source (the `discogs` xref item is just an external link today, same as `mbid`), and the
+  Artist/Composer top-level browsable concept mentioned above.
 - A one-off single-video show is currently registered as a full show/season/episode, faking an
   `S01E01`-style episode number just to fit the model — a plain "Videos" gallery (load_film.php-
   style, no season/episode modeling at all) would fit these better. Not started.
