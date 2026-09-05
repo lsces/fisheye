@@ -76,9 +76,11 @@ const MPEG2_TIDY_EXTENSIONS = [ 'mkv', 'mp4', 'm4v', 'avi' ];
  * other's work).
  *
  * @param string|null $pScope  'films', 'tvshows', or null for no filtering
+ * @param string|null $pShow   further narrows to one show/film's own folder within that scope
+ *                             (requires $pScope) - see the walkDir note below for why
  * @return array
  */
-function mpeg2_tidy_scan_roots( ?string $pScope = null ): array {
+function mpeg2_tidy_scan_roots( ?string $pScope = null, ?string $pShow = null ): array {
 	global $gBitSystem;
 	$found = [];
 	$roots = [ \Bitweaver\Liberty\mime_film_get_storage_root() ];
@@ -103,8 +105,15 @@ function mpeg2_tidy_scan_roots( ?string $pScope = null ): array {
 		$realRoot = rtrim( $realRoot, '/' ).'/';
 		// When scoped, walk only the matching subfolder directly - not the whole root then
 		// filter - so an unrelated top-level folder (Music/Maps/Library/... on a shared-root
-		// install like desktop's) never gets walked at all, not just skipped per-file.
+		// install like desktop's) never gets walked at all, not just skipped per-file. Same
+		// reasoning one level deeper for $pShow - walking the whole scope then discarding
+		// everything but one show is cheap on local disk but genuinely slow over a network mount
+		// (srv10's sshfs bridge onto srv9's media, 2026-09-05) where every directory entry costs
+		// a round trip.
 		$walkDir = $scopePrefix !== null ? $realRoot.$scopePrefix : $realRoot;
+		if( !empty( $pShow ) && $scopePrefix !== null ) {
+			$walkDir .= $pShow.'/';
+		}
 		if( !is_dir( $walkDir ) ) {
 			continue;
 		}
@@ -217,18 +226,10 @@ foreach( $argv ?? [] as $arg ) {
 	}
 }
 
-$allEntries = mpeg2_tidy_scan_roots( $scope );
-// --show=<name> cherry-picks a single show/film by its top-level folder name (relative's 2nd
-// path segment, e.g. 'TV Shows/Blakes 7/...') - lets one machine be pointed at a specific
-// title (e.g. splitting the backlog across desktop/srv9/srv10 by hand) without also re-scanning
-// or re-probing the rest of the library. Filtered here, before ffprobe, not just at $candidates -
-// probing every other show's codec would be wasted work when only one is wanted.
-if( !empty( $show ) ) {
-	$allEntries = array_values( array_filter( $allEntries, function( $entry ) use ( $show ) {
-		$parts = explode( '/', $entry['relative'], 3 );
-		return ( $parts[1] ?? null ) === $show;
-	} ) );
-}
+// --show=<name> cherry-picks a single show/film by its top-level folder name - lets one machine
+// be pointed at a specific title (e.g. splitting the backlog across desktop/srv9/srv10 by hand)
+// without walking, probing, or re-transcoding the rest of the library.
+$allEntries = mpeg2_tidy_scan_roots( $scope, $show );
 $allPaths = array_map( fn( $e ) => $e['root'].$e['relative'], $allEntries );
 $codecs = mpeg2_tidy_video_codecs_parallel( $allPaths );
 
