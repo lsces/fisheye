@@ -1,10 +1,10 @@
 <?php
 /**
  * Admin page for registering an already-on-disk film via mime.film.php's no-copy attachment path
- * - the real, permanent replacement for hand-editing import_disk_test.php's $toRegister array and
- * running it via CLI. Runs as a genuine authenticated admin request (php-fpm as nginx), so
- * thumbnail generation under storage/attachments/ works correctly with no permission workarounds -
- * see fisheye.md's 2026-09-02 "through bitweaver, not hacks" entry for why that matters.
+ * - the real, permanent replacement for a one-off CLI smoke-test script hand-editing an array of
+ * files to register. Runs as a genuine authenticated admin request (php-fpm as the web server
+ * user), so thumbnail generation under storage/attachments/ works correctly with no permission
+ * workarounds needed.
  *
  * Plex metadata backfill itself lives in FisheyeFilm::reloadPlexMetadata() (moved there
  * 2026-09-02) so edit_film.php's 'Reload Metadata' action can reuse it for a film imported

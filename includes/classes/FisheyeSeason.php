@@ -82,11 +82,10 @@ class FisheyeSeason extends FisheyeImage {
 
 	/**
 	 * A season has no mime attachment of its own at all (no single file - it's a pure metadata
-	 * container over its episodes' own xref rows, see fisheye.md's 2026-09-01/02 entries), so
+	 * container over its episodes' own xref rows), so
 	 * FisheyeImage's own mime-derived thumbnail is never populated by the normal load path.
 	 *
-	 * Fixed properly 2026-09-02 (second attempt - see fisheye.md's same-dated "real attachment"
-	 * entry): a season DOES have its own unused attachment slot (FisheyeImage descends from
+	 * Fixed properly by recognising that a season DOES have its own unused attachment slot (FisheyeImage descends from
 	 * LibertyMime just like any real photo/film does - it just never had anything stored there),
 	 * so reloadPlexImages() now stores a real image attachment via attachThumbnail() the same way
 	 * a normal upload would. This reads that attachment directly via LibertyMime's own storage-
@@ -203,7 +202,7 @@ class FisheyeSeason extends FisheyeImage {
 	 *
 	 * Resolves the TV-specific per-show storage root (mime_film_get_tvshow_storage_root(),
 	 * A-M/N-Z split) via the show's own title - found by walking this season's parent gallery
-	 * (the show-level FisheyeGallery it's linked into - see fisheye.md's Collections entry)
+	 * (the show-level FisheyeGallery it's linked into)
 	 * rather than any field on the season itself, which doesn't carry the
 	 * show's name directly.
 	 *
@@ -214,10 +213,9 @@ class FisheyeSeason extends FisheyeImage {
 	 * one thing matchPlexSeasonMetadataItem() needs to find the right Plex season - it matches by
 	 * an existing 'episode' xref's own file path, chicken-and-egg otherwise), then immediately call
 	 * reloadPlexEpisodes() to replace that single seed row with the show's real full episode list
-	 * from Plex. Mirrors import_episode_test.php's proven manual sequence (the one-off smoke test
-	 * this supersedes - see that file's own docblock) rather than reinventing it, with the season
-	 * linked into a real FisheyeProgram gallery instead of that script's plain-FisheyeGallery
-	 * fallback (FisheyeProgram didn't exist yet when it was written).
+	 * from Plex. Mirrors the proven manual sequence a superseded one-off smoke test established,
+	 * with the season linked into a real FisheyeProgram gallery instead of that script's plain-
+	 * FisheyeGallery fallback (FisheyeProgram didn't exist yet when it was written).
 	 *
 	 * Season title convention: "<show title> - <season folder name>" (e.g. "Example Show -
 	 * Season 1", "Example Show - Specials") - the folder name is used verbatim rather than
@@ -377,7 +375,7 @@ class FisheyeSeason extends FisheyeImage {
 
 	/**
 	 * Fetch this season's full episode list from Plex - the "Load Episodes" action,
-	 * superseding the one-off import_episode_test.php script that had
+	 * superseding an earlier one-off smoke test that had
 	 * registered only the one episode it was hand-fed. Rebuild-not-diff, same as every other
 	 * reload* method here: every 'episode' xref row for this content_id is deleted before
 	 * re-inserting, since 'episode' is multiple=1 and storeXref() has no natural key to update
@@ -394,7 +392,9 @@ class FisheyeSeason extends FisheyeImage {
 	 *
 	 * Each episode's full packet (title/summary/air_date/director/writer/star/content_rating/
 	 * duration) is JSON-encoded into the xref row's `data` column (via the 'edit' param key -
-	 * see import_episode_test.php's own comment on that non-obvious key name), so a single
+	 * LibertyContent::verify() only maps content_store['data'] from $pParamHash['edit'], not a
+	 * literal 'data' key, a non-obvious gotcha worth remembering when storing anything this way),
+	 * so a single
 	 * already-loaded xref row carries everything view_season.php needs to show when that episode
 	 * is selected - no per-episode page/request needed, matching Plex's own smart-TV pattern of
 	 * a live highlight-swaps-the-detail-panel interaction rather than navigating away.
@@ -585,8 +585,8 @@ class FisheyeSeason extends FisheyeImage {
 	/**
 	 * Fetch alternate poster/backdrop images from Plex for this season, same shape as
 	 * FisheyeFilm::reloadPlexImages() (per-type idempotency, w342/w780 TMDB sizes, 5-per-type
-	 * cap, xref-based storage - see that method's own docblock and fisheye.md's 2026-09-02
-	 * entries for the fuller reasoning, not repeated here). Differences specific to a season:
+	 * cap, xref-based storage - see that method's own docblock for the fuller reasoning, not
+	 * repeated here). Differences specific to a season:
 	 * matched via matchPlexSeasonMetadataItem() (no file of its own to match by directly), and
 	 * the shared `images/` folder lives under the TV-specific per-show root rather than
 	 * fisheye_disk_storage_root, since a season has no single source file to derive a filename

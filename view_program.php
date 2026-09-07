@@ -3,8 +3,7 @@
  * Dedicated view page for a TV show ("program" - FisheyeProgram, extends FisheyeGallery) -
  * show-level facts (genre/cast/rating/external links, same allXrefs() pattern view_film.php
  * uses) plus a grid of this show's own season members. Deliberately separate from the generic
- * gallery view.php, same reasoning as view_film.php being separate from view_image.php - see
- * fisheye.md's 2026-09-02 "program liberty object" entry for the wider design.
+ * gallery view.php, same reasoning as view_film.php being separate from view_image.php.
  *
  * Named view_program.php (not its original list_program.php) to match the view_X.php convention
  * every other per-item content type uses (view_film.php, view_image.php) - the old name made a

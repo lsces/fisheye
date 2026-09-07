@@ -2,7 +2,7 @@
 /**
  * Dedicated view page for film content (mime.film.php-backed FisheyeImage rows) - deliberately
  * separate from view_image.php rather than folding film-specific rendering into the generic
- * photo view. See liberty.md's 2026-09-01 entries for the wider design.
+ * photo view.
  *
  * @package fisheye
  * @subpackage functions
@@ -34,10 +34,9 @@ $genres = $directors = $writers = $stars = [];
 $contentRating = $durationMs = null;
 $externalLinks = [];
 // this film's own alternate poster/backdrop images (FisheyeFilm::reloadPlexImages()) - xref-based,
-// not a second liberty_attachments row per image, see fisheye.md's 2026-09-02 "'images' xref
-// group" entry. Rendered via view_extra_image.php (xref_id only, never a raw path - see that
-// script's own docblock for why) rather than a direct URL, since these files live outside
-// storage/attachments/ with no nginx location serving that tree yet.
+// not a second liberty_attachments row per image. Rendered via view_extra_image.php (xref_id only,
+// never a raw path - see that script's own docblock for why) rather than a direct URL, since these
+// files live outside storage/attachments/ with no nginx location serving that tree yet.
 $filmImages = [];
 // this film's own bonus content, for a DVD-rip-with-extras style folder - Featurettes/ is no
 // different to Season/, same xref-on-the-parent's-own-content_id shape

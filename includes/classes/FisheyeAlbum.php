@@ -3,8 +3,8 @@
  * Music album — extends FisheyeImage with content_type_guid='fisheyealbum'.
  *
  * The real, folder-leaf content_id in the artist->album->track tree (an "artist"/"composer"
- * itself has no content_id at all - it's a computed, FoodDay-pattern browsing level over its
- * albums, not yet built - see fisheye.md's 2026-09-02 entry). Ring-fences album-level metadata
+ * itself has no content_id at all - it's a computed browsing level over its
+ * albums, not a stored one, not yet built). Ring-fences album-level metadata
  * (artist/composer, MusicBrainz+Discogs links) plus the TRACK xref item away from plain
  * fisheyeimage photo rows and from FisheyeFilm/FisheyeSeason's own item sets - no other
  * behavioural difference from FisheyeImage, same pattern as Contact/ContactPerson/ContactBusiness.

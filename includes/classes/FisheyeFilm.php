@@ -5,8 +5,7 @@
  * Exists purely to ring-fence film-specific xref_group/item registrations (genre/director/
  * writer/star/content_rating/duration, IMDB link) away from plain fisheyeimage photo rows and
  * from FisheyeSeason/FisheyeAlbum's own item sets — no behavioural difference from FisheyeImage
- * otherwise, same pattern as Contact/ContactPerson/ContactBusiness. See liberty.md's 2026-09-01
- * entries for the wider film/TV/music design, and fisheye.md's 2026-09-02 entry for this split.
+ * otherwise, same pattern as Contact/ContactPerson/ContactBusiness.
  *
  * @package fisheye
  */
@@ -359,9 +358,10 @@ class FisheyeFilm extends FisheyeImage {
 	 * needed) so genre/director/writer/star/content_rating/duration are always available with no
 	 * config beyond fisheye_plex_db_path; imdb/tmdb need fisheye_plex_token too (Plex's own
 	 * Preferences.xml, where that lives, is NOT world-readable — has to be copied into
-	 * kernel_config by hand once). All text values go into xkey_ext, not xkey (view_film.php
-	 * reads xkey_ext — see fisheye.md's 2026-09-02 "wrong xref field" entry for why that
-	 * distinction matters), duration is stored as Plex's own raw milliseconds. Silently does
+	 * kernel_config by hand once). All text values go into xkey_ext, not xkey — the xref table's
+	 * `data`-style free text column, not the short indexed `xkey` one (view_film.php
+	 * reads xkey_ext, and getting this backwards silently stores nothing readable), duration
+	 * is stored as Plex's own raw milliseconds. Silently does
 	 * nothing if fisheye_plex_db_path isn't configured or the file has no Plex match — metadata
 	 * entry always remains possible by hand either way via the generic xref table.
 	 *
@@ -467,9 +467,10 @@ class FisheyeFilm extends FisheyeImage {
 	}
 
 	/**
-	 * Fetch alternate poster/backdrop images from Plex's local API (posters/arts endpoints - see
-	 * fisheye.md's 2026-09-02 "'images' xref group" entry for why this is xref-based rather than
-	 * a second liberty_attachments row per image) and store real local copies, decoupling from
+	 * Fetch alternate poster/backdrop images from Plex's local API (posters/arts endpoints -
+	 * xref-based rather than a second liberty_attachments row per image, since a film can have
+	 * several alternates and LibertyMime only supports one attachment per content_id) and store
+	 * real local copies, decoupling from
 	 * Plex's continued availability. Deliberately its own action, separate from
 	 * reloadPlexMetadata() - downloading N image files is a heavier,
 	 * slower operation than the near-instant text-metadata backfill, so it gets its own

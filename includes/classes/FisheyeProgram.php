@@ -9,9 +9,8 @@
  * behaviour) but also needs its own metadata (genre/cast/external links) and, critically, its
  * own genuinely selected thumbnail - a plain FisheyeGallery has no metadata of its own and picks
  * its thumbnail by bubbling down into whichever member it happens to land on, which breaks
- * entirely once that member (a FisheyeSeason) has no mime attachment to derive one from. Added
- * 2026-09-02 - see fisheye.md's same-dated "program liberty object" entry for the design
- * discussion that led here: the correct fix was a real program liberty object storing all the
+ * entirely once that member (a FisheyeSeason) has no mime attachment to derive one from. The
+ * correct fix was a real program liberty object storing all the
  * program data and a selected thumbnail, not another bubble-down guess.
  *
  * The existing 'Inspector Morse' gallery (content_id=4069) was retyped from 'fisheyegallery' to
@@ -129,8 +128,7 @@ class FisheyeProgram extends FisheyeGallery {
 	}
 
 	/**
-	 * A show's own selected thumbnail. Fixed properly 2026-09-02 (second attempt - see
-	 * fisheye.md's same-dated "real attachment" entry): FisheyeGallery descends from LibertyMime
+	 * A show's own selected thumbnail. FisheyeGallery descends from LibertyMime
 	 * just like a real photo does, so this show has its own unused attachment slot -
 	 * reloadPlexImages() stores a real image attachment there via attachThumbnail(), same as a
 	 * normal upload would. Read here via LibertyMime's own storage-based lookup (explicit class

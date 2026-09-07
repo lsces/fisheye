@@ -14,9 +14,9 @@
  * getExtraImagePath() (FisheyeBase's default is getImageStorageRoot()-relative, correct for
  * Season/Program; FisheyeFilm overrides it for its own different storage location) rather than
  * building the path here directly - a season's own images/episode thumbs live under the
- * TV-specific root, not the plain film one; the two only coincide on desktop (both /media3/), a
- * real bug this fixes (see fisheye.md's 2026-09-02 "content_id assumption"/"storage root"
- * entries for the same category of mistake found earlier in edit_xref.php).
+ * TV-specific root, not the plain film one; an install where both roots happen to resolve to the
+ * same physical location can mask a real bug here that shows up the moment they diverge, the same
+ * category of mistake found earlier in edit_xref.php.
  *
  * @package fisheye
  * @subpackage functions

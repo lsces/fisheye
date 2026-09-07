@@ -1,14 +1,13 @@
 <?php
 /**
  * Lists films found under the storage root's Films/ folder (or one of its real subfolders, e.g.
- * Films/Harry Potter/, standing in for a collection) that aren't registered yet, so an admin can
+ * Films/<Collection Name>/, standing in for a collection) that aren't registered yet, so an admin can
  * pick a batch to import rather than the whole folder at once - deliberately capped
  * (LOAD_FILM_LIMIT below), not a "scan and import everything" tool. Registration itself
  * (FisheyeFilm::registerFromDisk() - store/gallery-link/Plex-backfill) is cheap per film; the one
  * genuinely expensive step, thumbnail generation, isn't triggered here at all - it happens lazily
  * per film via mime_film_get_thumbnail_url() whenever that film's own page is first viewed, not
- * as part of this bulk import. See fisheye.md for the fuller reasoning (session log entry
- * matching this file's own introduction) - a batch import followed by a page that displays many
+ * as part of this bulk import - a batch import followed by a page that displays many
  * freshly-imported films together could still trigger a burst of synchronous ffmpeg calls at
  * that later point; not addressed by this page.
  *
