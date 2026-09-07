@@ -4,8 +4,7 @@
  * rips - bulky and, along with everything else that doesn't play inline, browsers reject even a
  * remux of .mkv itself, not just the codec inside - see MANUAL.md's Video playback section) and
  * re-encode them to h264/aac in an .mp4 container, in place, ahead of ever loading them into
- * fisheye at all (Lester, 2026-09-03: "Tidying would be a better step and one off fix before
- * loading"). Deliberately NOT a live/runtime transcode-on-demand feature - a real transcode is
+ * fisheye at all. Deliberately NOT a live/runtime transcode-on-demand feature - a real transcode is
  * genuinely slow (minutes per file), and every file only needs doing once, so a batch pass ahead
  * of import is the right shape, not caching a second copy behind every page load.
  *
@@ -16,8 +15,7 @@
  * ffprobe reads only container headers (fast - a few hundred ms/file even at this library's
  * scale), so re-scanning each run costs nothing next to the transcode time itself.
  *
- * Originals are archived, never deleted (Lester, 2026-09-03: "keep originals for now as disks
- * are only half full") - moved into a `.mpeg2_originals/` folder alongside the file being
+ * Originals are archived, never deleted - moved into a `.mpeg2_originals/` folder alongside the file being
  * replaced, so a bad re-encode is trivially reversible and nothing about the folder structure
  * itself changes.
  *
@@ -69,11 +67,9 @@ const MPEG2_TIDY_EXTENSIONS = [ 'mkv', 'mp4', 'm4v', 'avi' ];
  * configured root is being walked - some installs (desktop: fisheye_disk_storage_root and both
  * fisheye_tvshow_storage_root_* configs all happen to resolve, via symlinks, to the very same
  * real directory) walk exactly one physical tree covering both Films/ and TV Shows/ at once, so
- * root identity alone can't distinguish them. Lester, 2026-09-03, splitting the work across
- * machines: "leave films out on srv9 only tvshows has none common stuff" (desktop's own Films/
- * turned out to have real candidates too, once the codec-detection bugs below were fixed -
- * scoping lets Films run on desktop and TV Shows run on srv9 without either duplicating the
- * other's work).
+ * root identity alone can't distinguish them. Built to split the work across machines - Films on
+ * desktop, TV Shows on srv9 - without either duplicating the other's work; desktop's own Films/
+ * turned out to have real candidates too, once the codec-detection bugs below were fixed.
  *
  * @param string|null $pScope  'films', 'tvshows', or null for no filtering
  * @param string|null $pShow   further narrows to one show/film's own folder within that scope
@@ -264,9 +260,9 @@ foreach( $batch as $c ) {
 	@unlink( $tmpOut );
 	// nice (never compete with interactive foreground work) + a capped thread count (never
 	// saturate every core) - unconstrained libx264 pegged all 12 threads on desktop's own
-	// 5600G at ~980% CPU, real heat while Lester was actively using the machine (2026-09-03:
-	// "desktop is running a little hot on the processor"). Half the machine's own thread count,
-	// not a fixed number, so this scales sanely on srv9's own different core count too.
+	// 5600G at ~980% CPU, real heat while the machine was actively in interactive use. Half the
+	// machine's own thread count, not a fixed number, so this scales sanely on srv9's own
+	// different core count too.
 	//
 	// A plain global `-threads N` (before -i) mostly governs the *decoder*'s thread count, not
 	// libx264's own encoder thread pool - confirmed live: it made no measurable difference to
@@ -291,12 +287,12 @@ foreach( $batch as $c ) {
 		continue;
 	}
 
-	// Films are duplicated in three places (Lester, 2026-09-03: "no problem just killing the
-	// original") - the original mpeg2 file is deleted outright once the re-encode is verified
-	// good, not archived. TV Shows are not - "only some tvshows exist on desktop, so only one
-	// copy of many so keep the original" - archived into .mpeg2_originals/ instead, same
-	// reasoning as the unscoped default (every non-'films' scope, including no scope at all,
-	// keeps this safer default).
+	// Films are duplicated in three places (desktop/srv9/srv10 each hold a full copy), so the
+	// original mpeg2 file is deleted outright once the re-encode is verified good, not archived.
+	// TV Shows are not duplicated the same way - only some shows exist on desktop at all, so a
+	// given copy may be the only one - archived into .mpeg2_originals/ instead, same reasoning
+	// as the unscoped default (every non-'films' scope, including no scope at all, keeps this
+	// safer default).
 	//
 	// A source that's already .mp4 (mpeg2video does turn up in that extension too - see the
 	// codec breakdown) needs care: $newPath then equals $c['full'] exactly, so there's no room

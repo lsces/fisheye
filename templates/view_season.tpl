@@ -11,9 +11,9 @@
 		   every ancestor, which always lands on the generic gallery view regardless of type -
 		   wrong for a show (FisheyeProgram has its own view_program.php). A season is only ever
 		   one level below its show, so the title itself just links back up to the parent's own
-		   getDisplayUrl() (Lester, 2026-09-02: "The point was to put the link ON the title text")
-		   rather than a separate breadcrumb line, and rather than trying to make the shared,
-		   type-agnostic breadcrumb component type-aware. *}
+		   getDisplayUrl() - the link belongs on the title text itself - rather than a separate
+		   breadcrumb line, and rather than trying to make the shared, type-agnostic breadcrumb
+		   component type-aware. *}
 		{if $gGallery && $seasonTitleSuffix}
 			<h1><a href="{$gGallery->getDisplayUrl()|escape}">{$gGallery->getTitle()|escape}</a>{$seasonTitleSuffix|escape}</h1>
 		{elseif $gGallery}
@@ -28,8 +28,7 @@
 			{if $gContent->getThumbnailUri('medium')}
 				<div class="col-md-6 film-poster">
 					{* Hidden until a "Play Episode" button (episode_detail_panels_inc.tpl) shows
-					   it in place of the poster - Lester, 2026-09-04: "player hidden in the left
-					   hand half of the top area which is made visible when Play Episode is hit". *}
+					   it in place of the poster, in the left half of the top area. *}
 					<img id="fisheye-episode-poster" class="img-responsive" src="{$gContent->getThumbnailUri('medium')}" alt="{$gContent->getTitle()|escape}" />
 					<video id="fisheye-episode-player" class="img-responsive" controls preload="metadata" style="display:none; width:100%; max-height:600px;">
 						<source src="" type="video/mp4">
@@ -37,13 +36,12 @@
 				</div>
 			{/if}
 			<div class="col-md-6">
-				{* No season-level facts panel - Plex has none of its own (Lester, 2026-09-02: "Plex
-				   DOESN'T put anything up on a season page... it's the TV that toggles to display a
-				   selected episode's metadata as you select each"). This is that panel: the
-				   highlighted episode's own already-rendered detail block, swapped by the grid below
-				   with no per-episode request - matching that highlight-swaps-the-panel interaction,
-				   positioned beside the poster the way view_film.tpl's own facts panel is (Lester:
-				   "Text block to top right"). *}
+				{* No season-level facts panel - Plex has none of its own either, it's the TV that
+				   toggles to display a selected episode's metadata as you select each. This is
+				   that panel: the highlighted episode's own already-rendered detail block, swapped
+				   by the grid below with no per-episode request - matching that highlight-swaps-
+				   the-panel interaction, positioned beside the poster (top right) the way
+				   view_film.tpl's own facts panel is. *}
 				{include file="bitpackage:fisheye/episode_detail_panels_inc.tpl"}
 				{if !$episodes|@count}
 					{if $externalLinks|@count}

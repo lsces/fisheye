@@ -11,8 +11,8 @@
  * its thumbnail by bubbling down into whichever member it happens to land on, which breaks
  * entirely once that member (a FisheyeSeason) has no mime attachment to derive one from. Added
  * 2026-09-02 - see fisheye.md's same-dated "program liberty object" entry for the design
- * discussion that led here (Lester: "The correct way to fix this is to use the program liberty
- * object to store all the program data and a selected thumbnail").
+ * discussion that led here: the correct fix was a real program liberty object storing all the
+ * program data and a selected thumbnail, not another bubble-down guess.
  *
  * The existing 'Inspector Morse' gallery (content_id=4069) was retyped from 'fisheyegallery' to
  * this guid as part of introducing it - same content_id, same fisheye_gallery_image_map rows
@@ -53,16 +53,15 @@ class FisheyeProgram extends FisheyeGallery {
 	/**
 	 * A show gets its own dedicated view page (view_program.php - header facts + a grid of its
 	 * own season members) rather than the generic gallery view.php a plain FisheyeGallery uses -
-	 * "extending for fisheyeprogram would also slot into directing to list_program as a program
-	 * specific 'gallery' of seasons" (Lester, 2026-09-02). Every gallery-grid template links via
-	 * getDisplayUrl() generically (see fisheye_fixed_grid_inc.tpl), so overriding this alone is
-	 * enough to redirect from the TV Shows gallery grid with no template changes.
+	 * fisheyeprogram directs to view_program.php as a program-specific "gallery" of seasons.
+	 * Every gallery-grid template links via getDisplayUrl() generically (see
+	 * fisheye_fixed_grid_inc.tpl), so overriding this alone is enough to redirect from the TV
+	 * Shows gallery grid with no template changes.
 	 *
 	 * Originally named list_program.php - renamed to view_program.php 2026-09-02 to match the
 	 * view_X.php convention every other per-item content type uses (view_film.php, view_image.php);
 	 * the old name made a Shows gallery's member links look like they pointed at a listing page,
-	 * inconsistent with the Films gallery's view_film.php links (Lester: "gallery_id=5 gives
-	 * view_film links while the tvshow gallery has list_program links").
+	 * inconsistent with the Films gallery's own view_film.php links.
 	 *
 	 * @return string
 	 */
@@ -74,9 +73,8 @@ class FisheyeProgram extends FisheyeGallery {
 	/**
 	 * Override LibertyContent::getEditUrl()'s generic '<package>/edit.php' default - same
 	 * fatal-until-fixed reasoning as FisheyeSeason::getEditUrl() - edit_program.php (title edit +
-	 * xref table + Reload Metadata/Reload Images, a clone of edit_film.php - Lester, 2026-09-02:
-	 * "you need a clone of edit_film to create an edit_program") is this show's own real edit page,
-	 * not the plain FisheyeGallery one.
+	 * xref table + Reload Metadata/Reload Images, a clone of edit_film.php) is this show's own
+	 * real edit page, not the plain FisheyeGallery one.
 	 *
 	 * @return string
 	 */
@@ -327,11 +325,10 @@ class FisheyeProgram extends FisheyeGallery {
 			$linked = $gallery->addItem( $program->mContentId );
 		}
 		// Halt here rather than blindly fetching metadata/images against a title match that may
-		// well be wrong or missing - exact title matching is fragile in both directions (Lester,
-		// 2026-09-03: "halt download if there is no match to plex so I can fix it... Dinnerladies
-		// failed because plex had dinnerladies and my stripping of : out of titles is also biting
-		// back" - confirmed live: Plex's own title is the single word "Dinnerladies", the on-disk
-		// folder is "Dinner Ladies"). The show record itself (above) still always gets created -
+		// well be wrong or missing - exact title matching is fragile in both directions, confirmed
+		// live on Dinnerladies: Plex's own title is the single word "Dinnerladies", the on-disk
+		// folder is "Dinner Ladies", and stripping ":" out of titles for comparison made it worse,
+		// not better. The show record itself (above) still always gets created -
 		// cheap, and gives searchPlexShows()/setPlexMatchOverride() (the "Search Plex" action on
 		// edit_program.php) something to attach a manually-confirmed match to - but no metadata/
 		// image fetch runs until a match is actually confirmed, automatic or manual.
@@ -341,8 +338,7 @@ class FisheyeProgram extends FisheyeGallery {
 		$plexMeta = $program->reloadPlexMetadata();
 		// Unlike FisheyeFilm::registerFromDisk()'s opt-in $pFetchImages (a bulk 20-film import
 		// paying for N image downloads at once is a real cost worth choosing explicitly), shows
-		// are registered one at a time here - no reason to make images a separate manual step
-		// (Lester, 2026-09-03: "not pulling in the metadata or images, need to do that manually").
+		// are registered one at a time here - no reason to make images a separate manual step.
 		$plexImages = $program->reloadPlexImages();
 
 		return [ 'created' => $program->mContentId, 'gallery_id' => $program->mGalleryId, 'linked' => $linked, 'plex' => $plexMeta, 'images' => $plexImages ];
@@ -370,9 +366,8 @@ class FisheyeProgram extends FisheyeGallery {
 	 * A show has no video file of its own to grab a frame from - unlike FisheyeSeason's own
 	 * version, walks this show's own seasons (loadImages(), the same gallery-item mechanism
 	 * every other gallery uses) looking for the first one with a real seed episode file, and
-	 * grabs from that instead. Lester, 2026-09-03, on Flying Scotsman's show-level image gap
-	 * specifically (as distinct from the season-level gap this was first built for): "where
-	 * does the video grab pop in, It's that which needs to pop up to the program image gap".
+	 * grabs from that instead. Built for Flying Scotsman's show-level image gap specifically,
+	 * distinct from the season-level gap this mechanism was first built for.
 	 *
 	 * @return string|null  the new xref row's xkey_ext, or null if no season has a usable
 	 *                       episode file, or the grab/resize/store itself failed
@@ -486,8 +481,8 @@ class FisheyeProgram extends FisheyeGallery {
 	/**
 	 * Best-effort metadata backfill/refresh for this show, same shape as
 	 * FisheyeFilm::reloadPlexMetadata() (same tag_type map, same delete-then-reinsert rebuild, same
-	 * imdb/tmdb guid fetch) - the piece that was missing entirely until now (Lester, 2026-09-02:
-	 * "no metadata for morse as that is our only test"), which is why view_program.php's facts
+	 * imdb/tmdb guid fetch) - the piece that was missing entirely until now, which is why
+	 * view_program.php's facts
 	 * panel was always empty and its one 'Reload Images' button looked orphaned with nothing to
 	 * pair it with. A show-level Plex record only carries genre + actor(tag_type 1/6) taggings in
 	 * practice - director/writer are per-episode, not per-show, so those two stay empty here and
@@ -515,9 +510,9 @@ class FisheyeProgram extends FisheyeGallery {
 		}
 		$summary['matched'] = true;
 
-		// the show's own description - a real gap found live 2026-09-02 (Lester: "The top level
-		// Morse on plex has a description section which we seem to be missing") - stored directly
-		// on liberty_content.data (view_program.php's own {if $gContent->mInfo.data} block was
+		// the show's own description - a real gap found live 2026-09-02 on Inspector Morse's Plex
+		// record - stored directly on liberty_content.data (view_program.php's own
+		// {if $gContent->mInfo.data} block was
 		// already there, just never had anything to show since nothing populated it).
 		if( !empty( $plexRow['summary'] ) ) {
 			// FisheyeGallery::store() (inherited) declares its param by-reference, so a literal

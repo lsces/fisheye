@@ -385,9 +385,8 @@ class FisheyeGallery extends FisheyeBase {
 	public function verifyGalleryData(&$pParamHash) {
 		global $gBitSystem;
 
-		// film_grid/program_grid's own row/column counts aren't admin-configurable (Lester,
-		// 2026-09-04 - "tvshows can get the same fix" once film_grid had it) - the visual column
-		// count (8 across on a wide monitor, folding to 4 then 2) is pure CSS in each style's own
+		// film_grid/program_grid's own row/column counts aren't admin-configurable - the visual
+		// column count (8 across on a wide monitor, folding to 4 then 2) is pure CSS in each style's own
 		// _inc.tpl now, decoupled from cols_per_page entirely (Bootstrap's 12-column grid doesn't
 		// divide evenly into eighths anyway). rows_per_page/cols_per_page still get set here
 		// regardless - images_per_page (= rows*cols) is what the existing shared pagination
@@ -695,8 +694,7 @@ class FisheyeGallery extends FisheyeBase {
 	 * the real source of truth for the "bodge, acknowledged" LOAD_FILM_TOP_GALLERY_ID /
 	 * LOAD_PROGRAM_TOP_GALLERY_ID sentinels load_film.php/load_program.php each used to hardcode
 	 * as a literal 1/2, install-order-dependent and only ever "confirmed live" by eyeballing this
-	 * one install's data (Lester, 2026-09-03: "should possibly be part of a media info structure"
-	 * rather than a magic number per file). Plain title lookup, same query shape
+	 * one install's data. Plain title lookup, same query shape
 	 * FisheyeProgram::registerFromDisk() already runs to find "TV Shows" to link a new show into -
 	 * this just gives every caller one shared place to ask the same question instead of
 	 * hardcoding (or re-deriving) the answer themselves.

@@ -24,23 +24,20 @@
 <script>
 	// Swaps the poster image (fisheye-episode-poster) for the hidden player
 	// (fisheye-episode-player, view_season.tpl/view_program_single_season.tpl's own left-hand
-	// poster column) rather than navigating away - Lester, 2026-09-04: "player hidden in the
-	// left hand half of the top area which is made visible when Play Episode is hit". Falls
+	// poster column), in the left half of the top area, rather than navigating away. Falls
 	// through to the real play_episode.php page (target="_blank") if JS doesn't run or either
 	// element isn't on this page for some reason.
 	//
 	// view_program_single_season.tpl's left side is two col-md-3 columns (poster + show facts) -
 	// fisheye-episode-poster-col/-facts-col, both hidden so the player (col-md-6) gets their
-	// combined width instead of being squeezed into just the poster's own column - Lester,
-	// 2026-09-04: "it could do with using both of the left panels so it's more like the other
-	// player". Neither id exists on view_season.tpl (a single col-md-6 poster column already),
-	// so those two lookups just no-op there.
+	// combined width instead of being squeezed into just the poster's own column. Neither id
+	// exists on view_season.tpl (a single col-md-6 poster column already), so those two lookups
+	// just no-op there.
 	//
-	// The button itself doubles as the back control - Lester, 2026-09-04: "back button next ...
-	// Play episode -> Stop?" - clicking the same (or any other) episode's button while one is
-	// playing stops it and restores the poster/facts columns; only one button is ever in "Stop"
-	// state at a time, tracked via fisheyePlayingBtn so switching to a different episode's button
-	// resets whichever one was previously showing "Stop" back to "Play Episode".
+	// The button itself doubles as the back control - clicking the same (or any other) episode's
+	// button while one is playing stops it and restores the poster/facts columns; only one button
+	// is ever in "Stop" state at a time, tracked via fisheyePlayingBtn so switching to a different
+	// episode's button resets whichever one was previously showing "Stop" back to "Play Episode".
 	var fisheyePlayingBtn = null;
 	var FISHEYE_PLAY_LABEL = '&#9658; {tr}Play Episode{/tr}';
 	var FISHEYE_STOP_LABEL = '&#9632; {tr}Stop{/tr}';

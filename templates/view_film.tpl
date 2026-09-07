@@ -61,17 +61,15 @@
 	{include file="bitpackage:fisheye/images_strip_inc.tpl" images=$filmImages stripId="film-images-strip" stripTitle="Images"}
 
 	{if $featurettes|@count}
-		{* "Featurettes/ is no different to Season/" (Lester, 2026-09-04) - same play_episode.php
-		   link shape view_season.tpl's own episode grid already uses, just a plain list rather
-		   than a grid since a film's own Featurettes set is typically small. Clicking one pinches
-		   the player already on this page (id="liberty-video-player", player.tpl) rather than
-		   navigating away - Lester, 2026-09-04: "COULD pinch the player already on the page?".
-		   Falls through to a real page navigation (target="_blank") if JS doesn't run or the
-		   player element isn't there for some reason. *}
+		{* Featurettes/ is no different to Season/ - same play_episode.php link shape view_season.tpl's
+		   own episode grid already uses, just a plain list rather than a grid since a film's own
+		   Featurettes set is typically small. Clicking one pinches the player already on this page
+		   (id="liberty-video-player", player.tpl) rather than navigating away. Falls through to a
+		   real page navigation (target="_blank") if JS doesn't run or the player element isn't
+		   there for some reason. *}
 		{* .featurette-btn layout lives in config.css (Bootstrap-level sizing tweak), colour in
-		   rdmcloud-dark.css (theme-specific) - Lester, 2026-09-04: "NO style stuff should be IN
-		   the templates ... all should be managed from .css so we CAN change them outside the
-		   code". *}
+		   rdmcloud-dark.css (theme-specific) - style stays out of templates so it can be changed
+		   from .css alone. *}
 		<section class="film-featurettes">
 			<h2>{tr}Featurettes{/tr}</h2>
 			<ul>
@@ -82,11 +80,10 @@
 		</section>
 		<script>
 			{* Same "the button itself is the back control" treatment as episode_detail_panels_inc.tpl's
-			   Play Episode -> Stop toggle - Lester, 2026-09-04: "Same treatment on the featurette
-			   Back to Film link ... Featurettes <> Film". Only one featurette link is ever in
-			   "playing" state at a time (fisheyePlayingFeaturetteBtn); clicking it again, or
-			   another featurette's link, goes back to the film first. Original film source
-			   captured lazily off the player's own <source> the first time any featurette plays. *}
+			   Play Episode -> Stop toggle. Only one featurette link is ever in "playing" state at
+			   a time (fisheyePlayingFeaturetteBtn); clicking it again, or another featurette's
+			   link, goes back to the film first. Original film source captured lazily off the
+			   player's own <source> the first time any featurette plays. *}
 			var fisheyeFilmSourceUrl = null;
 			var fisheyePlayingFeaturetteBtn = null;
 

@@ -1,8 +1,8 @@
 {* Single-season show: skips the dummy "Season 1" click-through entirely - view_program.php
    dispatches here instead of view_program.tpl when a show has exactly one season, loading that
    season's own episode/image data itself (same shape view_season.php uses). Real FisheyeSeason
-   object still underneath, just not a separate page view - Lester, 2026-09-04: "just a different
-   tpl when the single season state is identified".
+   object still underneath, just not a separate page view - a different tpl for the single-season
+   state rather than special-casing view_program.tpl itself.
 
    Layout, per Lester: left side 50/50 (series thumbnail | show summary), episode detail panel
    to the right (col-md-6, swaps per-episode same as view_season.tpl), episodes along the bottom. *}
@@ -20,12 +20,10 @@
 
 	<section class="body">
 		<div class="row">
-			{* Player hidden until "Play Episode" (episode_detail_panels_inc.tpl) shows it -
-			   Lester, 2026-09-04: "player hidden in the left hand half of the top area which is
-			   made visible when Play Episode is hit", then: "it could do with using both of the
-			   left panels so it's more like the other player" - spans both col-md-3s below
-			   (col-md-6 combined) rather than being squeezed into just the poster's own column,
-			   hiding both when shown so the row's own column math still adds up to 12. *}
+			{* Player hidden until "Play Episode" (episode_detail_panels_inc.tpl) shows it, in the
+			   left half of the top area. Spans both col-md-3s below (col-md-6 combined) rather
+			   than being squeezed into just the poster's own column, hiding both when shown so
+			   the row's own column math still adds up to 12. *}
 			<video id="fisheye-episode-player" class="col-md-6" controls preload="metadata" style="display:none; max-height:600px;">
 				<source src="" type="video/mp4">
 			</video>
