@@ -3,8 +3,8 @@
  * Stub edit page for film content - title edit plus the generic liberty xref table
  * (list_xref.tpl / add_xref.php / edit_xref.php, already built for contact/stock - reused as-is
  * rather than bespoke per-field markup) for genre/director/writer/star/rating/duration/imdb/tmdb.
- * Also hosts two Plex actions, kept deliberately separate (Lester, 2026-09-02 - different
- * weight/frequency operations): 'Reload Metadata' (FisheyeFilm::reloadPlexMetadata()) for a film
+ * Also hosts two Plex actions, kept deliberately separate as different weight/frequency
+ * operations: 'Reload Metadata' (FisheyeFilm::reloadPlexMetadata()) for a film
  * imported before that backfill existed, or needs re-syncing after a Plex library update; and
  * 'Reload Images' (FisheyeFilm::reloadPlexImages()) to fetch alternate poster/backdrop images
  * once - see each method's own docblock for detail.
@@ -36,7 +36,7 @@ $plexResultLabel = null;
 if( !empty( $_REQUEST['fCancel'] ) ) {
 	KernelTools::bit_redirect( $gContent->getDisplayUrl() );
 } elseif( !empty( $_REQUEST['fSave'] ) ) {
-	// Same "description box" tidy as edit_program.php's own fSave (Lester, 2026-09-04) - the
+	// Same "description box" tidy as edit_program.php's own fSave - the
 	// 'edit' field is what LibertyContent::verify() maps into content_store['data'], already
 	// populated on Reload Metadata via reloadPlexMetadata()'s own description-store hash, but
 	// edit_film.tpl had no field for it and this handler dropped it silently on manual Save.
@@ -52,9 +52,8 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 	$plexResult = $gContent->reloadPlexImages();
 	$plexResultLabel = KernelTools::tra( 'Images reloaded from Plex' );
 } elseif( !empty( $_REQUEST['delete'] ) ) {
-	// Same delete flow as edit_program.php's own (Lester, 2026-09-02) - now safe to wire up
-	// properly, since LibertyMime::expunge() actually reaches LibertyContent::expunge() again
-	// (2026-09-04 regression fix). The video file itself is never touched either way - see
+	// Same delete flow as edit_program.php's own - safe to wire up
+	// properly since LibertyMime::expunge() actually reaches LibertyContent::expunge(). The video file itself is never touched either way - see
 	// deleteXrefFile()/replaceXrefFile()'s own docblocks, mimefilm's whole point is external,
 	// un-owned storage.
 	$gContent->hasUserPermission( 'p_fisheye_admin', true );

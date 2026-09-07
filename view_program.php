@@ -11,7 +11,7 @@
  * TV Show gallery's member links look like they routed to a listing page rather than a single
  * show's own detail view, unlike the Films gallery's view_film.php links.
  *
- * Pure display, no update actions - Lester, 2026-09-02: "view is ONLY a view page". The Plex
+ * Pure display, no update actions. The Plex
  * 'Reload Metadata'/'Reload Images' actions live on edit_program.php instead, same split as
  * edit_film.php/view_film.php.
  *
@@ -72,9 +72,9 @@ $gBitSmarty->assign( 'externalLinks', $externalLinks );
 $listHash = [ 'max_records' => -1 ];
 $gContent->loadImages( $listHash );
 
-// season card titles drop the "<show> - " prefix (Lester, 2026-09-02: "loose the 'Inspector
-// Morse - ' and just show Season 1") - same split as view_season.php's own title-link suffix,
-// keyed by content_id since this is a whole grid of seasons rather than a single one. Falls back
+// season card titles drop the "<show> - " prefix, leaving just "Season 1" etc - same split as
+// view_season.php's own title-link suffix, keyed by content_id since this is a whole grid of
+// seasons rather than a single one. Falls back
 // to the season's own full title if it doesn't actually start with the show's title.
 $showTitle = $gContent->getTitle();
 $seasonTitles = [];
@@ -89,8 +89,8 @@ $gBitSmarty->assign( 'seasonTitles', $seasonTitles );
 // Single-season shows skip the dummy "Season 1" click-through - view_program_single_season.tpl
 // merges the show's own facts (above) with that one season's episode grid/detail panel directly,
 // same data shape view_season.php itself loads. Real FisheyeSeason object still underneath, just
-// not a separate page - Lester, 2026-09-04: "just a different tpl when the single season state
-// is identified".
+// not a separate page - a different tpl for the single-season state rather than special-casing
+// the multi-season template.
 $template = 'bitpackage:fisheye/view_program.tpl';
 if( count( (array)$gContent->mItems ) === 1 ) {
 	$season = current( $gContent->mItems );

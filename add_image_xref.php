@@ -3,9 +3,7 @@
  * Dedicated "Add Image" page for the Images tab's own group-tab override
  * (templates/xref/view_images_group.tpl) - the generic add_xref.php/add_xref.tpl flow has no
  * file upload at all, so adding a new image previously meant creating a bare row via that
- * generic form, then separately going to edit it to attach a file (Lester, 2026-09-03: "the add
- * button on the_image tab just uses the generic add so you have to create a new image line, and
- * then go and edit it"). One step instead of two: upload straight into a new row, via
+ * generic form, then separately going to edit it to attach a file. One step instead of two: upload straight into a new row, via
  * addImageXrefFile() (FisheyeBase, shared by Film/Season/Program alike).
  *
  * @package fisheye

@@ -192,7 +192,7 @@ class FisheyeProgram extends FisheyeGallery {
 	/**
 	 * Promote one of this show's already-downloaded 'image' xref alternates (a local file under
 	 * the TV storage root's images/ folder) into the real, single thumbnail attachment - the
-	 * manual "change it" action Lester asked for, since the auto-picked (Plex's own currently-
+	 * manual "change it" action, since the auto-picked (Plex's own currently-
 	 * selected poster) default is sometimes not the best of the available alternates.
 	 *
 	 * @param string $pRelativePath  an 'image' xref row's own xkey_ext value

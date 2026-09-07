@@ -12,7 +12,7 @@
  * freshly-imported films together could still trigger a burst of synchronous ffmpeg calls at
  * that later point; not addressed by this page.
  *
- * Folder scoping (Lester, 2026-09-03): a collection isn't modelled as anything more formal than
+ * Folder scoping: a collection isn't modelled as anything more formal than
  * "a real subfolder under Films/ whose name matches a gallery's own title" - see the
  * $topGalleryId/gallery_id/folder handling below for the three ways this page ends up
  * scoped to one.
@@ -97,8 +97,8 @@ if( !empty( $_REQUEST['fImport'] ) && empty( $gBitSystem->getConfig( 'fisheye_pl
 	// when this is unset (genre/cast/rating/duration still come from Plex's local db, no token
 	// needed there) - fine for a single film re-synced later via 'Reload Metadata', but a whole
 	// batch importing "successfully" while silently missing imdb/tmdb links for every film isn't
-	// something to only notice after the fact (Lester, 2026-09-05: a Plex reinstall had silently
-	// cleared this). Stop the batch outright rather than import anything with it unset.
+	// something to only notice after the fact - a Plex reinstall can silently clear this token.
+	// Stop the batch outright rather than import anything with it unset.
 	$result = [ 'error' => KernelTools::tra( 'fisheye_plex_token is not configured - set it on the General Settings tab first (imdb/tmdb links would silently be skipped for every film in this batch otherwise).' ) ];
 } elseif( !empty( $_REQUEST['fImport'] ) ) {
 	$fetchImages = !empty( $_REQUEST['fetch_images'] );
@@ -109,10 +109,10 @@ if( !empty( $_REQUEST['fImport'] ) && empty( $gBitSystem->getConfig( 'fisheye_pl
 		if( empty( $relativePath ) || !is_file( $root.$relativePath ) ) {
 			continue;
 		}
-		// Skip rather than register a film with no Plex match at all (Lester, 2026-09-04: "one
-		// does not know which ones have not actually loaded metadata" - e.g. Plex's own title
-		// having since changed to "2001: A Space Odyssey" while the file itself still reads "2001
-		// A Space Odyssey", so the automatic title-independent realpath match below never fires).
+		// Skip rather than register a film with no Plex match at all - there'd be no way to tell
+		// which ones haven't actually loaded metadata otherwise. E.g. Plex's own title changing
+		// (a punctuation/spacing tweak) while the on-disk filename doesn't match anymore means the
+		// automatic title-independent realpath match below never fires.
 		// Registering it anyway used to just leave a metadata-less film sitting in the library
 		// indistinguishable from a properly-loaded one; left un-imported instead, it stays in the
 		// candidate list every re-scan until the mismatch is actually fixed (rename the file, or
@@ -141,9 +141,7 @@ if( !empty( $_REQUEST['fImport'] ) && empty( $gBitSystem->getConfig( 'fisheye_pl
 // actually still outstanding - cheap: a capped directory listing plus one indexed lookup per
 // candidate file, not a concern at this scale.
 //
-// Two shapes live side by side under a collection folder (Lester, 2026-09-04, found live: "Alien
-// only showed the plain films" - Prometheus, packaged in its own subfolder with a Featurettes/
-// set, never appeared as a candidate): most films are flat files directly under $scanDir, but a
+// Two shapes live side by side under a collection folder: most films are flat files directly under $scanDir, but a
 // DVD-rip-with-extras film sits one level deeper in its own subfolder alongside its Featurettes/
 // (FisheyeFilm::registerFeaturettesFromDisk()'s own "film" shape). So this scans both - $scanDir's
 // own files, plus one level into any of its subfolders (Featurettes/ itself excluded, since its
@@ -198,7 +196,7 @@ foreach( $scanTargets as $target ) {
 }
 
 // The page heading's own "Films" text doubles as a link back to the real gallery - same tidy as
-// load_program.php's "TV Shows" heading (Lester, 2026-09-03), applied here 2026-09-04.
+// load_program.php's "TV Shows" heading.
 $topGalleryUrlHash = [ 'gallery_id' => $topGalleryId ];
 $gBitSmarty->assign( 'topGalleryUrl', FisheyeGallery::getDisplayUrlFromHash( $topGalleryUrlHash ) );
 

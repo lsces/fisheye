@@ -18,9 +18,10 @@ global $gBitSystem, $gLibertySystem, $_SERVER;
 
 $_SERVER['HTTP_HOST'] = $_SERVER['HTTP_HOST'] ?? '';
 $_SERVER['SERVER_NAME'] = $_SERVER['SERVER_NAME'] ?? '';
-// This script is meant to be run through a real web request (php-fpm as nginx - correct
-// storage/attachments/ permissions for thumbnail generation come for free that way, confirmed
-// 2026-09-02 after CLI-as-lester hit a real permission wall there). DOCUMENT_ROOT is already
+// This script is meant to be run through a real web request (php-fpm as the web server user -
+// correct storage/attachments/ permissions for thumbnail generation come for free that way;
+// running via CLI as a personal user account instead hits a real permission wall there).
+// DOCUMENT_ROOT is already
 // correct in that case - only patch it for the CLI fallback case, where it's empty. CLI has no
 // real DOCUMENT_ROOT - setup_inc.php's own BIT_ROOT_PATH fallback resolves from its own __FILE__,
 // which PHP flattens through the kernel/_bw5 symlink chain down to the dev repo, not the site

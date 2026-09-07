@@ -23,7 +23,7 @@
 
 		{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='body' serviceHash=$gContent->mInfo}
 
-		{* Responsive flex grid, not cols_per_page/Bootstrap-col driven (Lester, 2026-09-04: 8
+		{* Responsive flex grid, not cols_per_page/Bootstrap-col driven - 8
 		   across on a wide monitor, folding to 4 then 2 - Bootstrap's 12-column grid has no clean
 		   class for eighths, so this is plain CSS keyed off the same pixel breakpoints Bootstrap 3
 		   itself uses elsewhere in this theme - lg >=1200px, sm/md 768-1199px, xs <768px).

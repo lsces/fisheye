@@ -1,9 +1,9 @@
 {* Group-tab override for the 'images' xref group (fisheyefilm/fisheyeseason/fisheyeprogram all
    share this one - liberty_xref_group.template set to 'images' for their three group rows).
-   Identical to liberty's own generic list_xref.tpl except the "Add record" link below, which the
-   generic add_xref.php/add_xref.tpl flow has no file upload for at all - Lester, 2026-09-03: "the
-   add button on the_image tab just uses the generic add so you have to create a new image line,
-   and then go and edit it". add_image_xref.php uploads straight into a new row in one step. *}
+   Identical to liberty's own generic list_xref.tpl except the "Add record" link below, which
+   points at add_image_xref.php instead of the generic add_xref.php/add_xref.tpl flow (that one
+   has no file upload at all, requiring a create-then-edit-to-attach two-step). add_image_xref.php
+   uploads straight into a new row in one step. *}
 {assign var=xrefAllowEdit value=$allow_edit|default:true}
 {assign var=tabTitle value=$xrefGroup->mTitle}
 {assign var=isHistory value=($xrefGroup->mXGroup eq 'history')}

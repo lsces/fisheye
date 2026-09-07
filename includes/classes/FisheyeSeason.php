@@ -67,7 +67,7 @@ class FisheyeSeason extends FisheyeImage {
 	/**
 	 * Override FisheyeImage::getDisplayUrl()'s image_id-keyed default - a season is never a plain
 	 * photo, so its display page is view_season.php (facts + episode list, no video player of its
-	 * own), the "matching pair" to edit_season.php Lester asked for 2026-09-02 alongside
+	 * own), the matching pair to edit_season.php alongside
 	 * view_program.php/edit_program.php. Previously fell through to FisheyeImage's generic
 	 * getDisplayUrl(), which pointed a season's gallery-grid link at view_image.php - wrong page
 	 * for a season, just never noticed since nothing linked to a season directly until
@@ -119,7 +119,7 @@ class FisheyeSeason extends FisheyeImage {
 	/**
 	 * Promote one of this season's already-downloaded 'image' xref alternates (a local file
 	 * under the TV storage root's images/ folder) into the real, single thumbnail attachment -
-	 * the manual "change it" action Lester asked for, since the auto-picked (Plex's own
+	 * a manual "change it" action, since the auto-picked (Plex's own
 	 * currently-selected poster) default is sometimes not the best of the available alternates.
 	 *
 	 * @param string $pRelativePath  an 'image' xref row's own xkey_ext value
@@ -198,14 +198,13 @@ class FisheyeSeason extends FisheyeImage {
 	 * Locate this season in the local Plex library. A season has no file of its own to match by
 	 * (unlike a film) - matched instead via one of its own episodes' file path (an 'episode'
 	 * xref row's xkey_ext), walking Plex's own metadata_items.parent_id from that episode
-	 * (metadata_type=4) up to its season (metadata_type=3) in a single join. Confirmed against
-	 * real data 2026-09-02: Inspector Morse S01E01's episode metadata_item (id 1870) has
-	 * parent_id 1869, which is exactly the 'Series 1' season row under the show (id 1832).
+	 * (metadata_type=4) up to its season (metadata_type=3) in a single join - an episode's own
+	 * metadata_item.parent_id always resolves to its season's metadata_item row this way.
 	 *
 	 * Resolves the TV-specific per-show storage root (mime_film_get_tvshow_storage_root(),
 	 * A-M/N-Z split) via the show's own title - found by walking this season's parent gallery
-	 * (the show-level FisheyeGallery it's linked into, e.g. 'Inspector Morse' - see fisheye.md's
-	 * Collections entry) rather than any field on the season itself, which doesn't carry the
+	 * (the show-level FisheyeGallery it's linked into - see fisheye.md's Collections entry)
+	 * rather than any field on the season itself, which doesn't carry the
 	 * show's name directly.
 	 *
 	 * @return array{db:\PDO,id:int,root:string}|null  null if unconfigured or no match found
@@ -220,8 +219,8 @@ class FisheyeSeason extends FisheyeImage {
 	 * linked into a real FisheyeProgram gallery instead of that script's plain-FisheyeGallery
 	 * fallback (FisheyeProgram didn't exist yet when it was written).
 	 *
-	 * Season title convention: "<show title> - <season folder name>" (e.g. "Inspector Morse -
-	 * Season 1", "Inspector Morse - Specials") - the folder name is used verbatim rather than
+	 * Season title convention: "<show title> - <season folder name>" (e.g. "Example Show -
+	 * Season 1", "Example Show - Specials") - the folder name is used verbatim rather than
 	 * trying to normalize "Specials" into a numbered series, since it already reads correctly and
 	 * Plex's own season match doesn't depend on this title at all (only on the seeded file path).
 	 *
@@ -377,21 +376,20 @@ class FisheyeSeason extends FisheyeImage {
 	}
 
 	/**
-	 * Fetch this season's full episode list from Plex - the "Load Episodes" action
-	 * (Lester, 2026-09-02), superseding the one-off import_episode_test.php script that had
+	 * Fetch this season's full episode list from Plex - the "Load Episodes" action,
+	 * superseding the one-off import_episode_test.php script that had
 	 * registered only the one episode it was hand-fed. Rebuild-not-diff, same as every other
 	 * reload* method here: every 'episode' xref row for this content_id is deleted before
 	 * re-inserting, since 'episode' is multiple=1 and storeXref() has no natural key to update
 	 * in place.
 	 *
-	 * There is no season-level facts panel to populate (Lester, 2026-09-02: "Plex DOESN'T put
-	 * anything up on a season page... it's the TV that toggles to display a selected episode's
-	 * metadata as you select each" - confirmed directly against the local Plex db: the season's
+	 * There is no season-level facts panel to populate - Plex doesn't put anything up on a season
+	 * page itself, it's the TV that toggles to display a selected episode's metadata as you
+	 * select each; confirmed directly against the local Plex db: the season's
 	 * own metadata_item has empty content_rating/duration and no genre/director/writer/star
-	 * taggings at all). Real per-episode facts - director(tag_type 4)/writer(5)/star(6, capped at
+	 * taggings at all. Real per-episode facts - director(tag_type 4)/writer(5)/star(6, capped at
 	 * 5 same reasoning as every other star cap here)/content_rating/duration - DO exist one level
-	 * down, on each episode's own metadata_item (metadata_type=4), confirmed against S01E01 (id
-	 * 1870). Genre never exists below show level in Plex's own model, so it's not attempted here -
+	 * down, on each episode's own metadata_item (metadata_type=4). Genre never exists below show level in Plex's own model, so it's not attempted here -
 	 * that's what view_program.php's own facts panel already covers, one level up.
 	 *
 	 * Each episode's full packet (title/summary/air_date/director/writer/star/content_rating/
@@ -528,9 +526,8 @@ class FisheyeSeason extends FisheyeImage {
 	 * the engine behind fallbackFrameGrabImage()'s automatic no-Plex-images fallback below, and
 	 * also exposed directly as the "Grab Thumbnail from Video" action on the Images tab
 	 * (templates/xref/view_images_group.tpl's own group-tab override, edit_season.php's
-	 * fGrabFrame handler) - Lester, 2026-09-03, on manually fixing Flying Scotsman's missing
-	 * images: "IS perhaps the point where a grab thumbnail could be an option?". The actual grab
-	 * is FisheyeBase::grabVideoFrameIntoImageXref() - this just resolves which video file to
+	 * fGrabFrame handler) - a manual fallback for a season with no usable Plex images at all.
+	 * The actual grab is FisheyeBase::grabVideoFrameIntoImageXref() - this just resolves which video file to
 	 * grab from (its own seed episode).
 	 *
 	 * Always grabs a fresh one - does not check whether an image already exists, unlike the
@@ -554,9 +551,8 @@ class FisheyeSeason extends FisheyeImage {
 	/**
 	 * Shared fallback used at every exit point of reloadPlexImages() below - if nothing usable
 	 * came back from Plex (no season match at all, no fisheye_plex_token configured, or a real
-	 * match that simply has zero photos - seen live 2026-09-03: "Cities of the Underworld" S4
-	 * and the flat "4472 Flying Scotsman" season both matched fine but came back with zero
-	 * photos), grab a frame from this season's own seed episode file instead of leaving the
+	 * match that simply has zero photos - a real Plex match with zero photos does happen), grab
+	 * a frame from this season's own seed episode file instead of leaving the
 	 * gallery grid with no thumbnail at all - see grabVideoFrameImage() above for the actual
 	 * grab.
 	 *
@@ -594,7 +590,7 @@ class FisheyeSeason extends FisheyeImage {
 	 * matched via matchPlexSeasonMetadataItem() (no file of its own to match by directly), and
 	 * the shared `images/` folder lives under the TV-specific per-show root rather than
 	 * fisheye_disk_storage_root, since a season has no single source file to derive a filename
-	 * basename from - this season's own title is used instead (e.g. 'Inspector Morse - Series 1').
+	 * basename from - this season's own title is used instead (e.g. 'Example Show - Series 1').
 	 *
 	 * @return array Summary of what was found/stored, for the calling page's result display.
 	 */

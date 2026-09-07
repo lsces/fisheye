@@ -5,7 +5,7 @@ function updateGalleryPagination() {
 	// music_grid still shares fixed_grid's rows*cols settings panel - same underlying grid
 	// pagination math (see FisheyeGallery::getList()'s layout branch), just its own view
 	// template/floaticons - not worth a duplicate panel for it alone. film_grid/program_grid
-	// have their own (Lester, 2026-09-04) - fixed at 4*8=32 by FisheyeGallery::
+	// have their own settings panel too, fixed at 4*8=32 by FisheyeGallery::
 	// verifyGalleryData(), not admin-configurable, the visual column count is pure CSS now.
 	var styleGroup = { music_grid: 'fixed_grid' };
 	paginationIds.forEach(function(id) {

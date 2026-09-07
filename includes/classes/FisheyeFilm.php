@@ -131,13 +131,12 @@ class FisheyeFilm extends FisheyeImage {
 
 	/**
 	 * This film's own storage/attachments/<branch>/ path - home for its downloaded Plex image
-	 * alternates and any manual uploads (Lester, 2026-09-04: "storage/attachments/<branch>/ has
-	 * always been used as home for extras like the plex images and any manual uploads" - not a
-	 * new convention, this class just wasn't following it yet). Always nginx-writable by
-	 * construction, unlike the external film-library tree (getImageStorageRoot()) - found live:
-	 * collection folders made via mkdir/os.makedirs() during this library's reorganisation landed
-	 * at 755, not writable by php-fpm at all, and the film's own folder isn't guaranteed to be
-	 * either (only Films/ itself and hand-ripped per-film folders happened to be 777).
+	 * alternates and any manual uploads. Not a new convention - this is the same home every other
+	 * attachment type already uses for its own extras, this class just wasn't following it yet.
+	 * Always nginx-writable by construction, unlike the external film-library tree
+	 * (getImageStorageRoot()) - a disk-managed media tree isn't guaranteed to be web-writable the
+	 * way storage/ is, so extras always live under storage/ rather than being written back
+	 * alongside the source files.
 	 *
 	 * @return string
 	 */
@@ -149,9 +148,7 @@ class FisheyeFilm extends FisheyeImage {
 	 * Promote one of this film's already-downloaded 'image' xref alternates into its actual
 	 * displayed thumbnail. No separate "which one is the thumbnail" bookkeeping needed -
 	 * mime_film_get_thumbnail_url() just reads whatever's in storage/attachments/<branch>/thumbs/
-	 * regardless of how it got there (Lester, 2026-09-04: "system always just reads the thumbnail
-	 * directory so as long as the 'promote' button actually loads the right set of thumbnails
-	 * everything else just works") - so this just regenerates thumbs/ directly from the chosen
+	 * regardless of how it got there - so this just regenerates thumbs/ directly from the chosen
 	 * alternate, already sitting in the same branch as the thumbs themselves.
 	 *
 	 * @param string $pRelativePath  an 'image' xref row's own xkey_ext value (a bare filename)
@@ -252,8 +249,8 @@ class FisheyeFilm extends FisheyeImage {
 
 	/**
 	 * A film living in its own folder alongside a Featurettes/ subfolder (DVD-era bonus content -
-	 * "Featurettes/ is no different to Season/", Lester, 2026-09-04: same shape as an episode
-	 * living under a season, just one level shallower) gets each Featurettes file registered as a
+	 * the same shape as an episode living under a season, just one level shallower) gets each
+	 * Featurettes file registered as a
 	 * 'featurette' xref on this film's own content_id - not a separate FisheyeFilm, not a gallery
 	 * of its own. Same rebuild-not-diff convention as every other xref-based reload* here.
 	 *
@@ -368,7 +365,7 @@ class FisheyeFilm extends FisheyeImage {
 	 * nothing if fisheye_plex_db_path isn't configured or the file has no Plex match — metadata
 	 * entry always remains possible by hand either way via the generic xref table.
 	 *
-	 * Deliberately separate from reloadPlexImages() (Lester, 2026-09-02) - text metadata and
+	 * Deliberately separate from reloadPlexImages() - text metadata and
 	 * image fetching are different weight/frequency operations (the former is near-instant,
 	 * the latter downloads several image files), so they get their own action/button each
 	 * rather than one doing both.
@@ -378,8 +375,7 @@ class FisheyeFilm extends FisheyeImage {
 	 * via LibertyContent::deleteXrefByItem() *before* re-inserting, since storeXref() always
 	 * inserts a fresh row when called without an xref_id (correct for the multiple=1 items, which
 	 * have no natural single-row key to update in place) - without the upfront delete, a second
-	 * "Reload Metadata" just appended duplicate rows on top of the first run's, found live
-	 * 2026-09-02 (Lester: "metadata seems to have been duplicated, not refreshed"). Same
+	 * "Reload Metadata" just appended duplicate rows on top of the first run's. Same
 	 * rebuild-not-diff pattern deleteXrefByItem()'s own docblock already documents for health's
 	 * RebuildHRDerived.php and food's FoodAssembly::clearItems().
 	 *
@@ -475,25 +471,22 @@ class FisheyeFilm extends FisheyeImage {
 	 * fisheye.md's 2026-09-02 "'images' xref group" entry for why this is xref-based rather than
 	 * a second liberty_attachments row per image) and store real local copies, decoupling from
 	 * Plex's continued availability. Deliberately its own action, separate from
-	 * reloadPlexMetadata() (Lester, 2026-09-02) - downloading N image files is a heavier,
+	 * reloadPlexMetadata() - downloading N image files is a heavier,
 	 * slower operation than the near-instant text-metadata backfill, so it gets its own
 	 * button/action rather than running unconditionally every time metadata is reloaded.
 	 *
 	 * Needs fisheye_plex_token (the posters/arts endpoints aren't in the world-readable db, only
 	 * via Plex's authenticated local API). Idempotent **per type** (poster/art), not globally -
-	 * a type is only re-fetched if every existing row of that type has been deleted first;
-	 * a global "any image exists at all" check (the original 2026-09-02 shape) meant tidying
-	 * down to just the kept images of one type by deleting a whole other type still blocked ever
-	 * re-fetching that now-empty type without wiping everything else too, found live the same day
-	 * against Casino Royale. A new fetch continues the existing xorder sequence rather than
+	 * a type is only re-fetched if every existing row of that type has been deleted first; a
+	 * global "any image exists at all" check would mean tidying down to just the kept images of
+	 * one type by deleting a whole other type still blocked ever re-fetching that now-empty type
+	 * without wiping everything else too. A new fetch continues the existing xorder sequence rather than
 	 * restarting at 1, so a top-up run doesn't collide with rows the other type still has.
 	 *
 	 * Storage: this film's own storage/attachments/<branch>/ - alongside thumbs/, the same home
-	 * every other attachment already uses for its own conversions/extras (Lester, 2026-09-04:
-	 * "storage/attachments/<branch>/ has always been used as home for extras like the plex
-	 * images and any manual uploads"). Not the external film library tree - that folder's
-	 * ownership/permissions are Lester's own to manage (mkdir/os.makedirs() during a reorg
-	 * routinely lands at 755, not nginx-writable), where storage/attachments/ is always
+	 * every other attachment already uses for its own conversions/extras. Not the external film
+	 * library tree - that folder's ownership/permissions aren't guaranteed to be web-writable
+	 * (a disk reorg can easily land a folder at 755, not nginx-writable), where storage/attachments/ is always
 	 * nginx-owned by construction. Files named `<film file's own basename>-poster-N.jpg` /
 	 * `-art-N.jpg` (a leftover disambiguation habit from the old shared-folder days - harmless
 	 * now each branch is already per-content_id, kept for readability browsing the folder
@@ -507,9 +500,8 @@ class FisheyeFilm extends FisheyeImage {
 	 *
 	 * Fetches TMDB's own pre-resized w342 (poster)/w780 (art) sizes, not the 'original' full
 	 * resolution (1-4MB apiece, wasted weight for what's only ever shown as a thumbnail on
-	 * view_film.tpl - discovered live the first time this actually rendered, Lester 2026-09-02).
-	 * w185/w300 (TMDB's next size down) turned out too small once seen rendered - bumped up a
-	 * tier the same day. TMDB only offers a fixed size set (no arbitrary width) - w342 is its
+	 * view_film.tpl). w185/w300 (TMDB's next size down) turned out too small once seen rendered -
+	 * bumped up a tier. TMDB only offers a fixed size set (no arbitrary width) - w342 is its
 	 * closest poster size to a ~400px target, w780 the closest backdrop size above it (nothing
 	 * exists between w300 and w780 for backdrops).
 	 *
@@ -551,8 +543,7 @@ class FisheyeFilm extends FisheyeImage {
 
 		// Lives in this film's own storage/attachments/<branch>/ - alongside thumbs/, same as
 		// every other conversion/derived file any liberty attachment already keeps there - not
-		// the external film-library tree (Lester, 2026-09-04: "storage/attachments/<branch>/ has
-		// always been used as home for extras like the plex images and any manual uploads").
+		// the external film-library tree.
 		// Always nginx-writable by construction, unlike the external tree (found live: collection
 		// folders made via mkdir/os.makedirs() during this library's reorganisation landed at 755,
 		// not writable by php-fpm at all).
@@ -565,8 +556,8 @@ class FisheyeFilm extends FisheyeImage {
 
 		// Auto-pick a real cover (Plex's own currently-selected poster) as the primary thumbnail
 		// in place of the video frame-grab fallback (mime_video_create_thumbnail(), via
-		// renderThumbnails()'s video-type branch) - Lester, 2026-09-05: "FisheyeFilm SHOULD have
-		// the option to attach a DVD image in place of the last resort screen grab". Once only -
+		// renderThumbnails()'s video-type branch) - a real cover image is always preferable to a
+		// last-resort screen grab when one's available. Once only -
 		// gated on $existingImagePaths being empty (this method's first-ever run for this film),
 		// same "don't silently override a later manual choice" reasoning as Season/Program/
 		// Album's own auto-pick gate (empty($this->mStorage) there - doesn't apply to Film, whose

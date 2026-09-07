@@ -146,8 +146,7 @@ class FisheyeAlbum extends FisheyeImage {
 	/**
 	 * This album's own storage/attachments/<branch>/ path - home for its downloaded Plex image
 	 * alternates and any manual uploads, same convention FisheyeFilm::getImageStorageBranchPath()
-	 * already established ("storage/attachments/<branch>/ has always been used as home for
-	 * extras like the plex images and any manual uploads" - Lester, 2026-09-04). Always
+	 * already established. Always
 	 * nginx-writable by construction, unlike the external music library tree.
 	 *
 	 * @return string
@@ -555,9 +554,8 @@ class FisheyeAlbum extends FisheyeImage {
 		}
 
 		// Read tags and sort by (disc, track-number-from-tag-or-filename) - embedded tags take
-		// priority per Lester 2026-09-05 ("a lot of tracks DO have their own built in metadata
-		// which perhaps should take priority"), filename order is only the fallback for untagged
-		// files (e.g. the Bob Marley release found live with zero embedded tags at all).
+		// priority, since most tracks already carry their own real metadata; filename order is
+		// only the fallback for untagged files (some releases have zero embedded tags at all).
 		foreach( $trackFiles as &$track ) {
 			$tags = self::readTrackTags( $absoluteFolder.$track['relative'] );
 			$track['tags'] = $tags;

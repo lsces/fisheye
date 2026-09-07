@@ -6,11 +6,11 @@
  * load_film.php's own folder scoping already degrades gracefully without one ($linked stays
  * false, per FisheyeFilm::registerFromDisk()'s own docblock), but that leaves imported films
  * effectively invisible in the gallery hierarchy until a gallery exists to link them into.
- * Deliberately a separate one-off step ahead of import (Lester, 2026-09-04) - creating the
+ * Deliberately a separate one-off step ahead of import - creating the
  * gallery is cheap/instant, importing films is the expensive step load_film.php already owns.
  *
- * "Real collection" vs a single packaged film in its own folder (Lester, 2026-09-03: "the
- * standard should be that a folder is only used when there is a Featurettes set") - a folder
+ * "Real collection" vs a single packaged film in its own folder - the standard is that a folder
+ * is only used when there's a Featurettes set to go with it. A folder
  * holding exactly one film unit (one flat video file, or one nested single-film subfolder, and
  * nothing else besides a possible Featurettes/) is that packaged-film case, not a collection, and
  * is deliberately excluded here: it needs no gallery of its own, load_film.php's own subfolder

@@ -235,7 +235,7 @@ not ready for primetime
 	 * to load a full object per ancestor) so every real gallery view template (view_film.tpl,
 	 * fisheye_film_grid_inc.tpl, ...) can render a correct "Films - Collection - " breadcrumb
 	 * trail without duplicating this logic. Never includes the current item itself - callers
-	 * render their own title as the trailing plain-text segment (Lester, 2026-09-03).
+	 * render their own title as the trailing plain-text segment.
 	 *
 	 * @return array List of ['title'=>string, 'url'=>string], oldest ancestor first.
 	 */
@@ -322,13 +322,11 @@ not ready for primetime
 	 * a config change away from an alternate processor) rather than hand-rolling a second GD
 	 * implementation. Lives here on FisheyeBase (not duplicated on FisheyeFilm/Season/Program
 	 * separately) so any fisheye content type descending from either FisheyeImage or
-	 * FisheyeGallery gets it for free - Lester, 2026-09-02: "Can't it be shared in some way since
-	 * even music will need it in a bit?" (a future FisheyeAlbum-equivalent will).
+	 * FisheyeGallery gets it for free, including future content types with the same need.
 	 *
 	 * Originally needed because TMDB only offers fixed *width*-based presets (w342/w500/w780/etc,
 	 * no bounding-box option) - a landscape backdrop fetched at w780 is still 780x439, fine as a
-	 * full-size Images-tab view but wasted weight for a small alternates-strip thumbnail (Lester:
-	 * "the 700px images are just too big").
+	 * full-size Images-tab view but wasted weight for a small alternates-strip thumbnail.
 	 *
 	 * Works on files, not raw bytes (liberty's resize function's own calling convention), so the
 	 * caller writes any downloaded bytes to a temp source file first. Silently falls back to
@@ -491,9 +489,7 @@ not ready for primetime
 	 * Grab a frame from a given video file and store it as a new 'image' xref on THIS content
 	 * object - the shared engine behind FisheyeSeason::grabVideoFrameImage() (source: its own
 	 * seed episode) and FisheyeProgram::grabVideoFrameImage() (source: its first season's own
-	 * seed episode, since a show has no video file of its own - Lester, 2026-09-03, on Flying
-	 * Scotsman's show-level image gap specifically: "where does the video grab pop in, It's
-	 * that which needs to pop up to the program image gap"). Reuses
+	 * seed episode, since a show has no video file of its own). Reuses
 	 * mime_film_grab_video_frame() - the same ffmpegthumbnailer/ffmpeg chain a plain film's own
 	 * attachment thumbnail already falls back to.
 	 *
@@ -540,9 +536,9 @@ not ready for primetime
 	 * image - the "create" counterpart to replaceXrefFile()'s "overwrite an existing row's file
 	 * in place" (edit_image_item.tpl/edit_xref.php). Built for add_image_xref.php, the dedicated
 	 * upload page the Images tab's own group-tab override (templates/xref/view_images_group.tpl)
-	 * links to instead of the generic add_xref.php/add_xref.tpl, which has no file upload at all
-	 * (Lester, 2026-09-03: "the add button on the_image tab just uses the generic add so you have
-	 * to create a new image line, and then go and edit it").
+	 * links to instead of the generic add_xref.php/add_xref.tpl, which has no file upload at all -
+	 * that flow required creating an empty xref row first, then editing it separately to attach
+	 * a file, an awkward two-step process this page collapses into one.
 	 *
 	 * Lives here on FisheyeBase rather than duplicated on FisheyeFilm/Season/Program separately -
 	 * same reasoning as resizeImageFile() above - guarded by method_exists() rather than assuming

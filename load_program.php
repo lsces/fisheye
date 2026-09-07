@@ -47,8 +47,8 @@ require_once dirname( __DIR__ ).'/liberty/plugins/mime.film.php';
 const LOAD_PROGRAM_LIMIT = 20;
 const LOAD_PROGRAM_EXTENSIONS = [ 'mkv', 'mp4', 'm4v', 'avi' ];
 // Sentinel season-folder value meaning "no season subfolder at all - episode files sit directly
-// in the show folder" (seen live: "4472 - Flying Scotsman (1968)", a single-episode show with no
-// Season 01/ subfolder). '.' is unambiguous (scandir() already skips it as a real entry) and
+// in the show folder" - a single-episode show with no Season 01/ subfolder is a real, if
+// uncommon, case. '.' is unambiguous (scandir() already skips it as a real entry) and
 // FisheyeSeason::registerFromDisk() treats it as "season dir == show dir", titling it
 // "<show> - Season 1".
 const LOAD_PROGRAM_FLAT_SEASON = '.';
@@ -186,9 +186,9 @@ if( $scopeShow === null ) {
 	}
 }
 
-// The page heading's own "TV Shows" text doubles as a link back to the real gallery (Lester,
-// 2026-09-03: "the Prior TV Shows would be nice if it linked back to the gallery to see what
-// had just loaded") - getDisplayUrlFromHash() just needs the id, no need to load the whole
+// The page heading's own "TV Shows" text doubles as a link back to the real gallery, so the
+// list of what was just loaded stays reachable from the gallery view too -
+// getDisplayUrlFromHash() just needs the id, no need to load the whole
 // object for a URL.
 $topGalleryUrlHash = [ 'gallery_id' => $topGalleryId ];
 $gBitSmarty->assign( 'topGalleryUrl', FisheyeGallery::getDisplayUrlFromHash( $topGalleryUrlHash ) );

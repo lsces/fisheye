@@ -1,13 +1,13 @@
 <?php
 /**
- * Streams one episode's (or film Featurette's - "Featurettes/ is no different to Season/",
- * Lester, 2026-09-04, same shape one level shallower: a bonus xref row living on its parent
- * content's own content_id) own video file, for the "play button" on view_season.php's episode
- * grid (Lester, 2026-09-02) and view_film.php's Featurettes section. Same "no nginx location for
- * that tree yet, no LibertyMime attachment either" situation view_extra_image.php is already in -
- * neither an 'episode' nor a 'featurette' xref row's xkey_ext is a liberty_files attachment, so
- * there is no existing serving route for either. Kept this name despite covering both - Lester
- * explicitly chose not to rename it once the episode/Featurette parallel was clear.
+ * Streams one episode's (or film Featurette's - Featurettes/ is no different to Season/, same
+ * shape one level shallower: a bonus xref row living on its parent content's own content_id)
+ * own video file, for the "play button" on view_season.php's episode grid and view_film.php's
+ * Featurettes section. Same "no nginx location for that tree yet, no LibertyMime attachment
+ * either" situation view_extra_image.php is already in - neither an 'episode' nor a 'featurette'
+ * xref row's xkey_ext is a liberty_files attachment, so there is no existing serving route for
+ * either. Kept this name despite covering both, since the episode/Featurette parallel is close
+ * enough that a separate script wouldn't earn its keep.
  *
  * Takes xref_id only, never a raw path - same no-path-traversal-surface reasoning as
  * view_extra_image.php.
@@ -65,9 +65,10 @@ if( empty( $root ) || !is_file( $path ) ) {
 if( !empty( $_REQUEST['vlc'] ) ) {
 	$scheme = ( !empty( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] !== 'off' ) ? 'https' : 'http';
 	$streamUrl = $scheme.'://'.$_SERVER['HTTP_HOST'].$_SERVER['PHP_SELF'].'?xref_id='.$xrefId;
-	// video/vnd.mpegurl, not the more common audio/x-mpegurl - this desktop's own mimeapps.list
-	// maps that exact string to vlc.desktop (confirmed live); audio/x-mpegurl falls back to
-	// brasero here instead, which is why the button downloaded fine but launched nothing.
+	// video/vnd.mpegurl, not the more common audio/x-mpegurl - Linux desktop environments
+	// typically map video/vnd.mpegurl to a media player's own .desktop file, whereas
+	// audio/x-mpegurl can fall back to an unrelated default handler that downloads the file
+	// without ever launching a player.
 	header( 'Content-Type: video/vnd.mpegurl' );
 	header( 'Content-Disposition: attachment; filename="'.pathinfo( $path, PATHINFO_FILENAME ).'.m3u"' );
 	echo "#EXTM3U\n#EXTINF:-1,".$gContent->getTitle()."\n".$streamUrl."\n";

@@ -1,11 +1,10 @@
 <?php
 /**
- * Dedicated view page for TV season content (FisheyeSeason) - the "matching pair" to
- * edit_season.php, alongside view_program.php/edit_program.php (Lester, 2026-09-02).
+ * Dedicated view page for TV season content (FisheyeSeason) - the matching pair to
+ * edit_season.php, alongside view_program.php/edit_program.php.
  *
- * No season-level facts panel - Plex itself has none (Lester, 2026-09-02: "Plex DOESN'T put
- * anything up on a season page... it's the TV that toggles to display a selected episode's
- * metadata as you select each"). Instead this page's main content is the episode list; each
+ * No season-level facts panel - Plex itself has none, it's the TV that toggles to display a
+ * selected episode's metadata as you select each. Instead this page's main content is the episode list; each
  * episode's own JSON packet (FisheyeSeason::reloadPlexEpisodes(), stored in its xref row's `data`
  * column - title/summary/air_date/director/writer/star/content_rating/duration) is decoded here
  * and rendered into the template already, so selecting an episode client-side just toggles which
@@ -74,11 +73,10 @@ $gBitSmarty->assign( 'episodes', $episodes );
 
 // parent show, for the "back up a level" link - lookup() (not `new FisheyeGallery()`) so this
 // resolves to a real FisheyeProgram instance when the parent is a show, not a plain FisheyeGallery -
-// needed for its own getDisplayUrl() override to fire (Lester, 2026-09-02: "Program is using
-// prettyurl and so goes to a generic view" - the generic shared breadcrumb's own hardcoded
-// 'gallery/<id>' pretty-url route bypasses that override entirely, landing on the plain gallery
-// view instead of view_program.php; `new FisheyeGallery()` here would have silently reproduced the
-// same bug even after dropping that shared breadcrumb).
+// needed for its own getDisplayUrl() override to fire - the generic shared breadcrumb's own
+// hardcoded 'gallery/<id>' pretty-url route bypasses that override entirely, landing on the plain
+// gallery view instead of view_program.php; `new FisheyeGallery()` here would have silently
+// reproduced the same bug even after dropping that shared breadcrumb.
 $gGallery = null;
 if( !empty( $_REQUEST['gallery_id'] ) && is_numeric( $_REQUEST['gallery_id'] )) {
 	$gGallery = FisheyeGallery::lookup( $_REQUEST );
@@ -88,9 +86,9 @@ if( !empty( $_REQUEST['gallery_id'] ) && is_numeric( $_REQUEST['gallery_id'] )) 
 }
 $gBitSmarty->assign( 'gGallery', $gGallery );
 
-// this season's title is conventionally "<show title> - <season name>" (e.g. "Inspector Morse -
-// Series 1") - split off just the show-name portion to link (Lester, 2026-09-02: "JUST the
-// 'Inspector Morse' will be tidier"), leaving the season-specific remainder as plain text.
+// this season's title is conventionally "<show title> - <season name>" (e.g. "Example Show -
+// Series 1") - split off just the show-name portion to link, leaving the season-specific
+// remainder as plain text (the link belongs on just the show name, not the whole title).
 // Falls back to the full title with no split if it doesn't actually start with the show's own
 // title (defensive - naming isn't enforced anywhere, just a convention).
 $seasonTitleSuffix = '';

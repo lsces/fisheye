@@ -4,7 +4,7 @@
    object still underneath, just not a separate page view - a different tpl for the single-season
    state rather than special-casing view_program.tpl itself.
 
-   Layout, per Lester: left side 50/50 (series thumbnail | show summary), episode detail panel
+   Layout: left side 50/50 (series thumbnail | show summary), episode detail panel
    to the right (col-md-6, swaps per-episode same as view_season.tpl), episodes along the bottom. *}
 {strip}
 <div class="display fisheye view-program view-program-single-season">

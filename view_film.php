@@ -39,8 +39,8 @@ $externalLinks = [];
 // script's own docblock for why) rather than a direct URL, since these files live outside
 // storage/attachments/ with no nginx location serving that tree yet.
 $filmImages = [];
-// this film's own bonus content, for a DVD-rip-with-extras style folder ("Featurettes/ is no
-// different to Season/" - Lester, 2026-09-04) - same xref-on-the-parent's-own-content_id shape
+// this film's own bonus content, for a DVD-rip-with-extras style folder - Featurettes/ is no
+// different to Season/, same xref-on-the-parent's-own-content_id shape
 // as a season's episodes, played via the same play_episode.php (xref_id only, widened to accept
 // either item).
 $featurettes = [];

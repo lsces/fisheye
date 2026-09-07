@@ -5,9 +5,9 @@
  * imdb/tvdb/tmdb/episodes/images - same reuse-the-generic-table decision as edit_film.php.
  *
  * Hosts 'Reload Images' (FisheyeSeason::reloadPlexImages()) and 'Load Episodes'
- * (FisheyeSeason::reloadPlexEpisodes()) - no season-level 'Reload Metadata' exists deliberately
- * (Lester, 2026-09-02: "Plex DOESN'T put anything up on a season page... it's the TV that toggles
- * to display a selected episode's metadata as you select each") - genre/director/writer/star/
+ * (FisheyeSeason::reloadPlexEpisodes()) - no season-level 'Reload Metadata' exists deliberately,
+ * since Plex itself has none: it's the TV that toggles to display a selected episode's metadata
+ * as you select each. genre/director/writer/star/
  * rating/duration live per-episode instead, fetched by 'Load Episodes' and shown per-episode on
  * view_season.php.
  *

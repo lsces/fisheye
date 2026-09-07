@@ -3,11 +3,9 @@
    {xref_id}), $stripId (unique per instance on a page - only matters if a page ever embeds more
    than one), $stripTitle (heading text, defaults to "Images").
 
-   Collapsible (Lester, 2026-09-02: "The images strip would benefit from a open/close until we
-   replace it with cast images") - a stopgap presentation, not a permanent fixture, so it stays
-   out of the way by default rather than always taking up page space. Starts CLOSED (Lester:
-   "the image bar needs to come up closed"); plain JS toggle, no library, same pattern as
-   fisheyeShowEpisode(). *}
+   Collapsible - a stopgap presentation ahead of a proper cast-images treatment, not a permanent
+   fixture, so it stays out of the way by default rather than always taking up page space. Starts
+   closed; plain JS toggle, no library, same pattern as fisheyeShowEpisode(). *}
 {if $images|@count}
 	<section class="film-images-strip">
 		<h2 class="images-strip-toggle" onclick="fisheyeToggleStrip('{$stripId|default:'images-strip'}', this)" style="cursor:pointer;">

@@ -23,8 +23,8 @@
 
 		{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='body' serviceHash=$gContent->mInfo}
 
-		{* Responsive flex grid, not cols_per_page/Bootstrap-col driven - same as film_grid's own
-		   fix (2026-09-04), applied here too ("tvshows can get the same fix" - Lester). *}
+		{* Responsive flex grid, not cols_per_page/Bootstrap-col driven - same fix as film_grid's
+		   own, applied here too for consistency across gallery styles. *}
 		<style>
 			.film-grid { display: flex; flex-wrap: wrap; margin: 0 -5px; }
 			.film-grid-item { box-sizing: border-box; padding: 5px; text-align: center; width: 12.5%; }

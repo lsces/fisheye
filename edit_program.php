@@ -2,14 +2,12 @@
 /**
  * Stub edit page for TV show ("program") content - title edit plus the generic liberty xref
  * table (list_xref.tpl / add_xref.php / edit_xref.php) for genre/cast/rating/duration/imdb/tvdb/
- * tmdb/images, same reuse-the-generic-table decision as edit_film.php - a clone of that page
- * (Lester, 2026-09-02: "you need a clone of edit_film to create an edit_program"), replacing the
- * inherited generic FisheyeGallery edit.php as this show's real edit page.
+ * tmdb/images, same reuse-the-generic-table decision as edit_film.php - a clone of that page,
+ * replacing the inherited generic FisheyeGallery edit.php as this show's real edit page.
  *
  * Also hosts both Plex actions, same split as edit_film.php: 'Reload Metadata'
  * (FisheyeProgram::reloadPlexMetadata()) and 'Reload Images' (FisheyeProgram::reloadPlexImages()).
- * view_program.php stays pure display with no update actions of its own (Lester: "view is ONLY
- * a view page").
+ * view_program.php stays pure display with no update actions of its own.
  *
  * @package fisheye
  * @subpackage functions
@@ -74,8 +72,7 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 	// The "Grab Thumbnail from Video" action on the Images tab (templates/xref/
 	// view_images_group.tpl) - same on-demand action as edit_season.php's own fGrabFrame, but
 	// grabs from the show's first season with a usable episode file (a show has no video of its
-	// own) - Lester, 2026-09-03: "where does the video grab pop in, It's that which needs to
-	// pop up to the program image gap".
+	// own).
 	$relativePath = $gContent->grabVideoFrameImage();
 	$plexResult = [ 'items' => $relativePath ? [ "frame grab: $relativePath" ] : [] ];
 	$plexResultLabel = KernelTools::tra( 'Grabbed a frame from a season episode video' );
