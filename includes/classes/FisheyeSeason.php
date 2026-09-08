@@ -125,11 +125,11 @@ class FisheyeSeason extends FisheyeImage {
 	 * @return bool
 	 */
 	public function promoteImageToThumbnail( string $pRelativePath ): bool {
-		$root = $this->getImageStorageRoot();
-		if( empty( $root ) || !is_file( $root.$pRelativePath ) ) {
+		$path = $this->getExtraImagePath( $pRelativePath );
+		if( empty( $path ) || !is_file( $path ) ) {
 			return false;
 		}
-		return $this->attachThumbnail( $root.$pRelativePath );
+		return $this->attachThumbnail( $path );
 	}
 
 	/**
@@ -152,6 +152,29 @@ class FisheyeSeason extends FisheyeImage {
 	}
 
 	/**
+	 * Override of FisheyeBase's own getImageStorageRoot()-relative default - a season's own
+	 * downloaded Plex alternates and per-episode thumbs live in storage/attachments/<branch>/,
+	 * not the external TV library tree, same fix FisheyeFilm/FisheyeAlbum already got - this
+	 * class just wasn't following it yet.
+	 */
+	public function getExtraImagePath( string $pRelativePath ): string {
+		return $this->getImageStorageBranchPath().$pRelativePath;
+	}
+
+	/**
+	 * This season's own storage/attachments/<branch>/ path - home for its downloaded Plex image
+	 * alternates, per-episode thumbs, and any manual uploads, same convention
+	 * FisheyeFilm::getImageStorageBranchPath() already established. Always nginx-writable by
+	 * construction, unlike the external TV library tree (getImageStorageRoot(), still used for
+	 * locating this season's own episode video files, unrelated to where images live).
+	 *
+	 * @return string
+	 */
+	private function getImageStorageBranchPath(): string {
+		return STORAGE_PKG_PATH.\Bitweaver\Liberty\liberty_mime_get_storage_branch( [ 'attachment_id' => $this->mContentId ] );
+	}
+
+	/**
 	 * Generic file-lifecycle hook liberty/edit_xref.php calls (via method_exists()) when a file
 	 * is uploaded to replace an xref row's own referenced file - see FisheyeFilm::
 	 * replaceXrefFile()'s identical docblock for the fuller reasoning (same method, same shape,
@@ -166,11 +189,11 @@ class FisheyeSeason extends FisheyeImage {
 		if( $pItem !== 'image' || empty( $pXkeyExt ) ) {
 			return false;
 		}
-		$root = $this->getImageStorageRoot();
-		if( empty( $root ) ) {
+		$path = $this->getExtraImagePath( $pXkeyExt );
+		if( empty( $path ) ) {
 			return false;
 		}
-		return move_uploaded_file( $pTmpPath, $root.$pXkeyExt );
+		return move_uploaded_file( $pTmpPath, $path );
 	}
 
 	/**
@@ -186,11 +209,11 @@ class FisheyeSeason extends FisheyeImage {
 		if( $pItem !== 'image' || empty( $pXkeyExt ) ) {
 			return false;
 		}
-		$root = $this->getImageStorageRoot();
-		if( empty( $root ) || !is_file( $root.$pXkeyExt ) ) {
+		$path = $this->getExtraImagePath( $pXkeyExt );
+		if( empty( $path ) || !is_file( $path ) ) {
 			return false;
 		}
-		return @unlink( $root.$pXkeyExt );
+		return @unlink( $path );
 	}
 
 	/**
@@ -420,7 +443,7 @@ class FisheyeSeason extends FisheyeImage {
 		$realRoot = rtrim( $realRoot, '/' ).'/';
 
 		$plexToken = $gBitSystem->getConfig( 'fisheye_plex_token', '' );
-		$imagesDir = $root.'images/';
+		$imagesDir = $this->getImageStorageBranchPath();
 		if( !empty( $plexToken ) ) {
 			KernelTools::mkdir_p( $imagesDir );
 		}
@@ -479,9 +502,10 @@ class FisheyeSeason extends FisheyeImage {
 			// distinct from the season-level poster/backdrop alternates reloadPlexImages() fetches.
 			// Confirmed live 2026-09-02: each episode's own metadata carries a `thumb="..."`
 			// attribute (a lowercase-only match so it can't collide with `parentThumb`/
-			// `grandparentThumb` on the same element). Stored in the same shared images/ folder as
-			// the season's other alternates, named by episode index rather than xorder/basename
-			// since a season has no single file of its own to derive a name from.
+			// `grandparentThumb` on the same element). Stored in this season's own
+			// storage/attachments/<branch>/, same as its other alternates, named by episode index
+			// rather than xorder/basename since a season has no single file of its own to derive a
+			// name from.
 			if( !empty( $plexToken ) ) {
 				$episodeXml = @file_get_contents( "http://localhost:32400/library/metadata/{$row['id']}?X-Plex-Token=".urlencode( $plexToken ) );
 				if( $episodeXml !== false && preg_match( '#\bthumb="([^"]+)"#', $episodeXml, $m ) ) {
@@ -493,7 +517,7 @@ class FisheyeSeason extends FisheyeImage {
 						file_put_contents( $tmpFile, $imageData );
 						$fileName = $this->getTitle().' - episode-'.(int)$row['index'].'.jpg';
 						if( self::resizeImageFile( $tmpFile, $imagesDir.$fileName, 400 ) ) {
-							$episodeData['thumb'] = 'images/'.$fileName;
+							$episodeData['thumb'] = $fileName;
 						}
 						@unlink( $tmpFile );
 					}
@@ -577,20 +601,18 @@ class FisheyeSeason extends FisheyeImage {
 		$relativePath = $this->grabVideoFrameImage();
 		if( $relativePath ) {
 			$summary['items'][] = "frame grab: $relativePath";
-			$root = $this->getImageStorageRoot();
-			$this->attachThumbnail( $root.$relativePath );
+			$this->attachThumbnail( $this->getExtraImagePath( $relativePath ) );
 		}
 	}
 
 	/**
 	 * Fetch alternate poster/backdrop images from Plex for this season, same shape as
 	 * FisheyeFilm::reloadPlexImages() (per-type idempotency, w342/w780 TMDB sizes, 5-per-type
-	 * cap, xref-based storage - see that method's own docblock for the fuller reasoning, not
-	 * repeated here). Differences specific to a season:
-	 * matched via matchPlexSeasonMetadataItem() (no file of its own to match by directly), and
-	 * the shared `images/` folder lives under the TV-specific per-show root rather than
-	 * fisheye_disk_storage_root, since a season has no single source file to derive a filename
-	 * basename from - this season's own title is used instead (e.g. 'Example Show - Series 1').
+	 * cap, xref-based storage in storage/attachments/<branch>/ - see that method's own docblock
+	 * for the fuller reasoning, not repeated here). Differences specific to a season: matched via
+	 * matchPlexSeasonMetadataItem() (no file of its own to match by directly), and the filename
+	 * basename is this season's own title rather than a source file's, since a season has no
+	 * single source file of its own (e.g. 'Example Show - Series 1').
 	 *
 	 * @return array Summary of what was found/stored, for the calling page's result display.
 	 */
@@ -605,7 +627,6 @@ class FisheyeSeason extends FisheyeImage {
 		}
 		$summary['matched'] = true;
 		$metadataItemId = $plexMatch['id'];
-		$root = $plexMatch['root'];
 
 		$existingImagePaths = [];
 		$xorder = 0;
@@ -652,7 +673,7 @@ class FisheyeSeason extends FisheyeImage {
 			}
 		}
 
-		$imagesDir = $root.'images/';
+		$imagesDir = $this->getImageStorageBranchPath();
 		KernelTools::mkdir_p( $imagesDir );
 
 		$baseName = $this->getTitle();
@@ -689,7 +710,6 @@ class FisheyeSeason extends FisheyeImage {
 				}
 				$fetched++;
 				$fileName = "$baseName-$type-$fetched.jpg";
-				$relativePath = 'images/'.$fileName;
 				$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_alt_' );
 				file_put_contents( $tmpFile, $imageData );
 				$resized = self::resizeImageFile( $tmpFile, $imagesDir.$fileName, 400 );
@@ -698,9 +718,9 @@ class FisheyeSeason extends FisheyeImage {
 					continue;
 				}
 				$xorder++;
-				$xrefParamHash = [ 'content_id' => $this->mContentId, 'item' => 'image', 'xkey_ext' => $relativePath, 'xorder' => $xorder ];
+				$xrefParamHash = [ 'content_id' => $this->mContentId, 'item' => 'image', 'xkey_ext' => $fileName, 'xorder' => $xorder ];
 				$this->storeXref( $xrefParamHash );
-				$summary['items'][] = "$type: $relativePath";
+				$summary['items'][] = "$type: $fileName";
 			}
 		}
 

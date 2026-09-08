@@ -456,11 +456,11 @@ not ready for primetime
 	/**
 	 * Resolve an 'image'/'episode' xref row's own relative path (xkey_ext, or an episode's
 	 * 'thumb' data key) to a real filesystem path - view_extra_image.php's own generic serving
-	 * hook. Default here: getImageStorageRoot()-relative, correct for Season/Program's own Plex
-	 * image alternates and per-episode thumbs, which still live under the external TV storage
-	 * root. FisheyeFilm overrides this - its own alternates moved into storage/attachments/
-	 * (2026-09-04), a different resolution root from getImageStorageRoot() (the film library
-	 * tree, used only for the video file itself now).
+	 * hook. Default here: getImageStorageRoot()-relative - only still relevant to a future
+	 * content type that doesn't override this. Film, Album, Season and Program all now override
+	 * it with their own storage/attachments/<branch>/ resolution instead - see each class's own
+	 * getImageStorageBranchPath() docblock for why: the external library tree's ownership/
+	 * permissions aren't guaranteed to be web-writable, where storage/attachments/ always is.
 	 *
 	 * @param string $pRelativePath
 	 * @return string  empty string if this content type has no image storage root
@@ -495,18 +495,22 @@ not ready for primetime
 	 *
 	 * @param string $pVideoFile  absolute path to a real video file to grab a frame from
 	 * @return string|null  the new xref row's xkey_ext, or null if this content type has no
-	 *                       image storage root, the file doesn't exist, or the grab/resize/
+	 *                       image storage location, the file doesn't exist, or the grab/resize/
 	 *                       store itself failed
 	 */
 	protected function grabVideoFrameIntoImageXref( string $pVideoFile ): ?string {
-		if( !method_exists( $this, 'getImageStorageRoot' ) || !is_file( $pVideoFile ) ) {
+		if( !is_file( $pVideoFile ) ) {
 			return null;
 		}
-		$root = $this->getImageStorageRoot();
-		if( empty( $root ) ) {
+		// Routed through getExtraImagePath() (empty relative path -> the directory itself) rather
+		// than hardcoding getImageStorageRoot().'images/' here, so this automatically picks up
+		// whichever storage location the calling subclass actually overrides it with (storage/
+		// attachments/<branch>/ for every current fisheye content type - see that method's own
+		// docblock).
+		$imagesDir = $this->getExtraImagePath( '' );
+		if( empty( $imagesDir ) ) {
 			return null;
 		}
-		$imagesDir = $root.'images/';
 		\Bitweaver\KernelTools::mkdir_p( $imagesDir );
 		$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_frame_' );
 		$relativePath = null;
@@ -518,7 +522,7 @@ not ready for primetime
 				$n++;
 			} while( is_file( $imagesDir.$fileName ) );
 			if( self::resizeImageFile( $tmpFile, $imagesDir.$fileName, 400 ) ) {
-				$relativePath = 'images/'.$fileName;
+				$relativePath = $fileName;
 				$nextXorder = 1 + (int)$this->mDb->getOne(
 					"SELECT COALESCE(MAX(`xorder`),0) FROM `".BIT_DB_PREFIX."liberty_xref` WHERE `content_id`=? AND `item`='image'",
 					[ $this->mContentId ]
@@ -541,24 +545,21 @@ not ready for primetime
 	 * a file, an awkward two-step process this page collapses into one.
 	 *
 	 * Lives here on FisheyeBase rather than duplicated on FisheyeFilm/Season/Program separately -
-	 * same reasoning as resizeImageFile() above - guarded by method_exists() rather than assuming
-	 * every fisheye content type has an image storage root of its own (only those three do).
+	 * same reasoning as resizeImageFile() above, and routed through getExtraImagePath() the same
+	 * way grabVideoFrameIntoImageXref() is, so it automatically lands in whichever storage/
+	 * attachments/<branch>/ location the calling subclass actually overrides it with.
 	 *
 	 * @param string $pTmpPath       the uploaded file's own tmp_name
 	 * @param string $pOriginalName  the uploaded file's own original name, for its extension
-	 * @return string|null  the new file's path, relative to getImageStorageRoot() (an 'image'
+	 * @return string|null  the new file's path, relative to getExtraImagePath() (an 'image'
 	 *                       xref row's own xkey_ext shape) - null if this content type has no
-	 *                       image storage root, or the move itself failed
+	 *                       image storage location, or the move itself failed
 	 */
 	public function addImageXrefFile( string $pTmpPath, string $pOriginalName ): ?string {
-		if( !method_exists( $this, 'getImageStorageRoot' ) ) {
+		$imagesDir = $this->getExtraImagePath( '' );
+		if( empty( $imagesDir ) ) {
 			return null;
 		}
-		$root = $this->getImageStorageRoot();
-		if( empty( $root ) ) {
-			return null;
-		}
-		$imagesDir = $root.'images/';
 		\Bitweaver\KernelTools::mkdir_p( $imagesDir );
 		$baseName = preg_replace( '/[^A-Za-z0-9]+/', '_', $this->getTitle() ) ?: 'image';
 		$ext = strtolower( pathinfo( $pOriginalName, PATHINFO_EXTENSION ) ) ?: 'jpg';
@@ -570,7 +571,7 @@ not ready for primetime
 		if( !move_uploaded_file( $pTmpPath, $imagesDir.$fileName ) ) {
 			return null;
 		}
-		return 'images/'.$fileName;
+		return $fileName;
 	}
 
 	public function isInGallery( $pGalleryContentId, $pItemContentId = null) {

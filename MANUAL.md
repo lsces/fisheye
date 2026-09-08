@@ -190,12 +190,15 @@ path), `xorder` is the episode number. `Track` (album/song) is the same shape, o
 an album.
 
 **Alternate images** (`image` item, `images` group) — extra poster/backdrop artwork for a film,
-season, or show, stored as ordinary xref rows rather than a second `LibertyMime` attachment row
-(multiple attachments per `content_id` is not supported on this stack). `xkey_ext` is the file's
-path relative to the owning object's storage root, in a shared `images/` folder alongside the main
-file; `xorder` gives display order. Rendered via the shared, collapsible `images_strip_inc.tpl`
-(starts closed) — a stopgap presentation layer, expected to eventually be replaced by real
-cast/crew imagery once that data exists.
+album, season, or show, stored as ordinary xref rows rather than a second `LibertyMime` attachment
+row (multiple attachments per `content_id` is not supported on this stack). `xkey_ext` is a bare
+filename, resolved via the owning content object's own `getExtraImagePath()` — every content type
+overrides this to resolve against its own `storage/attachments/<branch>/` (the same home every
+other attachment/derived file already uses, always web-writable by construction, unlike the
+external media library tree `getImageStorageRoot()` points at); `xorder` gives display order.
+Rendered via the shared, collapsible `images_strip_inc.tpl` (starts closed) — a stopgap
+presentation layer, expected to eventually be replaced by real cast/crew imagery once that data
+exists.
 
 **The Images tab has its own group-tab override**, `templates/xref/view_images_group.tpl` (Film/
 Season/Program all share the one file — identical to liberty's generic `list_xref.tpl` except the
@@ -320,14 +323,16 @@ file:
   (`expunge=3`) of the row, distinguished from an Archive (soft-delete via `update` permission).
 - `promoteImageToThumbnail( $pRelativePath )` — see above.
 
-Each content class implements these against its own storage root and its own understanding of
-which `item` values apply — the controller just calls them generically if they exist.
+Each content class implements these against its own image storage location (`getExtraImagePath()`)
+and its own understanding of which `item` values apply — the controller just calls them
+generically if they exist.
 
 **`FisheyeBase::addImageXrefFile( $pTmpPath, $pOriginalName )` is a related but separate
 mechanism** — not one of `edit_xref.php`'s three hooks (it *creates* a new row rather than acting
 on an existing one), called instead from the dedicated `add_image_xref.php` page the Images tab's
-own group-tab override links to. Guarded by `method_exists( $this, 'getImageStorageRoot' )`
-internally, and by `$gContent->supportsAddImage()` for the template-visible check (see above).
+own group-tab override links to. Resolves its destination via `getExtraImagePath('')` (returns
+empty for a content type with no image storage location), and by `$gContent->supportsAddImage()`
+for the template-visible check (see above).
 
 ## Video playback
 

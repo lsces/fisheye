@@ -197,11 +197,11 @@ class FisheyeProgram extends FisheyeGallery {
 	 * @return bool
 	 */
 	public function promoteImageToThumbnail( string $pRelativePath ): bool {
-		$root = $this->getImageStorageRoot();
-		if( empty( $root ) || !is_file( $root.$pRelativePath ) ) {
+		$path = $this->getExtraImagePath( $pRelativePath );
+		if( empty( $path ) || !is_file( $path ) ) {
 			return false;
 		}
-		return $this->attachThumbnail( $root.$pRelativePath );
+		return $this->attachThumbnail( $path );
 	}
 
 	/**
@@ -215,6 +215,29 @@ class FisheyeProgram extends FisheyeGallery {
 	 */
 	public function getImageStorageRoot(): string {
 		return \Bitweaver\Liberty\mime_film_get_tvshow_storage_root( $this->getTitle() );
+	}
+
+	/**
+	 * Override of FisheyeBase's own getImageStorageRoot()-relative default - a show's own
+	 * downloaded Plex alternates live in storage/attachments/<branch>/, not the external TV
+	 * library tree, same fix FisheyeFilm/FisheyeAlbum already got - this class just wasn't
+	 * following it yet.
+	 */
+	public function getExtraImagePath( string $pRelativePath ): string {
+		return $this->getImageStorageBranchPath().$pRelativePath;
+	}
+
+	/**
+	 * This show's own storage/attachments/<branch>/ path - home for its downloaded Plex image
+	 * alternates and any manual uploads, same convention FisheyeFilm::getImageStorageBranchPath()
+	 * already established. Always nginx-writable by construction, unlike the external TV library
+	 * tree (getImageStorageRoot(), still used by grabVideoFrameImage() to locate a season's own
+	 * episode video file, unrelated to where images live).
+	 *
+	 * @return string
+	 */
+	private function getImageStorageBranchPath(): string {
+		return STORAGE_PKG_PATH.\Bitweaver\Liberty\liberty_mime_get_storage_branch( [ 'attachment_id' => $this->mContentId ] );
 	}
 
 	/**
@@ -232,11 +255,11 @@ class FisheyeProgram extends FisheyeGallery {
 		if( $pItem !== 'image' || empty( $pXkeyExt ) ) {
 			return false;
 		}
-		$root = $this->getImageStorageRoot();
-		if( empty( $root ) ) {
+		$path = $this->getExtraImagePath( $pXkeyExt );
+		if( empty( $path ) ) {
 			return false;
 		}
-		return move_uploaded_file( $pTmpPath, $root.$pXkeyExt );
+		return move_uploaded_file( $pTmpPath, $path );
 	}
 
 	/**
@@ -252,11 +275,11 @@ class FisheyeProgram extends FisheyeGallery {
 		if( $pItem !== 'image' || empty( $pXkeyExt ) ) {
 			return false;
 		}
-		$root = $this->getImageStorageRoot();
-		if( empty( $root ) || !is_file( $root.$pXkeyExt ) ) {
+		$path = $this->getExtraImagePath( $pXkeyExt );
+		if( empty( $path ) || !is_file( $path ) ) {
 			return false;
 		}
-		return @unlink( $root.$pXkeyExt );
+		return @unlink( $path );
 	}
 
 	/**
@@ -588,10 +611,9 @@ class FisheyeProgram extends FisheyeGallery {
 	/**
 	 * Fetch alternate poster/backdrop images from Plex for this show, same shape as
 	 * FisheyeFilm::reloadPlexImages()/FisheyeSeason::reloadPlexImages() (per-type idempotency,
-	 * w342/w780 TMDB sizes, 5-per-type cap, xref-based storage - see FisheyeFilm's own docblock
-	 * for the fuller reasoning, not repeated here). Storage root is the TV-specific per-show root
-	 * resolved directly from this show's own title (no episode file needed to derive it, unlike
-	 * a season); filename basename is this show's own title too.
+	 * w342/w780 TMDB sizes, 5-per-type cap, xref-based storage in storage/attachments/<branch>/ -
+	 * see FisheyeFilm's own docblock for the fuller reasoning, not repeated here). Filename
+	 * basename is this show's own title (no episode file needed to derive it, unlike a season).
 	 *
 	 * @return array Summary of what was found/stored, for the calling page's result display.
 	 */
@@ -622,12 +644,6 @@ class FisheyeProgram extends FisheyeGallery {
 			return $summary;
 		}
 
-		$root = \Bitweaver\Liberty\mime_film_get_tvshow_storage_root( $this->getTitle() );
-		if( empty( $root ) ) {
-			$summary['items'][] = 'fisheye_tvshow_storage_root is not configured for this show.';
-			return $summary;
-		}
-
 		// Auto-pick the real thumbnail attachment (once only - see FisheyeSeason::
 		// reloadPlexImages()'s identical block for the fuller reasoning) from Plex's own
 		// currently-selected poster rather than just grabbing whichever alternate comes first.
@@ -649,7 +665,7 @@ class FisheyeProgram extends FisheyeGallery {
 			}
 		}
 
-		$imagesDir = $root.'images/';
+		$imagesDir = $this->getImageStorageBranchPath();
 		KernelTools::mkdir_p( $imagesDir );
 
 		$baseName = $this->getTitle();
@@ -685,7 +701,6 @@ class FisheyeProgram extends FisheyeGallery {
 				}
 				$fetched++;
 				$fileName = "$baseName-$type-$fetched.jpg";
-				$relativePath = 'images/'.$fileName;
 				$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_alt_' );
 				file_put_contents( $tmpFile, $imageData );
 				$resized = self::resizeImageFile( $tmpFile, $imagesDir.$fileName, 400 );
@@ -694,9 +709,9 @@ class FisheyeProgram extends FisheyeGallery {
 					continue;
 				}
 				$xorder++;
-				$xrefParamHash = [ 'content_id' => $this->mContentId, 'item' => 'image', 'xkey_ext' => $relativePath, 'xorder' => $xorder ];
+				$xrefParamHash = [ 'content_id' => $this->mContentId, 'item' => 'image', 'xkey_ext' => $fileName, 'xorder' => $xorder ];
 				$this->storeXref( $xrefParamHash );
-				$summary['items'][] = "$type: $relativePath";
+				$summary['items'][] = "$type: $fileName";
 			}
 		}
 
