@@ -351,8 +351,10 @@ class FisheyeSeason extends FisheyeImage {
 		}
 
 		$this->loadXrefInfo();
-		$episodeXref = $this->mXrefInfo ? $this->mXrefInfo->findRowByItem( 'episode' ) : null;
-		if( !$episodeXref || empty( $episodeXref['xkey_ext'] ) ) {
+		$episodeXrefs = $this->mXrefInfo
+			? array_filter( $this->mXrefInfo->allXrefs(), fn( $xref ) => $xref['item'] === 'episode' )
+			: [];
+		if( empty( $episodeXrefs ) ) {
 			return null;
 		}
 
@@ -370,11 +372,6 @@ class FisheyeSeason extends FisheyeImage {
 			return null;
 		}
 
-		$realPath = realpath( $root.$episodeXref['xkey_ext'] );
-		if( empty( $realPath ) ) {
-			return null;
-		}
-
 		try {
 			$plexDb = new \PDO( 'sqlite:'.$dbPath );
 		} catch( \Exception $e ) {
@@ -387,13 +384,26 @@ class FisheyeSeason extends FisheyeImage {
 			 JOIN metadata_items mi ON mi.id = mi2.metadata_item_id
 			 WHERE mp.file = ? AND mi.metadata_type = 4"
 		);
-		$stmt->execute( [ $realPath ] );
-		$seasonMetadataItemId = $stmt->fetchColumn();
-		if( !$seasonMetadataItemId ) {
-			return null;
+
+		// try every seeded episode row, not just the first - a single stale/renamed anchor
+		// file (e.g. after fixing a mistagged episode) shouldn't permanently break matching
+		// for the whole season when another row still points at a real file
+		foreach( $episodeXrefs as $episodeXref ) {
+			if( empty( $episodeXref['xkey_ext'] ) ) {
+				continue;
+			}
+			$realPath = realpath( $root.$episodeXref['xkey_ext'] );
+			if( empty( $realPath ) ) {
+				continue;
+			}
+			$stmt->execute( [ $realPath ] );
+			$seasonMetadataItemId = $stmt->fetchColumn();
+			if( $seasonMetadataItemId ) {
+				return [ 'db' => $plexDb, 'id' => (int)$seasonMetadataItemId, 'root' => $root ];
+			}
 		}
 
-		return [ 'db' => $plexDb, 'id' => (int)$seasonMetadataItemId, 'root' => $root ];
+		return null;
 	}
 
 	/**
