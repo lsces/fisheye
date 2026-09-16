@@ -5,6 +5,7 @@
 			{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='icon' serviceHash=$gContent->mInfo}
 			{if $gContent->hasUpdatePermission()}
 				<a title="{tr}Edit{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}edit_program.php?content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="edit" iexplain="Edit"}</a>
+				<a title="{tr}Load More Seasons{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}load_program.php?gallery_id={$gContent->mGalleryId}&amp;show={$gContent->getTitle()|escape:"url"}">{biticon ipackage="icons" iname="folder-open" iexplain="Load More Seasons"}</a>
 			{/if}
 		</div>
 		{* Breadcrumb - same getBreadcrumbTrail() mechanism as view_film.tpl/fisheye_film_grid_inc.tpl/
@@ -58,9 +59,6 @@
 				{foreach from=$gContent->mItems item=season}
 					<div class="col-md-3 col-sm-4 col-xs-6">
 						<div class="gallery-box">
-							{if $gContent->hasUpdatePermission()}
-								<a class="gallery-box-edit" title="{tr}Edit{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}edit_season.php?content_id={$season->mContentId}">{biticon ipackage="icons" iname="edit" iexplain="Edit"}</a>
-							{/if}
 							<a href="{$smarty.const.FISHEYE_PKG_URL}view_season.php?content_id={$season->mContentId}">
 								{if $season->getThumbnailUri()}
 									<div class="gallery-img">
@@ -75,9 +73,6 @@
 					</div>
 				{/foreach}
 			</div>
-			{if $gContent->hasUpdatePermission()}
-				<p><a href="{$smarty.const.FISHEYE_PKG_URL}load_program.php?gallery_id={$gContent->mGalleryId}&amp;show={$gContent->getTitle()|escape:"url"}">{tr}Load More Seasons{/tr}</a></p>
-			{/if}
 		</section>
 	{/if}
 </div>
