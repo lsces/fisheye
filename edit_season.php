@@ -56,6 +56,43 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 	$relativePath = $gContent->grabVideoFrameImage();
 	$plexResult = [ 'items' => $relativePath ? [ "frame grab: $relativePath" ] : [] ];
 	$plexResultLabel = KernelTools::tra( 'Grabbed a frame from the episode video' );
+} elseif( !empty( $_REQUEST['delete'] ) ) {
+	// Same delete flow as edit_film.php's own - safe to wire up properly since
+	// LibertyMime::expunge() actually reaches LibertyContent::expunge(). The episode video files
+	// themselves are never touched either way.
+	$gContent->hasUserPermission( 'p_fisheye_admin', true );
+
+	if( !empty( $_REQUEST['cancel'] ) ) {
+		// user cancelled - just continue on, doing nothing
+	} elseif( empty( $_REQUEST['confirm'] ) ) {
+		$formHash['delete'] = true;
+		$formHash['content_id'] = $gContent->mContentId;
+		$gBitSystem->confirmDialog( $formHash,
+			[
+				'warning' => KernelTools::tra( 'Are you sure you want to delete this season, including all its episodes and images?' ) . ' ' . $gContent->getTitle(),
+				'error' => KernelTools::tra( 'This cannot be undone!' ),
+			],
+		);
+	} else {
+		$userId = $gContent->getField( 'user_id' );
+		// Redirect back to the parent show rather than a generic fallback, same reasoning as
+		// edit_program.php's own parent-gallery redirect - grab it before expunge() removes the
+		// membership row getParentGalleries() itself reads. Uses the real, type-correct show
+		// object's own getDisplayUrl() (-> view_program.php) rather than FisheyeGallery's generic
+		// getDisplayUrlFromHash() (-> view.php) - same "wrong link" bug already fixed once today in
+		// image_order.tpl, not worth repeating here.
+		$parentGalleries = $gContent->getParentGalleries();
+		$redirectUrl = FISHEYE_PKG_URL.'?user_id='.$userId;
+		if( !empty( $parentGalleries ) ) {
+			$parentContentId = current( $parentGalleries )['content_id'] ?? null;
+			if( $parentContentId && ( $parent = \Bitweaver\Liberty\LibertyBase::getLibertyObject( $parentContentId ) ) ) {
+				$redirectUrl = $parent->getDisplayUrl();
+			}
+		}
+		if( $gContent->expunge() ) {
+			KernelTools::bit_redirect( $redirectUrl );
+		}
+	}
 }
 
 $gBitSmarty->assign( 'errors', $gContent->mErrors );

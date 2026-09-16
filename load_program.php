@@ -110,7 +110,7 @@ if( $scopeShow === null ) {
 			if( count( $candidates ) >= LOAD_PROGRAM_LIMIT ) {
 				break 2;
 			}
-			if( $entry === '.' || $entry === '..' || !is_dir( $showsDir.$entry ) ) {
+			if( str_starts_with( $entry, '.' ) || !is_dir( $showsDir.$entry ) ) {
 				continue;
 			}
 			$existingContentId = $gBitDb->getOne(
@@ -155,7 +155,7 @@ if( $scopeShow === null ) {
 			if( count( $candidates ) >= LOAD_PROGRAM_LIMIT ) {
 				break;
 			}
-			if( $entry === '.' || $entry === '..' || !is_dir( $showDir.$entry ) ) {
+			if( str_starts_with( $entry, '.' ) || !is_dir( $showDir.$entry ) ) {
 				continue;
 			}
 			$seasonTitle = $showTitle.' - '.$entry;

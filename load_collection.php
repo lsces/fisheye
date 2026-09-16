@@ -53,7 +53,7 @@ function load_collection_gallery_id_for_title( string $pTitle ) {
 function load_collection_unit_count( string $pDir ): int {
 	$units = 0;
 	foreach( scandir( $pDir ) ?: [] as $entry ) {
-		if( $entry === '.' || $entry === '..' ) {
+		if( str_starts_with( $entry, '.' ) ) {
 			continue;
 		}
 		$fullPath = $pDir.$entry;
@@ -106,7 +106,7 @@ if( !empty( $root ) && is_dir( $filmsDir ) ) {
 	$entries = scandir( $filmsDir );
 	natsort( $entries );
 	foreach( $entries as $entry ) {
-		if( $entry === '.' || $entry === '..' || !is_dir( $filmsDir.$entry ) ) {
+		if( str_starts_with( $entry, '.' ) || !is_dir( $filmsDir.$entry ) ) {
 			continue;
 		}
 		if( load_collection_unit_count( $filmsDir.$entry.'/' ) <= 1 ) {

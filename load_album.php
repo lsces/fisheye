@@ -55,7 +55,7 @@ $musicDir = $root.'Music/';
 $artistDir = null;
 if( !empty( $root ) && is_dir( $musicDir ) ) {
 	foreach( scandir( $musicDir ) ?: [] as $subDir ) {
-		if( $subDir === '.' || $subDir === '..' || !is_dir( $musicDir.$subDir ) ) {
+		if( str_starts_with( $subDir, '.' ) || !is_dir( $musicDir.$subDir ) ) {
 			continue;
 		}
 		$candidateDir = $musicDir.$subDir.'/'.$galleryTitle.'/';
@@ -94,7 +94,7 @@ if( $artistDir ) {
 		if( count( $candidates ) >= LOAD_ALBUM_LIMIT ) {
 			break;
 		}
-		if( $entry === '.' || $entry === '..' || !is_dir( $artistDir.$entry ) ) {
+		if( str_starts_with( $entry, '.' ) || !is_dir( $artistDir.$entry ) ) {
 			continue;
 		}
 		$existingContentId = $gBitDb->getOne(

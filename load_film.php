@@ -85,7 +85,7 @@ $scanRelativePrefix = 'Films/'.( $folderName !== null ? $folderName.'/' : '' );
 $subfolders = [];
 if( $folderName === null && is_dir( $filmsDir ) ) {
 	foreach( scandir( $filmsDir ) as $entry ) {
-		if( $entry === '.' || $entry === '..' || !is_dir( $filmsDir.$entry ) ) {
+		if( str_starts_with( $entry, '.' ) || !is_dir( $filmsDir.$entry ) ) {
 			continue;
 		}
 		$subfolders[] = $entry;
@@ -157,7 +157,7 @@ if( !empty( $root ) && $scanDir !== null && is_dir( $scanDir ) ) {
 		$fullPath = $scanDir.$entry;
 		if( is_file( $fullPath ) ) {
 			$scanTargets[] = [ 'full' => $fullPath, 'relative' => $scanRelativePrefix.$entry, 'file' => $entry ];
-		} elseif( $folderName !== null && is_dir( $fullPath ) && $entry !== '.' && $entry !== '..' && $entry !== 'Featurettes' ) {
+		} elseif( $folderName !== null && is_dir( $fullPath ) && !str_starts_with( $entry, '.' ) && $entry !== 'Featurettes' ) {
 			// Only descend a level once already scoped inside one collection folder - at the true
 			// top level every subfolder here is itself a whole other collection (Aardman, Alien,
 			// ...), browsed separately via $subfolders below, not flattened into this list (found

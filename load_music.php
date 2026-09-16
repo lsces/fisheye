@@ -52,7 +52,7 @@ function load_music_gallery_id_for_title( string $pTitle ) {
 function load_music_unit_count( string $pDir ): int {
 	$units = 0;
 	foreach( scandir( $pDir ) ?: [] as $entry ) {
-		if( $entry === '.' || $entry === '..' ) {
+		if( str_starts_with( $entry, '.' ) ) {
 			continue;
 		}
 		$fullPath = $pDir.$entry.'/';
@@ -86,7 +86,7 @@ $musicDir = $root.'Music/';
 $baseFolders = [];
 if( !empty( $root ) && is_dir( $musicDir ) ) {
 	foreach( scandir( $musicDir ) ?: [] as $entry ) {
-		if( $entry === '.' || $entry === '..' || !is_dir( $musicDir.$entry ) ) {
+		if( str_starts_with( $entry, '.' ) || !is_dir( $musicDir.$entry ) ) {
 			continue;
 		}
 		$baseFolders[] = $entry;
@@ -133,7 +133,7 @@ if( $baseDir && is_dir( $baseDir ) ) {
 	$entries = scandir( $baseDir );
 	natsort( $entries );
 	foreach( $entries as $entry ) {
-		if( $entry === '.' || $entry === '..' || !is_dir( $baseDir.$entry ) ) {
+		if( str_starts_with( $entry, '.' ) || !is_dir( $baseDir.$entry ) ) {
 			continue;
 		}
 		if( load_music_unit_count( $baseDir.$entry.'/' ) <= 1 ) {
