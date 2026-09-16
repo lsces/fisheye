@@ -34,13 +34,13 @@
 				<div class="col-xs-6 col-sm-4 col-md-3 ">
 					<div class="{$gal.content_type_guid} thumbnail">
 						{if $gBitSystem->isFeatureActive('fisheye_list_thumbnail') && $gal.display_url}
-							{* assign var=thumbnailUri value = $gBitSystem->getParameter( $gal, 'thumbnail_uri', "`$smarty.const.FISHEYE_PKG_URL`image/no_image.png") *}
-							<a href="{$gal.display_url}"><div class="square" alt="{$gal.title|escape}" 
-								title="{$gal.title|truncate:50|escape}" 
+							{assign var=thumbnailUri value=$gBitSystem->getParameter( $gal, 'thumbnail_uri', "`$smarty.const.FISHEYE_PKG_URL`image/no_image.png")}
+							<a href="{$gal.display_url}"><div class="square" style="background-image:url('{$thumbnailUri}');" alt="{$gal.title|escape}"
+								title="{$gal.title|truncate:50|escape}"
 							{if !empty($gal.data)}
 								data-toggle="popover" data-trigger="click hover focus" data-placement="top" data-content="{$gal.data|truncate}"
 							{/if}>
-							<img src="{$gBitSystem->getParameter( $gal, 'thumbnail_uri', "`$smarty.const.FISHEYE_PKG_URL`image/no_image.png")}" alt="{$gal.title|escape}"><h3 class="gallery-title"><a href="{$gal.display_url}">
+							<img src="{$thumbnailUri}" alt="{$gal.title|escape}"><h3 class="gallery-title"><a href="{$gal.display_url}">
 							{if $gBitSystem->isFeatureActive('fisheye_list_title')}
 								{$gal.title|truncate|escape}
 							{else}
