@@ -295,7 +295,13 @@ class FisheyeSeason extends FisheyeImage {
 		$showGallery = new FisheyeGallery( null, $pShowContentId );
 		$showGallery->load();
 		if( !$showGallery->isInGallery( $pShowContentId, $season->mContentId ) ) {
-			$showGallery->addItem( $season->mContentId );
+			// addItem() defaults item_position to null, leaving every season to sort by its
+			// arbitrary creation order (content_id) rather than season number - derive a real
+			// position from the folder name instead ("Season 11" -> 110), counting by tens per
+			// image_order.tpl's own convention so gaps stay available for manual reordering
+			// later. A non-numbered folder (e.g. "Specials") sorts first, ahead of Season 1.
+			$position = preg_match( '/(\d+)/', $pSeasonFolderName, $m ) ? (int)$m[1] * 10 : 0;
+			$showGallery->addItem( $season->mContentId, $position );
 		}
 
 		if( !$alreadySeeded ) {
