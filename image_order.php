@@ -14,6 +14,14 @@ require_once '../kernel/includes/setup_inc.php';
 use Bitweaver\KernelTools;
 use Bitweaver\Liberty\LibertyBase;
 
+// FISHEYEIMAGE_CONTENT_TYPE_GUID (used by image_order.tpl to tell a real image apart from a
+// sub-gallery/show/season item) is only ever defined as a side effect of FisheyeImage.php being
+// autoloaded - which never happens on its own at a gallery level whose own items are galleries
+// themselves (e.g. the top-level "TV Shows" gallery, whose mItems are FisheyeProgram, not
+// FisheyeImage). Require it directly so the constant always exists here regardless of what kind
+// of gallery is being ordered.
+require_once __DIR__.'/includes/classes/FisheyeImage.php';
+
 global $gBitSystem;
 
 include_once FISHEYE_PKG_INCLUDE_PATH.'gallery_lookup_inc.php';
