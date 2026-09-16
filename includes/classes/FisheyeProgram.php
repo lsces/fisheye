@@ -499,7 +499,10 @@ class FisheyeProgram extends FisheyeGallery {
 			return [ 'db' => $plexDb, 'id' => (int)$overrideId ];
 		}
 
-		$stmt = $plexDb->prepare( "SELECT id FROM metadata_items WHERE metadata_type = 2 AND title = ?" );
+		// case-insensitive - Plex's own title casing doesn't always match the folder-derived title
+		// stored here (e.g. Plex has "dinnerladies", this show is titled "Dinnerladies"), and an
+		// exact match would otherwise report "no match" for a show clearly present in Plex.
+		$stmt = $plexDb->prepare( "SELECT id FROM metadata_items WHERE metadata_type = 2 AND title = ? COLLATE NOCASE" );
 		$stmt->execute( [ $this->getTitle() ] );
 		$showMetadataItemId = $stmt->fetchColumn();
 		if( !$showMetadataItemId ) {
