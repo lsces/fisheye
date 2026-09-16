@@ -705,7 +705,7 @@ class FisheyeSeason extends FisheyeImage {
 
 			$apiUrl = "http://localhost:32400/library/metadata/$metadataItemId/$endpoint?X-Plex-Token=".urlencode( $plexToken );
 			$xml = @file_get_contents( $apiUrl );
-			if( $xml === false || !preg_match_all( '#<Photo[^>]*\bkey="(https://[^"]+)"#', $xml, $matches ) ) {
+			if( $xml === false || !preg_match_all( '#<Photo[^>]*\bkey="([^"]+)"#', $xml, $matches ) ) {
 				continue;
 			}
 			$fetched = 0;
@@ -713,7 +713,14 @@ class FisheyeSeason extends FisheyeImage {
 				if( $fetched >= 5 ) {
 					break;
 				}
-				$imageUrl = str_replace( '/original/', '/'.$thumbSizes[$type].'/', html_entity_decode( $imageUrl ) );
+				$imageUrl = html_entity_decode( $imageUrl );
+				// Plex's own newer TV agent (tv.plex.agents.series) serves its bundled art via a
+				// local proxy path ("/library/metadata/.../file?url=metadata://...") rather than a
+				// direct https:// URL - no remote size variant to swap in for these, fetch as-is
+				// through the local API instead
+				$imageUrl = str_starts_with( $imageUrl, '/' )
+					? "http://localhost:32400$imageUrl".( str_contains( $imageUrl, '?' ) ? '&' : '?' )."X-Plex-Token=".urlencode( $plexToken )
+					: str_replace( '/original/', '/'.$thumbSizes[$type].'/', $imageUrl );
 				$imageData = @file_get_contents( $imageUrl );
 				if( $imageData === false ) {
 					continue;
