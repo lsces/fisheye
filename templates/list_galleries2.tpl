@@ -31,7 +31,7 @@
 			<div class="row galleries">
 				{* math assign=quarterValue equation="round(c/4)" c=$galleryList|count *}
 				{foreach from=$galleryList key=galleryId item=gal}
-				<div class="col-xs-6 col-sm-4 col-md-3 ">
+				<div class="col-xs-6 col-sm-4 col-md-2 ">
 					<div class="{$gal.content_type_guid} thumbnail">
 						{if $gBitSystem->isFeatureActive('fisheye_list_thumbnail') && $gal.display_url}
 							{assign var=thumbnailUri value=$gBitSystem->getParameter( $gal, 'thumbnail_uri', "`$smarty.const.FISHEYE_PKG_URL`image/no_image.png")}
