@@ -159,9 +159,16 @@ if( $scopeShow === null ) {
 				continue;
 			}
 			$seasonTitle = $showTitle.' - '.$entry;
+			// A content record existing isn't enough on its own to call this season "already
+			// loaded" - it also needs to actually be linked into this show's own gallery. A
+			// season can exist unlinked (e.g. registerFromDisk() ran once but the gallery link
+			// step never completed) and would otherwise be permanently hidden from this picker
+			// while still missing from view_program.php's own season grid.
 			$existingContentId = $gBitDb->getOne(
-				"SELECT content_id FROM liberty_content WHERE content_type_guid = 'fisheyeseason' AND title = ?",
-				[ $seasonTitle ]
+				"SELECT lc.content_id FROM liberty_content lc
+				 INNER JOIN fisheye_gallery_image_map m ON m.item_content_id = lc.content_id AND m.gallery_content_id = ?
+				 WHERE lc.content_type_guid = 'fisheyeseason' AND lc.title = ?",
+				[ $showContentId, $seasonTitle ]
 			);
 			if( $existingContentId ) {
 				continue;
