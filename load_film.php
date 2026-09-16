@@ -56,7 +56,10 @@ $filmsDir = $root.'Films/';
 // - neither yet, or gallery_id given but no folder yet - show the folder picker instead of
 //   scanning anything; reloading with a folder in the link is what actually selects one.
 $galleryIdParam = (int)( $_REQUEST['gallery_id'] ?? 0 );
-$folderParam = trim( (string)( $_REQUEST['folder'] ?? '' ) );
+// detoxify() HTML-escapes every $_REQUEST value on the way in (correct for values headed to
+// HTML output) - this one is used for a raw filesystem lookup instead, so it needs decoding back
+// first, otherwise any folder name containing &, <, or > silently fails to match on disk.
+$folderParam = htmlspecialchars_decode( trim( (string)( $_REQUEST['folder'] ?? '' ) ), ENT_NOQUOTES );
 $folderName = $folderParam !== '' ? $folderParam : null;
 
 $scopeGallery = null;

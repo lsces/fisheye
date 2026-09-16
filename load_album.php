@@ -71,7 +71,9 @@ $importResult = null;
 if( !empty( $_REQUEST['fImportAlbums'] ) ) {
 	$importResult = [ 'created' => [], 'errors' => [] ];
 	foreach( (array)( $_REQUEST['selected'] ?? [] ) as $albumFolder ) {
-		$albumFolder = trim( (string)$albumFolder );
+		// Same detoxify() decode as load_film.php - HTML-escapes every $_REQUEST value, which
+		// breaks a raw filesystem lookup like this one for any folder name containing &, <, or >.
+		$albumFolder = htmlspecialchars_decode( trim( (string)$albumFolder ), ENT_NOQUOTES );
 		if( $albumFolder === '' ) {
 			continue;
 		}

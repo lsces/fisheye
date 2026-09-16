@@ -72,7 +72,9 @@ $result = null;
 if( !empty( $_REQUEST['fCreate'] ) ) {
 	$result = [ 'created' => [], 'errors' => [] ];
 	foreach( (array)( $_REQUEST['selected'] ?? [] ) as $folderName ) {
-		$folderName = trim( (string)$folderName );
+		// Same detoxify() decode as load_film.php - HTML-escapes every $_REQUEST value, which
+		// breaks a raw filesystem lookup like this one for any folder name containing &, <, or >.
+		$folderName = htmlspecialchars_decode( trim( (string)$folderName ), ENT_NOQUOTES );
 		if( empty( $folderName ) || !is_dir( $filmsDir.$folderName ) ) {
 			continue;
 		}

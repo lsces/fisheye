@@ -57,7 +57,9 @@ const LOAD_PROGRAM_FLAT_SEASON = '.';
 $topGalleryId = FisheyeGallery::getTopGalleryId( 'TV Shows' );
 
 $galleryIdParam = (int)( $_REQUEST['gallery_id'] ?? 0 );
-$showParam = trim( (string)( $_REQUEST['show'] ?? '' ) );
+// See load_film.php's own comment on this same decode - detoxify() HTML-escapes every $_REQUEST
+// value, which breaks a raw filesystem lookup like this one for any show name containing &, <, or >.
+$showParam = htmlspecialchars_decode( trim( (string)( $_REQUEST['show'] ?? '' ) ), ENT_NOQUOTES );
 
 $scopeShow = null;      // ['content_id'=>, 'title'=>] once a show is known/registered
 $showResult = null;     // registerFromDisk() result, only shown the first time a show is created
@@ -130,7 +132,8 @@ if( $scopeShow === null ) {
 	if( !empty( $_REQUEST['fImportSeasons'] ) ) {
 		$seasonResult = [ 'created' => [], 'errors' => [] ];
 		foreach( (array)( $_REQUEST['selected'] ?? [] ) as $seasonFolder ) {
-			$seasonFolder = trim( (string)$seasonFolder );
+			// Same detoxify() decode as $showParam above - these came from checkbox values.
+			$seasonFolder = htmlspecialchars_decode( trim( (string)$seasonFolder ), ENT_NOQUOTES );
 			if( $seasonFolder === '' ) {
 				continue;
 			}

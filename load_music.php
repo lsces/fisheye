@@ -94,7 +94,9 @@ if( !empty( $root ) && is_dir( $musicDir ) ) {
 	natsort( $baseFolders );
 }
 
-$base = trim( (string)( $_REQUEST['base'] ?? '' ) );
+// See load_film.php's own comment on this same decode - detoxify() HTML-escapes every $_REQUEST
+// value, which breaks a raw filesystem lookup like this one for any collection name containing &, <, or >.
+$base = htmlspecialchars_decode( trim( (string)( $_REQUEST['base'] ?? '' ) ), ENT_NOQUOTES );
 if( $base !== '' && !in_array( $base, $baseFolders, true ) ) {
 	$base = '';
 }
@@ -104,7 +106,8 @@ $result = null;
 if( $base !== '' && !empty( $_REQUEST['fCreate'] ) ) {
 	$result = [ 'created' => [], 'errors' => [] ];
 	foreach( (array)( $_REQUEST['selected'] ?? [] ) as $folderName ) {
-		$folderName = trim( (string)$folderName );
+		// Same detoxify() decode as $base above - these came from checkbox values.
+		$folderName = htmlspecialchars_decode( trim( (string)$folderName ), ENT_NOQUOTES );
 		if( empty( $folderName ) || !is_dir( $baseDir.$folderName ) ) {
 			continue;
 		}
