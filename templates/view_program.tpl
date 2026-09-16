@@ -56,9 +56,17 @@
 	{if $gContent->mItems|@count}
 		<section class="film-seasons">
 			<h2>{tr}Seasons{/tr}</h2>
-			<div class="row">
+			{* Same responsive flex grid as fisheye_film_grid_inc.tpl/fisheye_program_grid_inc.tpl -
+			   8 across on a wide monitor, folding to 4 then 2 - not Bootstrap-col driven. *}
+			<style>
+				.film-grid { display: flex; flex-wrap: wrap; margin: 0 -5px; }
+				.film-grid-item { box-sizing: border-box; padding: 5px; text-align: center; width: 12.5%; }
+				@media (max-width: 1199px) { .film-grid-item { width: 25%; } }
+				@media (max-width: 767px) { .film-grid-item { width: 50%; } }
+			</style>
+			<div class="film-grid">
 				{foreach from=$gContent->mItems item=season}
-					<div class="col-md-3 col-sm-4 col-xs-6">
+					<div class="film-grid-item">
 						<div class="gallery-box">
 							<a href="{$smarty.const.FISHEYE_PKG_URL}view_season.php?content_id={$season->mContentId}">
 								{if $season->getThumbnailUri()}
