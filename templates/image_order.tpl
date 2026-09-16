@@ -1,7 +1,7 @@
 {strip}
 <div class="admin fisheye">
 	<div class="header">
-		<h1>{tr}Gallery Images{/tr}: <a href="{$smarty.const.FISHEYE_PKG_URL}view.php?gallery_id={$gContent->mGalleryId}">{$gContent->getTitle()|escape}</a></h1>
+		<h1>{tr}Gallery Images{/tr}: <a href="{$gContent->getDisplayUrl()|escape}">{$gContent->getTitle()|escape}</a></h1>
 	</div>
 
 	<div class="body">
