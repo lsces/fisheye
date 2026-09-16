@@ -58,6 +58,9 @@
 				{foreach from=$gContent->mItems item=season}
 					<div class="col-md-3 col-sm-4 col-xs-6">
 						<div class="gallery-box">
+							{if $gContent->hasUpdatePermission()}
+								<a class="gallery-box-edit" title="{tr}Edit{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}edit_season.php?content_id={$season->mContentId}">{biticon ipackage="icons" iname="edit" iexplain="Edit"}</a>
+							{/if}
 							<a href="{$smarty.const.FISHEYE_PKG_URL}view_season.php?content_id={$season->mContentId}">
 								{if $season->getThumbnailUri()}
 									<div class="gallery-img">
@@ -72,6 +75,9 @@
 					</div>
 				{/foreach}
 			</div>
+			{if $gContent->hasUpdatePermission()}
+				<p><a href="{$smarty.const.FISHEYE_PKG_URL}load_program.php?gallery_id={$gContent->mGalleryId}&amp;show={$gContent->getTitle()|escape:"url"}">{tr}Load More Seasons{/tr}</a></p>
+			{/if}
 		</section>
 	{/if}
 </div>

@@ -116,13 +116,23 @@ class FisheyeProgram extends FisheyeGallery {
 		if( $this->isValid() && $this->loadImages() ) {
 			foreach( $this->mItems as $season ) {
 				if( is_a( $season, '\Bitweaver\Fisheye\FisheyeSeason' ) ) {
-					$season->expunge();
+					// abort the whole show delete rather than silently skip a season that fails
+					if( !$season->expunge() ) {
+						// $season is a separate object instance - pull its own mErrors across,
+						// since they don't reach $this->mErrors on their own
+						$this->mErrors['expunge_season'] = "Season ".$season->mContentId." could not be expunged: "
+							.( $season->mErrors['expunge_attachment'] ?? implode( '; ', $season->mErrors ) ?: 'unknown reason' );
+						return false;
+					}
 				}
 			}
 		}
 		$query = "SELECT `attachment_id` FROM `".BIT_DB_PREFIX."liberty_attachments` WHERE `content_id`=?";
 		foreach( $this->mDb->getCol( $query, [ $this->mContentId ] ) as $attachmentId ) {
-			$this->expungeAttachment( $attachmentId );
+			if( !$this->expungeAttachment( $attachmentId ) ) {
+				// expungeAttachment() already set mErrors['expunge_attachment'] to the specific reason
+				return false;
+			}
 		}
 		return parent::expunge();
 	}

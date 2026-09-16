@@ -753,6 +753,9 @@ class FisheyeImage extends FisheyeBase {
 	}
 
 	public function expunge(): bool {
+		// return actual success/failure, not an unconditional true - callers such as
+		// FisheyeProgram::expunge()'s season loop rely on this to abort on a real failure
+		$ret = false;
 		if( $this->isValid() ) {
 			$this->StartTrans();
 			$query = "DELETE FROM `".BIT_DB_PREFIX."fisheye_gallery_image_map` WHERE `item_content_id` = ?";
@@ -765,11 +768,12 @@ class FisheyeImage extends FisheyeBase {
 				$this->CompleteTrans();
 				$this->mImageId = null;
 				$this->mContentId = null;
+				$ret = true;
 			} else {
 				$this->mDb->RollbackTrans();
 			}
 		}
-		return true;
+		return $ret;
 	}
 
 	public function expungingAttachment($pAttachmentId, $pContentIdArray) {
