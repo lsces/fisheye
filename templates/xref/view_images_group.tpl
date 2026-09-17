@@ -43,7 +43,7 @@
 		{smartlink ititle="Add Image" ipackage="liberty" ifile="add_xref.php" biticon="list-add" content_id=$gContent->mInfo.content_id group=$xrefGroup->mSortOrder}
 		{if $gContent->canGrabVideoFrame()}
 			&nbsp;
-			<a href="{$gContent->getEditUrl()|cat:'&fGrabFrame=1'|escape}">{biticon ipackage="icons" iname="image-x-generic" iexplain="Grab Thumbnail"} {tr}Grab Thumbnail from Video{/tr}</a>
+			<a title="{tr}Grab Thumbnail from Video{/tr}" href="{$gContent->getEditUrl()|cat:'&fGrabFrame=1'|escape}">{biticon ipackage="icons" iname="package_multimedia" iexplain="Grab Thumbnail from Video"}</a>
 		{/if}
 	</div>
 {/if}
