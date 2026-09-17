@@ -454,6 +454,20 @@ not ready for primetime
 	}
 
 	/**
+	 * Generic hook liberty/add_xref.php calls (via method_exists()) when the only addable item
+	 * in a group is 'image' - redirects straight to the real upload flow instead of rendering
+	 * add_xref.tpl's generic form, which has no file upload at all and would otherwise create a
+	 * dead xref row with an empty xkey_ext and no file behind it (found live 2026-09-17, exactly
+	 * that on a show's own image xref - reachable directly at add_xref.php regardless of
+	 * whether view_images_group.tpl's own conditional link ever pointed here).
+	 *
+	 * @return string|null
+	 */
+	public function getAddImageUrl(): ?string {
+		return $this->supportsAddImage() ? FISHEYE_PKG_URL.'add_image_xref.php?content_id='.$this->mContentId : null;
+	}
+
+	/**
 	 * Resolve an 'image'/'episode' xref row's own relative path (xkey_ext, or an episode's
 	 * 'thumb' data key) to a real filesystem path - view_extra_image.php's own generic serving
 	 * hook. Default here: getImageStorageRoot()-relative - only still relevant to a future
