@@ -118,6 +118,22 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 $gBitSmarty->assign( 'errors', $gContent->mErrors );
 
 $gContent->loadXrefInfo();
+
+// Single-season shows: merge that one season's own real 'episodes' group straight into this
+// show's own xref info - same real LibertyXrefGroup/LibertyXref objects loadXrefInfo() already
+// produces for the season itself (view_program.php's single-season merge uses the same
+// getSingleSeason(), just for its own flattened episode-grid display rather than this generic
+// xref group). Shown read-only here (edit_program.tpl passes allow_edit=false for this one
+// group) since its own Add/Edit links would otherwise point at the show's content_id, not the
+// season's that these rows actually belong to - edit_season.php (reachable via the season's own
+// image xref tab already existing) is still the real place to edit an episode.
+if( $season = $gContent->getSingleSeason() ) {
+	$season->loadXrefInfo();
+	if( $season->mXrefInfo && isset( $season->mXrefInfo->mGroups['episodes'] ) ) {
+		$gContent->mXrefInfo->mGroups['episodes'] = $season->mXrefInfo->mGroups['episodes'];
+	}
+}
+
 $gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
 $gBitSmarty->assign( 'gContent', $gContent );
 $gBitSmarty->assign( 'plexResult', $plexResult );

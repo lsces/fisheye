@@ -238,6 +238,20 @@ class FisheyeProgram extends FisheyeGallery {
 	}
 
 	/**
+	 * This show's one-and-only season, for the single-season case (a flat/single-episode show,
+	 * see FisheyeSeason::registerFromDisk()'s own "isFlatSeason" handling) - null for a show with
+	 * zero or more than one season, since there'd be no single unambiguous season to return.
+	 *
+	 * @return FisheyeSeason|null
+	 */
+	public function getSingleSeason(): ?FisheyeSeason {
+		// loadImages() takes its param by reference - a literal array fatals.
+		$listHash = [ 'max_records' => -1 ];
+		$this->loadImages( $listHash );
+		return count( (array)$this->mItems ) === 1 ? current( $this->mItems ) : null;
+	}
+
+	/**
 	 * This show's own storage/attachments/<branch>/ path - home for its downloaded Plex image
 	 * alternates and any manual uploads, same convention FisheyeFilm::getImageStorageBranchPath()
 	 * already established. Always nginx-writable by construction, unlike the external TV library
