@@ -1,9 +1,9 @@
-{* Group-tab override for the 'images' xref group (fisheyefilm/fisheyeseason/fisheyeprogram all
-   share this one - liberty_xref_group.template set to 'images' for their three group rows).
-   Identical to liberty's own generic list_xref.tpl except the "Add record" link below, which
-   points at add_image_xref.php instead of the generic add_xref.php/add_xref.tpl flow (that one
-   has no file upload at all, requiring a create-then-edit-to-attach two-step). add_image_xref.php
-   uploads straight into a new row in one step. *}
+{* Group-tab override for the 'images' xref group (fisheyefilm/fisheyeseason/fisheyeprogram/
+   fisheyealbum all share this one - liberty_xref_group.template set to 'images' for their group
+   rows). Identical to liberty's own generic list_xref.tpl except the "Add" link below, which
+   goes through the standard add_xref.php - LibertyContent::getXrefAddTemplate() resolves this
+   same group's own add_images_group.tpl there too (real file upload), rather than the plain
+   add_xref.tpl (no upload at all). *}
 {assign var=xrefAllowEdit value=$allow_edit|default:true}
 {assign var=tabTitle value=$xrefGroup->mTitle}
 {assign var=isHistory value=($xrefGroup->mXGroup eq 'history')}
@@ -40,11 +40,7 @@
 </div>
 {if $allow_add && $gContent->isValid() && $gContent->hasUpdatePermission() && !$isHistory}
 	<div>
-		{if $gContent->supportsAddImage()}
-			<a href="{$smarty.const.FISHEYE_PKG_URL}add_image_xref.php?content_id={$gContent->mInfo.content_id}">{biticon ipackage="icons" iname="list-add" iexplain="Add Image"} {tr}Add Image{/tr}</a>
-		{else}
-			{smartlink ititle="Add record" ipackage="liberty" ifile="add_xref.php" biticon="list-add" content_id=$gContent->mInfo.content_id group=$xrefGroup->mSortOrder}
-		{/if}
+		{smartlink ititle="Add Image" ipackage="liberty" ifile="add_xref.php" biticon="list-add" content_id=$gContent->mInfo.content_id group=$xrefGroup->mSortOrder}
 		{if $gContent->canGrabVideoFrame()}
 			&nbsp;
 			<a href="{$gContent->getEditUrl()|cat:'&fGrabFrame=1'|escape}">{biticon ipackage="icons" iname="image-x-generic" iexplain="Grab Thumbnail"} {tr}Grab Thumbnail from Video{/tr}</a>
