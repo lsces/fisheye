@@ -6,7 +6,7 @@
 
 <div class="admin liberty">
 	<div class="header">
-		<h1><a href="{$topGalleryUrl|escape}">{tr}TV Shows{/tr}</a>{if $scopeShow} - <a href="{$smarty.const.FISHEYE_PKG_URL}load_program.php">{tr}Next{/tr}</a> - {$scopeShow.title|escape}{/if}</h1>
+		<h1><a href="{$topGalleryUrl|escape}">{tr}TV Shows{/tr}</a>{if $scopeShow} - <a href="{$smarty.const.FISHEYE_PKG_URL}load_program.php">{tr}Next{/tr}</a> - <a href="{$smarty.const.FISHEYE_PKG_URL}view_program.php?content_id={$scopeShow.content_id}">{$scopeShow.title|escape}</a>{/if}</h1>
 	</div>
 
 	<div class="body">
