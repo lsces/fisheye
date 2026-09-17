@@ -82,13 +82,15 @@
 						{jstabs}
 							{foreach $gXrefInfo->mGroups as $xrefGroup}
 								{* The merged-in 'episodes' group (edit_program.php's getSingleSeason() merge, single-
-								   season shows only) belongs to the season's own content_id, not this show's - shown
-								   read-only here, actual editing stays on edit_season.php. *}
-								{assign var=isSeasonEpisodes value=($xrefGroup->mXGroup eq 'episodes')}
+								   season shows only) belongs to the season's own content_id, not this show's -
+								   xrefContentId overrides action_icons.tpl/list_xref.tpl's Edit/Add links to target
+								   the season correctly rather than this page's own $gContent. *}
+								{assign var=xrefContentId value=($xrefGroup->mXGroup eq 'episodes') ? $episodesContentId : null}
 								{include file=$gContent->getXrefListTemplate($xrefGroup->mTemplate)
 									xrefGroup=$xrefGroup
-									allow_add=!$isSeasonEpisodes
-									allow_edit=!$isSeasonEpisodes}
+									allow_add=true
+									allow_edit=true
+									xrefContentId=$xrefContentId}
 							{/foreach}
 						{/jstabs}
 					{/if}

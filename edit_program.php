@@ -123,16 +123,18 @@ $gContent->loadXrefInfo();
 // show's own xref info - same real LibertyXrefGroup/LibertyXref objects loadXrefInfo() already
 // produces for the season itself (view_program.php's single-season merge uses the same
 // getSingleSeason(), just for its own flattened episode-grid display rather than this generic
-// xref group). Shown read-only here (edit_program.tpl passes allow_edit=false for this one
-// group) since its own Add/Edit links would otherwise point at the show's content_id, not the
-// season's that these rows actually belong to - edit_season.php (reachable via the season's own
-// image xref tab already existing) is still the real place to edit an episode.
+// xref group). Its rows belong to the season's own content_id, not the show's - passed through
+// separately (xrefContentId) so action_icons.tpl/list_xref.tpl's Edit/Add links target the
+// season, not the show, instead of just hiding them.
+$episodesContentId = null;
 if( $season = $gContent->getSingleSeason() ) {
 	$season->loadXrefInfo();
 	if( $season->mXrefInfo && isset( $season->mXrefInfo->mGroups['episodes'] ) ) {
 		$gContent->mXrefInfo->mGroups['episodes'] = $season->mXrefInfo->mGroups['episodes'];
+		$episodesContentId = $season->mContentId;
 	}
 }
+$gBitSmarty->assign( 'episodesContentId', $episodesContentId );
 
 $gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
 $gBitSmarty->assign( 'gContent', $gContent );
