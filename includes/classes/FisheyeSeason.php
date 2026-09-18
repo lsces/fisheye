@@ -470,6 +470,14 @@ class FisheyeSeason extends FisheyeImage {
 
 		self::deleteXrefByItem( $this->mContentId, [ 'episode' ] );
 
+		// Same per-episode thumbnail this season's Plex-match branch above stores (its own
+		// 'thumb' key, resolved later by view_extra_image.php) - just sourced from a local
+		// ffmpeg/ffmpegthumbnailer frame grab (mime_film_grab_video_frame(), the same engine
+		// FisheyeBase::grabVideoFrameIntoImageXref() already uses) instead of Plex's HTTP API,
+		// since there's no Plex metadata_item id to fetch one from here.
+		$imagesDir = $this->getImageStorageBranchPath();
+		KernelTools::mkdir_p( $imagesDir );
+
 		$xorder = 1;
 		foreach( $files as $file ) {
 			$stem = pathinfo( $file, PATHINFO_FILENAME );
@@ -480,11 +488,20 @@ class FisheyeSeason extends FisheyeImage {
 			if( preg_match( '/ - (S\d+E[\dE&-]+)(?: - (.+))?$/i', $stem, $m ) ) {
 				$episodeTitle = $m[2] ?? $m[1];
 			}
+			$episodeData = [ 'title' => $episodeTitle ];
+			$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_ep_thumb_' );
+			if( \Bitweaver\Liberty\mime_film_grab_video_frame( $seasonDir.$file, $tmpFile ) ) {
+				$fileName = $this->getTitle().' - episode-'.$xorder.'.jpg';
+				if( self::resizeImageFile( $tmpFile, $imagesDir.$fileName, 400 ) ) {
+					$episodeData['thumb'] = $fileName;
+				}
+			}
+			@unlink( $tmpFile );
 			$xrefHash = [
 				'content_id' => $this->mContentId,
 				'item'       => 'episode',
 				'xkey_ext'   => $relativeSeasonDir.'/'.$file,
-				'edit'       => json_encode( [ 'title' => $episodeTitle ] ),
+				'edit'       => json_encode( $episodeData ),
 				'xorder'     => $xorder++,
 			];
 			$this->storeXref( $xrefHash );
