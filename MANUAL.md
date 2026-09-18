@@ -286,7 +286,15 @@ weight/frequency, not one action doing everything):
   real match with no artwork at all — not uncommon for a barebones single-episode entry), falls
   back to grabbing a video frame — see below.
 - **Load Episodes** (season only) — pulls the season's full episode list from Plex, including each
-  episode's own text metadata and its own Plex-generated screenshot thumbnail.
+  episode's own text metadata and its own Plex-generated screenshot thumbnail. **No Plex match at
+  all** (a manually-curated show Plex/TVDB has never heard of): falls back to registering every
+  real episode file already in the season's folder directly, parsing the `SnnEnn`/title out of the
+  `Show - SnnEnn - Title.ext` filename convention, with each episode's thumbnail sourced from a
+  local video frame grab (see below) instead of Plex's API. Reachable without visiting this page
+  at all whenever a season's on-disk file count exceeds what's registered — `load_program.php`
+  (already linked from the show page's own icon bar) detects the mismatch and offers a one-click
+  reload there directly, since most shows here are single-season and never need this page for
+  anything else.
 
 ## Video frame-grab fallback
 
