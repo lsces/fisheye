@@ -65,6 +65,8 @@ $scopeShow = null;      // ['content_id'=>, 'title'=>] once a show is known/regi
 $showResult = null;     // registerFromDisk() result, only shown the first time a show is created
 $seasonResult = null;
 $candidates = [];       // either show-folder names (top level) or season-folder names (scoped)
+$reloadCandidates = []; // already-registered seasons with more files on disk than registered
+$episodeReloadResult = null; // fReloadSeasonEpisodes result, only shown right after that action
 
 if( $galleryIdParam && $galleryIdParam !== $topGalleryId ) {
 	$program = new FisheyeProgram( $galleryIdParam );
@@ -144,6 +146,20 @@ if( $scopeShow === null ) {
 				$seasonResult['created'][] = [ 'folder' => $seasonFolder, 'content_id' => $row['created'], 'episodes' => $row['episodes'], 'images' => $row['images'] ];
 			}
 		}
+	} elseif( !empty( $_REQUEST['fReloadSeasonEpisodes'] ) ) {
+		// The show-page shortcut for a season that's picked up more episode files than are
+		// currently registered (see the $reloadCandidates detection below) - lets the common
+		// single-season show get its episode list refreshed without ever visiting
+		// edit_season.php, which is where this same action (FisheyeSeason::reloadPlexEpisodes())
+		// otherwise lives.
+		$reloadSeasonId = (int)( $_REQUEST['season_content_id'] ?? 0 );
+		if( $reloadSeasonId ) {
+			$reloadSeason = new FisheyeSeason( null, $reloadSeasonId );
+			$reloadSeason->load();
+			if( $reloadSeason->isValid() ) {
+				$episodeReloadResult = [ 'title' => $reloadSeason->getTitle(), 'episodes' => $reloadSeason->reloadPlexEpisodes() ];
+			}
+		}
 	}
 
 	$root = \Bitweaver\Liberty\mime_film_get_tvshow_storage_root( $showTitle );
@@ -194,6 +210,38 @@ if( $scopeShow === null ) {
 			}
 		}
 	}
+
+	// Seasons already registered under this show whose own folder now has more real episode
+	// files than are currently registered - most often a season that was first registered with
+	// no Plex/TVDB match (FisheyeSeason::registerEpisodesFromFilesystem()'s fallback only ever
+	// grabs what existed at that moment), but just as easily a genuinely new episode dropped into
+	// an existing, already-matched season's folder later. Offered here rather than only on
+	// edit_season.php's own 'Load Episodes' button, since most shows here are single-season and
+	// this page is already the one place view_program.php's icon bar links to for show-level
+	// season work.
+	$registeredSeasonIds = $gBitDb->getCol(
+		"SELECT lc.content_id FROM liberty_content lc
+		 INNER JOIN fisheye_gallery_image_map m ON m.item_content_id = lc.content_id AND m.gallery_content_id = ?
+		 WHERE lc.content_type_guid = 'fisheyeseason'",
+		[ $showContentId ]
+	);
+	foreach( $registeredSeasonIds as $seasonContentId ) {
+		$existingSeason = new FisheyeSeason( null, (int)$seasonContentId );
+		$existingSeason->load();
+		if( !$existingSeason->isValid() ) {
+			continue;
+		}
+		$onDisk = $existingSeason->getEpisodeFileCountOnDisk();
+		$registeredCount = $existingSeason->countRegisteredEpisodes();
+		if( $onDisk !== null && $onDisk > $registeredCount ) {
+			$reloadCandidates[] = [
+				'content_id' => $existingSeason->mContentId,
+				'title'      => $existingSeason->getTitle(),
+				'on_disk'    => $onDisk,
+				'registered' => $registeredCount,
+			];
+		}
+	}
 }
 
 // The page heading's own "TV Shows" text doubles as a link back to the real gallery, so the
@@ -205,6 +253,8 @@ $gBitSmarty->assign( 'topGalleryUrl', FisheyeGallery::getDisplayUrlFromHash( $to
 
 $gBitSmarty->assign( 'candidateLimit', LOAD_PROGRAM_LIMIT );
 $gBitSmarty->assign( 'candidates', $candidates );
+$gBitSmarty->assign( 'reloadCandidates', $reloadCandidates );
+$gBitSmarty->assign( 'episodeReloadResult', $episodeReloadResult );
 $gBitSmarty->assign( 'scopeShow', $scopeShow );
 $gBitSmarty->assign( 'showResult', $showResult );
 $gBitSmarty->assign( 'seasonResult', $seasonResult );

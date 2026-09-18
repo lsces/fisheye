@@ -413,6 +413,100 @@ class FisheyeSeason extends FisheyeImage {
 	}
 
 	/**
+	 * Resolves this season's real on-disk folder from one of its own 'episode' xref's xkey_ext,
+	 * via the show's own storage root (walking the parent gallery for its title, same as
+	 * matchPlexSeasonMetadataItem() above) - not from the season title, since a flat
+	 * (no-subfolder) season's title ("Show - Season 1") doesn't correspond to a real "Season 1"
+	 * folder on disk. Shared by registerEpisodesFromFilesystem() and
+	 * getEpisodeFileCountOnDisk() below - both need the same folder, one to register from it,
+	 * one just to count.
+	 *
+	 * @return array{dir:string,relative:string}|null  dir is absolute with trailing slash,
+	 *                                                   relative is dir relative to the storage
+	 *                                                   root (the form xkey_ext values use) -
+	 *                                                   null if there's no seed episode, no
+	 *                                                   resolvable show/root, or the dir is gone.
+	 */
+	private function resolveSeasonDirectoryFromDisk(): ?array {
+		$this->loadXrefInfo();
+		$episodeXrefs = $this->mXrefInfo
+			? array_filter( $this->mXrefInfo->allXrefs(), fn( $xref ) => $xref['item'] === 'episode' )
+			: [];
+		$seedXref = current( $episodeXrefs );
+		if( empty( $seedXref['xkey_ext'] ) ) {
+			return null;
+		}
+
+		$parents = $this->getParentGalleries();
+		$showTitle = empty( $parents ) ? '' : ( current( $parents )['title'] ?? '' );
+		if( empty( $showTitle ) ) {
+			return null;
+		}
+		$root = \Bitweaver\Liberty\mime_film_get_tvshow_storage_root( $showTitle );
+		if( empty( $root ) ) {
+			return null;
+		}
+
+		$relativeSeasonDir = dirname( $seedXref['xkey_ext'] );
+		$seasonDir = $root.$relativeSeasonDir.'/';
+		if( !is_dir( $seasonDir ) ) {
+			return null;
+		}
+
+		return [ 'dir' => $seasonDir, 'relative' => $relativeSeasonDir ];
+	}
+
+	/**
+	 * Real episode video files (by extension) directly inside a season folder - shared scan used
+	 * by both registerEpisodesFromFilesystem() and getEpisodeFileCountOnDisk() below.
+	 *
+	 * @param string $pSeasonDir  absolute path, trailing slash
+	 * @return array  filenames only (no path), natsort-ordered
+	 */
+	private function scanEpisodeFiles( string $pSeasonDir ): array {
+		$files = [];
+		foreach( scandir( $pSeasonDir ) as $file ) {
+			if( is_file( $pSeasonDir.$file ) && in_array( strtolower( pathinfo( $file, PATHINFO_EXTENSION ) ), [ 'mkv', 'mp4', 'm4v', 'avi' ], true ) ) {
+				$files[] = $file;
+			}
+		}
+		natsort( $files );
+		return $files;
+	}
+
+	/**
+	 * How many real episode files actually sit in this season's own folder right now - compared
+	 * against countRegisteredEpisodes() below by load_program.php to offer a "Reload Episodes"
+	 * action directly from the show page whenever a season (almost always the only one, per
+	 * Lester's own usage - most of these shows are single-season) has picked up more files than
+	 * are currently registered, without needing to visit edit_season.php at all.
+	 *
+	 * @return int|null  null if the season's own folder can't be resolved at all (see
+	 *                    resolveSeasonDirectoryFromDisk())
+	 */
+	public function getEpisodeFileCountOnDisk(): ?int {
+		$dirInfo = $this->resolveSeasonDirectoryFromDisk();
+		if( !$dirInfo ) {
+			return null;
+		}
+		return count( $this->scanEpisodeFiles( $dirInfo['dir'] ) );
+	}
+
+	/**
+	 * How many 'episode' xref rows are currently registered for this season - see
+	 * getEpisodeFileCountOnDisk()'s own docblock for why this is compared against it.
+	 *
+	 * @return int
+	 */
+	public function countRegisteredEpisodes(): int {
+		$this->loadXrefInfo();
+		if( !$this->mXrefInfo ) {
+			return 0;
+		}
+		return count( array_filter( $this->mXrefInfo->allXrefs(), fn( $xref ) => $xref['item'] === 'episode' ) );
+	}
+
+	/**
 	 * registerFromDisk()'s single seed episode is only ever meant to be temporary - matched
 	 * against Plex, then replaced by reloadPlexEpisodes()'s real full list. When a show has no
 	 * Plex/TVDB entry at all, that replacement never happens, so this exists to register every
@@ -432,41 +526,17 @@ class FisheyeSeason extends FisheyeImage {
 	private function registerEpisodesFromFilesystem(): array {
 		$summary = [ 'matched' => false, 'items' => [] ];
 
-		$this->loadXrefInfo();
-		$episodeXrefs = $this->mXrefInfo
-			? array_filter( $this->mXrefInfo->allXrefs(), fn( $xref ) => $xref['item'] === 'episode' )
-			: [];
-		$seedXref = current( $episodeXrefs );
-		if( empty( $seedXref['xkey_ext'] ) ) {
+		$dirInfo = $this->resolveSeasonDirectoryFromDisk();
+		if( !$dirInfo ) {
 			return $summary;
 		}
+		$seasonDir = $dirInfo['dir'];
+		$relativeSeasonDir = $dirInfo['relative'];
 
-		$parents = $this->getParentGalleries();
-		$showTitle = empty( $parents ) ? '' : ( current( $parents )['title'] ?? '' );
-		if( empty( $showTitle ) ) {
-			return $summary;
-		}
-		$root = \Bitweaver\Liberty\mime_film_get_tvshow_storage_root( $showTitle );
-		if( empty( $root ) ) {
-			return $summary;
-		}
-
-		$relativeSeasonDir = dirname( $seedXref['xkey_ext'] );
-		$seasonDir = $root.$relativeSeasonDir.'/';
-		if( !is_dir( $seasonDir ) ) {
-			return $summary;
-		}
-
-		$files = [];
-		foreach( scandir( $seasonDir ) as $file ) {
-			if( is_file( $seasonDir.$file ) && in_array( strtolower( pathinfo( $file, PATHINFO_EXTENSION ) ), [ 'mkv', 'mp4', 'm4v', 'avi' ], true ) ) {
-				$files[] = $file;
-			}
-		}
+		$files = $this->scanEpisodeFiles( $seasonDir );
 		if( empty( $files ) ) {
 			return $summary;
 		}
-		natsort( $files );
 
 		self::deleteXrefByItem( $this->mContentId, [ 'episode' ] );
 

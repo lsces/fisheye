@@ -46,6 +46,31 @@
 			{/if}
 		{/if}
 
+		{if $episodeReloadResult}
+			<div class="alert alert-success">
+				{tr}Episodes reloaded for{/tr} "{$episodeReloadResult.title|escape}" -
+				{$episodeReloadResult.episodes.items|@count} {tr}episodes{/tr}
+			</div>
+		{/if}
+
+		{if $reloadCandidates}
+			<div class="alert alert-warning">
+				<p>{tr}Seasons with more episode files on disk than currently registered{/tr}:</p>
+				<ul>
+					{foreach from=$reloadCandidates item=row}
+						<li>
+							{$row.title|escape} - {$row.registered} {tr}registered{/tr}, {$row.on_disk} {tr}on disk{/tr}
+							{form legend="" action="{$smarty.const.FISHEYE_PKG_URL}load_program.php"}
+								<input type="hidden" name="gallery_id" value="{$scopeShow.gallery_id}" />
+								<input type="hidden" name="season_content_id" value="{$row.content_id}" />
+								<input type="submit" class="btn btn-primary btn-sm" name="fReloadSeasonEpisodes" value="{tr}Reload Episodes{/tr}" />
+							{/form}
+						</li>
+					{/foreach}
+				</ul>
+			</div>
+		{/if}
+
 		{if !$scopeShow && $candidates}
 			<p>{tr}Showing up to{/tr} {$candidateLimit} {tr}not-yet-loaded shows.{/tr}</p>
 			<ul>
