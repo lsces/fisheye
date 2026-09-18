@@ -13,6 +13,13 @@
 			{include file="bitpackage:liberty/services_inc.tpl" serviceLocation='icon' serviceHash=$gContent->mInfo}
 			{if $gContent->hasUpdatePermission()}
 				<a title="{tr}Edit{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}edit_program.php?content_id={$gContent->mContentId}">{biticon ipackage="icons" iname="edit" iexplain="Edit"}</a>
+				{* view_program.tpl (the multi-season case) calls this "Load More Seasons" - wrong
+				   label here since a single-season show never has another season to load, but the
+				   same destination also now surfaces a "Reload Episodes" action (load_program.php's
+				   $reloadCandidates - see FisheyeSeason::getEpisodeFileCountOnDisk()) for exactly
+				   this show's one season whenever its folder has more files than are registered -
+				   the common case worth a direct icon here, unlike the multi-season page. *}
+				<a title="{tr}Reload Episodes{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}load_program.php?gallery_id={$gContent->mGalleryId}&amp;show={$gContent->getTitle()|escape:"url"}">{biticon ipackage="icons" iname="view-refresh" iexplain="Reload Episodes"}</a>
 			{/if}
 		</div>
 		<h1>{foreach from=$gContent->getBreadcrumbTrail() item=crumb}<a href="{$crumb.url|escape}">{$crumb.title|escape}</a> - {/foreach}{$gContent->getTitle()|escape}</h1>
