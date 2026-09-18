@@ -413,6 +413,89 @@ class FisheyeSeason extends FisheyeImage {
 	}
 
 	/**
+	 * registerFromDisk()'s single seed episode is only ever meant to be temporary - matched
+	 * against Plex, then replaced by reloadPlexEpisodes()'s real full list. When a show has no
+	 * Plex/TVDB entry at all, that replacement never happens, so this exists to register every
+	 * real episode file already in the season's own folder directly instead, parsing the
+	 * "SnnEnn"/title out of the filename (the "Show - SnnEnn - Title.ext" convention used
+	 * throughout the TV library - see project_tv_library memory).
+	 *
+	 * Derives the season's own real folder from an existing 'episode' xref's xkey_ext rather than
+	 * reconstructing it from the season title, since a flat (no-subfolder) season's title
+	 * ("Show - Season 1") doesn't correspond to a real "Season 1" folder on disk.
+	 *
+	 * Rebuild-not-diff, same as the Plex-match branch above (every 'episode' xref row for this
+	 * content_id is deleted before re-inserting).
+	 *
+	 * @return array Same shape as the Plex-match branch: matched=>bool, items=>episode titles.
+	 */
+	private function registerEpisodesFromFilesystem(): array {
+		$summary = [ 'matched' => false, 'items' => [] ];
+
+		$this->loadXrefInfo();
+		$episodeXrefs = $this->mXrefInfo
+			? array_filter( $this->mXrefInfo->allXrefs(), fn( $xref ) => $xref['item'] === 'episode' )
+			: [];
+		$seedXref = current( $episodeXrefs );
+		if( empty( $seedXref['xkey_ext'] ) ) {
+			return $summary;
+		}
+
+		$parents = $this->getParentGalleries();
+		$showTitle = empty( $parents ) ? '' : ( current( $parents )['title'] ?? '' );
+		if( empty( $showTitle ) ) {
+			return $summary;
+		}
+		$root = \Bitweaver\Liberty\mime_film_get_tvshow_storage_root( $showTitle );
+		if( empty( $root ) ) {
+			return $summary;
+		}
+
+		$relativeSeasonDir = dirname( $seedXref['xkey_ext'] );
+		$seasonDir = $root.$relativeSeasonDir.'/';
+		if( !is_dir( $seasonDir ) ) {
+			return $summary;
+		}
+
+		$files = [];
+		foreach( scandir( $seasonDir ) as $file ) {
+			if( is_file( $seasonDir.$file ) && in_array( strtolower( pathinfo( $file, PATHINFO_EXTENSION ) ), [ 'mkv', 'mp4', 'm4v', 'avi' ], true ) ) {
+				$files[] = $file;
+			}
+		}
+		if( empty( $files ) ) {
+			return $summary;
+		}
+		natsort( $files );
+
+		self::deleteXrefByItem( $this->mContentId, [ 'episode' ] );
+
+		$xorder = 1;
+		foreach( $files as $file ) {
+			$stem = pathinfo( $file, PATHINFO_FILENAME );
+			// "Show - SnnEnn - Episode Title" -> keep the title; "Show - SnnEnn" alone (no per-
+			// episode title, common for documentaries) -> keep the SnnEnn tag itself rather than
+			// the whole filename stem.
+			$episodeTitle = $stem;
+			if( preg_match( '/ - (S\d+E[\dE&-]+)(?: - (.+))?$/i', $stem, $m ) ) {
+				$episodeTitle = $m[2] ?? $m[1];
+			}
+			$xrefHash = [
+				'content_id' => $this->mContentId,
+				'item'       => 'episode',
+				'xkey_ext'   => $relativeSeasonDir.'/'.$file,
+				'edit'       => json_encode( [ 'title' => $episodeTitle ] ),
+				'xorder'     => $xorder++,
+			];
+			$this->storeXref( $xrefHash );
+			$summary['items'][] = $episodeTitle;
+		}
+		$summary['matched'] = true;
+
+		return $summary;
+	}
+
+	/**
 	 * Fetch this season's full episode list from Plex - the "Load Episodes" action,
 	 * superseding an earlier one-off smoke test that had
 	 * registered only the one episode it was hand-fed. Rebuild-not-diff, same as every other
@@ -446,7 +529,11 @@ class FisheyeSeason extends FisheyeImage {
 
 		$plexMatch = $this->matchPlexSeasonMetadataItem();
 		if( !$plexMatch ) {
-			return $summary;
+			// No Plex/TVDB match at all (e.g. a manually-curated documentary series) - fall back
+			// to registering every real episode file already sitting in the season's own folder,
+			// rather than leaving the season stuck at the single seed episode registerFromDisk()
+			// planted. Without this, any non-catalogued show silently shows only its first episode.
+			return $this->registerEpisodesFromFilesystem();
 		}
 		$plexDb = $plexMatch['db'];
 		$seasonMetadataItemId = $plexMatch['id'];
