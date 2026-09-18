@@ -413,30 +413,30 @@ class FisheyeSeason extends FisheyeImage {
 	}
 
 	/**
-	 * Resolves this season's real on-disk folder from one of its own 'episode' xref's xkey_ext,
-	 * via the show's own storage root (walking the parent gallery for its title, same as
-	 * matchPlexSeasonMetadataItem() above) - not from the season title, since a flat
-	 * (no-subfolder) season's title ("Show - Season 1") doesn't correspond to a real "Season 1"
-	 * folder on disk. Shared by registerEpisodesFromFilesystem() and
-	 * getEpisodeFileCountOnDisk() below - both need the same folder, one to register from it,
-	 * one just to count.
+	 * Resolves this season's real on-disk folder, preferring one of its own 'episode' xref's
+	 * xkey_ext (unambiguous when available) but falling back to reconstructing it from the
+	 * season's own title when there's no episode left to derive it from at all - e.g. every
+	 * episode was deleted (found live 2026-09-19: getEpisodeFileCountOnDisk() silently returned
+	 * null forever afterwards, since it had no other way to find the folder again, making a
+	 * deleted-then-reload cycle permanently impossible without this).
+	 *
+	 * The reconstruction still can't just trust the title outright, because a flat (no-subfolder)
+	 * season's synthetic title ("Show - Season 1") is textually indistinguishable from a real
+	 * show that genuinely has a subfolder literally named "Season 1" - resolved by trying the
+	 * subfolder interpretation first (real directory check) and only falling back to "files sit
+	 * directly in the show's own folder" when no such subfolder actually exists, mirroring
+	 * registerFromDisk()'s own original flat-vs-not decision.
+	 *
+	 * Shared by registerEpisodesFromFilesystem() and getEpisodeFileCountOnDisk() below - both
+	 * need the same folder, one to register from it, one just to count.
 	 *
 	 * @return array{dir:string,relative:string}|null  dir is absolute with trailing slash,
 	 *                                                   relative is dir relative to the storage
 	 *                                                   root (the form xkey_ext values use) -
-	 *                                                   null if there's no seed episode, no
-	 *                                                   resolvable show/root, or the dir is gone.
+	 *                                                   null if the show/root/folder can't be
+	 *                                                   resolved at all by either method.
 	 */
 	private function resolveSeasonDirectoryFromDisk(): ?array {
-		$this->loadXrefInfo();
-		$episodeXrefs = $this->mXrefInfo
-			? array_filter( $this->mXrefInfo->allXrefs(), fn( $xref ) => $xref['item'] === 'episode' )
-			: [];
-		$seedXref = current( $episodeXrefs );
-		if( empty( $seedXref['xkey_ext'] ) ) {
-			return null;
-		}
-
 		$parents = $this->getParentGalleries();
 		$showTitle = empty( $parents ) ? '' : ( current( $parents )['title'] ?? '' );
 		if( empty( $showTitle ) ) {
@@ -447,13 +447,40 @@ class FisheyeSeason extends FisheyeImage {
 			return null;
 		}
 
-		$relativeSeasonDir = dirname( $seedXref['xkey_ext'] );
-		$seasonDir = $root.$relativeSeasonDir.'/';
-		if( !is_dir( $seasonDir ) ) {
-			return null;
+		$this->loadXrefInfo();
+		$episodeXrefs = $this->mXrefInfo
+			? array_filter( $this->mXrefInfo->allXrefs(), fn( $xref ) => $xref['item'] === 'episode' )
+			: [];
+		$seedXref = current( $episodeXrefs );
+		if( !empty( $seedXref['xkey_ext'] ) ) {
+			$relativeSeasonDir = dirname( $seedXref['xkey_ext'] );
+			$seasonDir = $root.$relativeSeasonDir.'/';
+			if( is_dir( $seasonDir ) ) {
+				return [ 'dir' => $seasonDir, 'relative' => $relativeSeasonDir ];
+			}
 		}
 
-		return [ 'dir' => $seasonDir, 'relative' => $relativeSeasonDir ];
+		// No usable seed episode (none left, or its file has since moved/gone) - reconstruct from
+		// the season's own title convention instead ("<show title> - <season folder name>").
+		$prefix = $showTitle.' - ';
+		$title = $this->getTitle();
+		if( !str_starts_with( $title, $prefix ) ) {
+			return null;
+		}
+		$seasonFolderNameGuess = substr( $title, strlen( $prefix ) );
+
+		$subfolderRelative = 'TV Shows/'.$showTitle.'/'.$seasonFolderNameGuess;
+		if( is_dir( $root.$subfolderRelative.'/' ) ) {
+			return [ 'dir' => $root.$subfolderRelative.'/', 'relative' => $subfolderRelative ];
+		}
+		if( $seasonFolderNameGuess === 'Season 1' ) {
+			$flatRelative = 'TV Shows/'.$showTitle;
+			if( is_dir( $root.$flatRelative.'/' ) ) {
+				return [ 'dir' => $root.$flatRelative.'/', 'relative' => $flatRelative ];
+			}
+		}
+
+		return null;
 	}
 
 	/**
