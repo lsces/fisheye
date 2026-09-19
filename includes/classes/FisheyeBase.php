@@ -337,7 +337,7 @@ not ready for primetime
 	 * place with a plain filesystem rename - this site's configured processor is imagick, whose
 	 * own security policy blocks it from writing directly under fisheye_disk_storage_root/TV
 	 * roots ("attempt to perform an operation not authorized by the security policy", confirmed
-	 * live 2026-09-02 via php-fpm's own error log) but has no objection to reading/writing under
+	 * live via php-fpm's own error log) but has no objection to reading/writing under
 	 * the system temp dir, which is all it's ever asked to do here. Adjusting ImageMagick's own
 	 * policy.xml would be a wider, riskier change (affects the whole machine, not just this
 	 * feature) for what's really just a "where do intermediate files live" question.
@@ -366,8 +366,8 @@ not ready for primetime
 		@unlink( $tmpDest );
 		if( $ok ) {
 			// rename() carries over tempnam()'s own 600 (owner-only) permissions, unlike every
-			// other file already sitting in that folder - found live 2026-09-02 straight after
-			// the temp-then-move fix above.
+			// other file already sitting in that folder - found live straight after the
+			// temp-then-move fix above.
 			@chmod( $pDestFile, 0644 );
 		}
 		return $ok;
@@ -377,13 +377,12 @@ not ready for primetime
 	 * Attach a real thumbnail image (a downloaded Plex poster, or a local cover.jpg/folder.jpg
 	 * read straight off disk) as this content's own primary LibertyMime attachment - shared here
 	 * rather than duplicated on FisheyeSeason/FisheyeProgram/FisheyeAlbum separately (found live
-	 * 2026-09-05 building the music feature: all three had grown byte-identical copies of this -
-	 * "this perhaps is why I would prefer a single set of code rather than reinventing the wheel
-	 * every time"). FisheyeFilm doesn't need this at all - its own thumbnail comes from a frame
+	 * building the music feature: all three had grown byte-identical copies of this). FisheyeFilm
+	 * doesn't need this at all - its own thumbnail comes from a frame
 	 * grab of the real video file (mime_video_create_thumbnail(), via renderThumbnails()), not a
 	 * separately-attached cover image.
 	 *
-	 * Two fixes over the original per-class copies, found live 2026-09-05:
+	 * Two fixes over the original per-class copies, found live:
 	 * - Generates thumbs/ synchronously (calls renderThumbnails() directly) rather than leaving it
 	 *   to the async thumbnailer.php cron queue - a freshly-registered album/season/show otherwise
 	 *   showed the generic "generating_thumbnails.png" placeholder until that cron next ran.
@@ -445,7 +444,7 @@ not ready for primetime
 	 * Whether addImageXrefFile() below actually does anything for this content type - a real
 	 * method call, callable from a template (`{if $gContent->supportsAddImage()}`, templates/
 	 * xref/view_images_group.tpl), unlike a bare `method_exists(...)` call, which Smarty here
-	 * rejects as an unknown modifier (found live 2026-09-03 - "unknown modifier 'method_exists'").
+	 * rejects as an unknown modifier (found live - "unknown modifier 'method_exists'").
 	 *
 	 * @return bool
 	 */
@@ -574,6 +573,12 @@ not ready for primetime
 
 		self::deleteXrefByItem( $this->mContentId, [ 'featurette' ] );
 
+		// Same per-item thumbnail grab as FisheyeSeason::registerEpisodesFromFilesystem()'s own
+		// no-Plex fallback - a featurette has no Plex metadata to source a thumb from at all
+		// (Plex doesn't catalogue bonus content), so a local frame grab is the only option.
+		$imagesDir = $this->getExtraImagePath( '' );
+		\Bitweaver\KernelTools::mkdir_p( $imagesDir );
+
 		$files = scandir( $featurettesDir );
 		natsort( $files );
 		$xorder = 0;
@@ -585,15 +590,42 @@ not ready for primetime
 				continue;
 			}
 			$xorder++;
+			$title = pathinfo( $file, PATHINFO_FILENAME );
+			$featuretteData = [ 'title' => $title ];
+			// Plex never catalogues bonus content, so there's no metadata source for duration
+			// here at all - straight from the file's own container via ffprobe instead.
+			$durationMs = \Bitweaver\Liberty\mime_film_get_duration_ms( $featurettesDir.$file );
+			if( $durationMs !== null ) {
+				$featuretteData['duration'] = $durationMs;
+			}
+			// Named after the featurette's own source file (unique within this folder), not its
+			// xorder position - reload is rebuild-not-diff (every xref row deleted and re-created
+			// above), so a position-based name would both mis-attach an old thumb to the wrong
+			// file the moment a new featurette shifts the ordering, and force an expensive
+			// re-grab of every thumbnail on every reload even when nothing about that file
+			// changed. Keying by the file's own name means an already-grabbed thumbnail is
+			// simply reused - only genuinely new featurettes pay the ffmpeg cost.
+			$fileName = $title.'.jpg';
+			if( is_file( $imagesDir.$fileName ) ) {
+				$featuretteData['thumb'] = $fileName;
+			} else {
+				$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_featurette_thumb_' );
+				if( \Bitweaver\Liberty\mime_film_grab_video_frame( $featurettesDir.$file, $tmpFile ) ) {
+					if( self::resizeImageFile( $tmpFile, $imagesDir.$fileName, 400 ) ) {
+						$featuretteData['thumb'] = $fileName;
+					}
+				}
+				@unlink( $tmpFile );
+			}
 			$xrefHash = [
 				'content_id' => $this->mContentId,
 				'item'       => 'featurette',
 				'xkey_ext'   => $pContainingDirRelative.'/Featurettes/'.$file,
-				'edit'       => json_encode( [ 'title' => pathinfo( $file, PATHINFO_FILENAME ) ] ),
+				'edit'       => json_encode( $featuretteData ),
 				'xorder'     => $xorder,
 			];
 			$this->storeXref( $xrefHash );
-			$summary['items'][] = pathinfo( $file, PATHINFO_FILENAME );
+			$summary['items'][] = $title;
 		}
 
 		return $summary;

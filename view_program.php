@@ -93,36 +93,15 @@ $gBitSmarty->assign( 'seasonTitles', $seasonTitles );
 $template = 'bitpackage:fisheye/view_program.tpl';
 if( count( (array)$gContent->mItems ) === 1 ) {
 	$season = current( $gContent->mItems );
-	$season->loadXrefInfo();
-	$seasonImages = [];
-	$episodes = [];
-	if( $season->mXrefInfo ) {
-		foreach( $season->mXrefInfo->allXrefs() as $xref ) {
-			switch( $xref['item'] ) {
-				case 'image':
-					$seasonImages[] = [ 'xref_id' => $xref['xref_id'] ];
-					break;
-				case 'episode':
-					$data = !empty( $xref['data'] ) ? json_decode( $xref['data'], true ) : [];
-					$episodes[] = [
-						'xref_id'       => $xref['xref_id'],
-						'xorder'        => (int)$xref['xorder'],
-						'title'         => $data['title'] ?? pathinfo( $xref['xkey_ext'], PATHINFO_FILENAME ),
-						'summary'       => $data['summary'] ?? '',
-						'air_date'      => $data['air_date'] ?? '',
-						'directors'     => $data['director'] ?? [],
-						'writers'       => $data['writer'] ?? [],
-						'stars'         => $data['star'] ?? [],
-						'content_rating'=> $data['content_rating'] ?? '',
-						'durationMs'    => $data['duration'] ?? null,
-						'thumb'         => $data['thumb'] ?? null,
-					];
-					break;
-			}
-		}
-	}
-	$gBitSmarty->assign( 'seasonImages', $seasonImages );
-	$gBitSmarty->assign( 'episodes', $episodes );
+	$viewData = $season->getSeasonViewData();
+	$gBitSmarty->assign( 'seasonImages', $viewData['images'] );
+	$gBitSmarty->assign( 'episodes', $viewData['episodes'] );
+	$gBitSmarty->assign( 'seasonFeaturettes', $viewData['featurettes'] );
+	$gBitSmarty->assign( 'firstContentTab', $viewData['firstTab'] );
+	// The show's own $gContent is what this template otherwise renders against - the tab edit
+	// actions (Reload Episodes/Featurettes, Add Image) need the *season's* content_id instead,
+	// since that's what actually owns these xrefs.
+	$gBitSmarty->assign( 'seasonContentId', $season->mContentId );
 	$template = 'bitpackage:fisheye/view_program_single_season.tpl';
 }
 

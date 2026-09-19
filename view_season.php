@@ -34,31 +34,8 @@ $gContent->addHit();
 
 $gContent->loadXrefInfo();
 $externalLinks = [];
-$seasonImages = [];
-$episodes = [];
 if( $gContent->mXrefInfo ) {
 	foreach( $gContent->mXrefInfo->allXrefs() as $xref ) {
-		switch( $xref['item'] ) {
-			case 'image':
-				$seasonImages[] = [ 'xref_id' => $xref['xref_id'] ];
-				break;
-			case 'episode':
-				$data = !empty( $xref['data'] ) ? json_decode( $xref['data'], true ) : [];
-				$episodes[] = [
-					'xref_id'       => $xref['xref_id'],
-					'xorder'        => (int)$xref['xorder'],
-					'title'         => $data['title'] ?? pathinfo( $xref['xkey_ext'], PATHINFO_FILENAME ),
-					'summary'       => $data['summary'] ?? '',
-					'air_date'      => $data['air_date'] ?? '',
-					'directors'     => $data['director'] ?? [],
-					'writers'       => $data['writer'] ?? [],
-					'stars'         => $data['star'] ?? [],
-					'content_rating'=> $data['content_rating'] ?? '',
-					'durationMs'    => $data['duration'] ?? null,
-					'thumb'         => $data['thumb'] ?? null,
-				];
-				break;
-		}
 		if( !empty( $xref['cross_ref_href'] ) && !empty( $xref['xkey'] )) {
 			$externalLinks[] = [
 				'title' => $xref['xref_title'] ?? strtoupper( $xref['item'] ),
@@ -68,8 +45,12 @@ if( $gContent->mXrefInfo ) {
 	}
 }
 $gBitSmarty->assign( 'externalLinks', $externalLinks );
-$gBitSmarty->assign( 'seasonImages', $seasonImages );
-$gBitSmarty->assign( 'episodes', $episodes );
+
+$viewData = $gContent->getSeasonViewData();
+$gBitSmarty->assign( 'seasonImages', $viewData['images'] );
+$gBitSmarty->assign( 'episodes', $viewData['episodes'] );
+$gBitSmarty->assign( 'seasonFeaturettes', $viewData['featurettes'] );
+$gBitSmarty->assign( 'firstContentTab', $viewData['firstTab'] );
 
 // parent show, for the "back up a level" link - lookup() (not `new FisheyeGallery()`) so this
 // resolves to a real FisheyeProgram instance when the parent is a show, not a plain FisheyeGallery -

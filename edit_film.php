@@ -33,6 +33,9 @@ $gContent->verifyUpdatePermission();
 
 $plexResult = null;
 $plexResultLabel = null;
+// Shown when $plexResult comes back empty - overridden per action below for the disk-based
+// Featurettes reload, which has nothing to do with Plex and shouldn't blame it for an empty result.
+$plexResultEmptyLabel = KernelTools::tra( 'No matching Plex entry found for this file.' );
 if( !empty( $_REQUEST['fCancel'] ) ) {
 	KernelTools::bit_redirect( $gContent->getDisplayUrl() );
 } elseif( !empty( $_REQUEST['fSave'] ) ) {
@@ -51,6 +54,11 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 } elseif( !empty( $_REQUEST['fReloadImages'] ) ) {
 	$plexResult = $gContent->reloadPlexImages();
 	$plexResultLabel = KernelTools::tra( 'Images reloaded from Plex' );
+} elseif( !empty( $_REQUEST['fReloadFeaturettes'] ) ) {
+	$relativeFilePath = $gContent->getRelativeFilePath();
+	$plexResult = $relativeFilePath !== null ? $gContent->registerFeaturettesFromDisk( $relativeFilePath ) : [ 'items' => [] ];
+	$plexResultLabel = KernelTools::tra( 'Featurettes reloaded' );
+	$plexResultEmptyLabel = KernelTools::tra( 'No Featurettes/ folder found alongside this file.' );
 } elseif( !empty( $_REQUEST['delete'] ) ) {
 	// Same delete flow as edit_program.php's own - safe to wire up
 	// properly since LibertyMime::expunge() actually reaches LibertyContent::expunge(). The video file itself is never touched either way - see
@@ -84,5 +92,6 @@ $gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
 $gBitSmarty->assign( 'gContent', $gContent );
 $gBitSmarty->assign( 'plexResult', $plexResult );
 $gBitSmarty->assign( 'plexResultLabel', $plexResultLabel );
+$gBitSmarty->assign( 'plexResultEmptyLabel', $plexResultEmptyLabel );
 
 $gBitSystem->display( 'bitpackage:fisheye/edit_film.tpl', KernelTools::tra( 'Edit Film: ' ).$gContent->getTitle(), [ 'display_mode' => 'edit' ] );

@@ -1,7 +1,8 @@
 {* Swappable per-episode detail blocks - one per $episodes entry, all but the first hidden.
-   fisheyeShowEpisode() (episode_grid_inc.tpl) toggles which is visible by index. Shared between
-   view_season.tpl and view_program_single_season.tpl (2026-09-04) - factored out rather than
-   duplicated, no wrapping column div here so each caller supplies its own. *}
+   fisheyeShowGridItem('episode', idx) (episode_grid_inc.tpl, content_tabs_js_inc.tpl) toggles
+   which is visible by index. Shared between view_season.tpl and view_program_single_season.tpl -
+   factored out rather than duplicated, no wrapping column div here so each caller supplies its
+   own. *}
 {foreach from=$episodes item=episode name=episodeDetails}
 	<div class="episode-detail" id="episode-detail-{$smarty.foreach.episodeDetails.index}"{if !$smarty.foreach.episodeDetails.first} style="display:none;"{/if}>
 		<h3>{$episode.title|escape}</h3>
@@ -57,7 +58,10 @@
 			}
 		} );
 		if( fisheyePlayingBtn ) {
-			fisheyePlayingBtn.innerHTML = FISHEYE_PLAY_LABEL;
+			// Featurette buttons (featurette_detail_panels_inc.tpl) set their own dataset.title so their
+			// own label is restored here, rather than the generic episode "Play Episode" text -
+			// an episode button never sets this, so its own behaviour is unchanged.
+			fisheyePlayingBtn.innerHTML = fisheyePlayingBtn.dataset.title ? ( '&#9658; ' + fisheyePlayingBtn.dataset.title ) : FISHEYE_PLAY_LABEL;
 			fisheyePlayingBtn = null;
 		}
 	}

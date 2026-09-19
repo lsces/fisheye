@@ -45,7 +45,7 @@ class FisheyeSeason extends FisheyeImage {
 
 	/**
 	 * Override LibertyContent::getEditUrl()'s generic '<package>/edit.php' default - same fatal-
-	 * error bug FisheyeFilm hit live 2026-09-02 ("Call to undefined method ...::getAllLayouts()"),
+	 * error bug FisheyeFilm hit live ("Call to undefined method ...::getAllLayouts()"),
 	 * fisheye's own edit.php being the GALLERY edit page, not a season's. See FisheyeFilm's own
 	 * identical override for the fuller explanation.
 	 *
@@ -139,9 +139,8 @@ class FisheyeSeason extends FisheyeImage {
 	 * lookup - nothing on the season object itself carries the show's name directly). NOT the
 	 * same root as a plain film's fisheye_disk_storage_root - edit_xref.php calls this generically
 	 * (via method_exists(), same as FisheyeFilm's own version of this method) rather than
-	 * assuming every fisheye content type's images share one root, a real bug found 2026-09-02
-	 * that desktop's setup happened to mask (both roots point at /media3/ there; they genuinely
-	 * differ on srv9).
+	 * assuming every fisheye content type's images share one root, a real bug that desktop's
+	 * setup happened to mask (both roots point at /media3/ there; they genuinely differ on srv9).
 	 *
 	 * @return string empty string if the show title can't be resolved or the config is unset
 	 */
@@ -214,6 +213,68 @@ class FisheyeSeason extends FisheyeImage {
 			return false;
 		}
 		return @unlink( $path );
+	}
+
+	/**
+	 * The images/episodes/featurettes arrays view_season.php and view_program.php's own
+	 * single-season dispatch both need from this season's own xrefs - previously two separate,
+	 * near-identical copies of the same switch-over-allXrefs() logic (missing 'featurette'
+	 * entirely in both, since that item type didn't exist yet), factored out here rather than
+	 * adding a third copy. `$externalLinks` (view_season.php's own IMDB/TVDB/TMDB link list) stays
+	 * that page's own separate concern - view_program.php's single-season page never built it, so
+	 * it isn't part of what was actually shared.
+	 *
+	 * @return array{images:array,episodes:array,featurettes:array,firstTab:?string}
+	 */
+	public function getSeasonViewData(): array {
+		$this->loadXrefInfo();
+		$images = [];
+		$episodes = [];
+		$featurettes = [];
+		if( $this->mXrefInfo ) {
+			foreach( $this->mXrefInfo->allXrefs() as $xref ) {
+				$data = !empty( $xref['data'] ) ? json_decode( $xref['data'], true ) : [];
+				switch( $xref['item'] ) {
+					case 'image':
+						$images[] = [ 'xref_id' => $xref['xref_id'] ];
+						break;
+					case 'episode':
+						$episodes[] = [
+							'xref_id'        => $xref['xref_id'],
+							'xorder'         => (int)$xref['xorder'],
+							'title'          => $data['title'] ?? pathinfo( $xref['xkey_ext'], PATHINFO_FILENAME ),
+							'summary'        => $data['summary'] ?? '',
+							'air_date'       => $data['air_date'] ?? '',
+							'directors'      => $data['director'] ?? [],
+							'writers'        => $data['writer'] ?? [],
+							'stars'          => $data['star'] ?? [],
+							'content_rating' => $data['content_rating'] ?? '',
+							'durationMs'     => $data['duration'] ?? null,
+							'thumb'          => $data['thumb'] ?? null,
+						];
+						break;
+					case 'featurette':
+						$featurettes[] = [
+							'xref_id'    => $xref['xref_id'],
+							'title'      => $data['title'] ?? pathinfo( $xref['xkey_ext'], PATHINFO_FILENAME ),
+							'summary'    => $data['summary'] ?? '',
+							'thumb'      => $data['thumb'] ?? null,
+							'durationMs' => $data['duration'] ?? null,
+						];
+						break;
+				}
+			}
+		}
+		// Which of the Episodes/Featurettes/Images tabs starts active - episodes first since
+		// that's the overwhelmingly common case, falling through to whichever else actually has
+		// content for the rare season that's extras-only or images-only.
+		$firstTab = match( true ) {
+			(bool)$episodes     => 'episodes',
+			(bool)$featurettes  => 'featurettes',
+			(bool)$images       => 'images',
+			default             => null,
+		};
+		return [ 'images' => $images, 'episodes' => $episodes, 'featurettes' => $featurettes, 'firstTab' => $firstTab ];
 	}
 
 	/**
@@ -612,14 +673,29 @@ class FisheyeSeason extends FisheyeImage {
 				$episodeTitle = $m[2] ?? $m[1];
 			}
 			$episodeData = [ 'title' => $episodeTitle ];
-			$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_ep_thumb_' );
-			if( \Bitweaver\Liberty\mime_film_grab_video_frame( $seasonDir.$file, $tmpFile ) ) {
-				$fileName = $this->getTitle().' - episode-'.$xorder.'.jpg';
-				if( self::resizeImageFile( $tmpFile, $imagesDir.$fileName, 400 ) ) {
-					$episodeData['thumb'] = $fileName;
-				}
+			// Plex never gets a chance to supply this for a no-match show - straight from the
+			// file's own container via ffprobe instead (same helper as the featurette fallback,
+			// FisheyeBase::registerFeaturettesFromFolder()).
+			$durationMs = \Bitweaver\Liberty\mime_film_get_duration_ms( $seasonDir.$file );
+			if( $durationMs !== null ) {
+				$episodeData['duration'] = $durationMs;
 			}
-			@unlink( $tmpFile );
+			// Named after the episode's own source file (unique within this folder), not its
+			// xorder position - same reasoning as the featurette fallback's identical fix: a
+			// position-based name mis-attaches an old thumb the moment episode numbering shifts,
+			// and forces an expensive re-grab on every reload even when nothing changed.
+			$fileName = $stem.'.jpg';
+			if( is_file( $imagesDir.$fileName ) ) {
+				$episodeData['thumb'] = $fileName;
+			} else {
+				$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_ep_thumb_' );
+				if( \Bitweaver\Liberty\mime_film_grab_video_frame( $seasonDir.$file, $tmpFile ) ) {
+					if( self::resizeImageFile( $tmpFile, $imagesDir.$fileName, 400 ) ) {
+						$episodeData['thumb'] = $fileName;
+					}
+				}
+				@unlink( $tmpFile );
+			}
 			$xrefHash = [
 				'content_id' => $this->mContentId,
 				'item'       => 'episode',
@@ -739,11 +815,19 @@ class FisheyeSeason extends FisheyeImage {
 			}
 			if( !empty( $row['duration'] ) ) {
 				$episodeData['duration'] = (int)$row['duration'];
+			} else {
+				// Plex itself sometimes has no duration for a real, matched episode - straight
+				// from the file's own container via ffprobe instead, same fallback the no-Plex
+				// path uses (registerEpisodesFromFilesystem()).
+				$durationMs = \Bitweaver\Liberty\mime_film_get_duration_ms( $row['file'] );
+				if( $durationMs !== null ) {
+					$episodeData['duration'] = $durationMs;
+				}
 			}
 
 			// this episode's own Plex-generated screenshot ("thumb") - a real per-episode still,
 			// distinct from the season-level poster/backdrop alternates reloadPlexImages() fetches.
-			// Confirmed live 2026-09-02: each episode's own metadata carries a `thumb="..."`
+			// Confirmed live: each episode's own metadata carries a `thumb="..."`
 			// attribute (a lowercase-only match so it can't collide with `parentThumb`/
 			// `grandparentThumb` on the same element). Stored in this season's own
 			// storage/attachments/<branch>/, same as its other alternates, named by episode index
@@ -764,6 +848,28 @@ class FisheyeSeason extends FisheyeImage {
 						}
 						@unlink( $tmpFile );
 					}
+				}
+			}
+			if( empty( $episodeData['thumb'] ) ) {
+				// Plex had no token configured, no thumb attribute for this specific episode, or
+				// the HTTP fetch itself failed - same local frame-grab fallback the no-Plex path
+				// uses (registerEpisodesFromFilesystem()), rather than leaving this one episode
+				// with no thumbnail at all just because Plex's own half didn't come through.
+				// Named after the episode's own file (not the index-based name the Plex branch
+				// above uses) so "does a fallback thumb already exist" is a simple, stable check
+				// independent of Plex's own naming.
+				\Bitweaver\KernelTools::mkdir_p( $imagesDir );
+				$fallbackFileName = pathinfo( $row['file'], PATHINFO_FILENAME ).'.jpg';
+				if( is_file( $imagesDir.$fallbackFileName ) ) {
+					$episodeData['thumb'] = $fallbackFileName;
+				} else {
+					$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_ep_thumb_' );
+					if( \Bitweaver\Liberty\mime_film_grab_video_frame( $row['file'], $tmpFile ) ) {
+						if( self::resizeImageFile( $tmpFile, $imagesDir.$fallbackFileName, 400 ) ) {
+							$episodeData['thumb'] = $fallbackFileName;
+						}
+					}
+					@unlink( $tmpFile );
 				}
 			}
 
@@ -896,8 +1002,8 @@ class FisheyeSeason extends FisheyeImage {
 		// fetchable URL of its own, but the same <Photo> element's 'thumb' attribute always is -
 		// either a Plex.tv proxy URL (external providers) or a local '/library/metadata/.../file?
 		// url=...' path (Plex's own cached copy), both fetchable through Plex's local API once
-		// resolved. Found live 2026-09-02: without this, only the undifferentiated alternates
-		// list was ever fetched, never Plex's own actual pick.
+		// resolved. Found live: without this, only the undifferentiated alternates list was
+		// ever fetched, never Plex's own actual pick.
 		if( empty( $this->mStorage ) ) {
 			$postersXml = @file_get_contents( "http://localhost:32400/library/metadata/$metadataItemId/posters?X-Plex-Token=".urlencode( $plexToken ) );
 			if( $postersXml !== false && preg_match_all( '#<Photo\b[^>]*/>#', $postersXml, $tagMatches ) ) {

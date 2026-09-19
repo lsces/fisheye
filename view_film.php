@@ -55,7 +55,13 @@ if( $gContent->mXrefInfo ) {
 			case 'image':          $filmImages[]  = [ 'xref_id' => $xref['xref_id'] ]; break;
 			case 'featurette':
 				$data = !empty( $xref['data'] ) ? json_decode( $xref['data'], true ) : [];
-				$featurettes[] = [ 'xref_id' => $xref['xref_id'], 'title' => $data['title'] ?? $xref['xkey_ext'] ];
+				$featurettes[] = [
+					'xref_id'    => $xref['xref_id'],
+					'title'      => $data['title'] ?? $xref['xkey_ext'],
+					'summary'    => $data['summary'] ?? '',
+					'thumb'      => $data['thumb'] ?? null,
+					'durationMs' => $data['duration'] ?? null,
+				];
 				break;
 		}
 		// external links (imdb/tvdb/tmdb/...) - identified by having a cross_ref_href
@@ -79,6 +85,15 @@ $gBitSmarty->assign( 'durationMs', $durationMs );
 $gBitSmarty->assign( 'externalLinks', $externalLinks );
 $gBitSmarty->assign( 'filmImages', $filmImages );
 $gBitSmarty->assign( 'featurettes', $featurettes );
+// Which of the Featurettes/Images tabs starts active - same "whichever actually has content"
+// reasoning as FisheyeSeason::getSeasonViewData()'s own $firstTab, just without an Episodes
+// option since a film has no episode grid of its own.
+$firstFilmTab = match( true ) {
+	(bool)$featurettes => 'featurettes',
+	(bool)$filmImages  => 'images',
+	default            => null,
+};
+$gBitSmarty->assign( 'firstFilmTab', $firstFilmTab );
 
 $gBitSmarty->assign( 'gContent', $gContent );
 

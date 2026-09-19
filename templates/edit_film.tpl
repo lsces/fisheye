@@ -16,11 +16,11 @@
 
 		{if $plexResult}
 			<div class="alert alert-info">
-				{if $plexResult.matched}
+				{if $plexResult.items}
 					<p>{$plexResultLabel|escape}:</p>
 					<ul>{foreach from=$plexResult.items item=line}<li>{$line|escape}</li>{/foreach}</ul>
 				{else}
-					<p>{tr}No matching Plex entry found for this file.{/tr}</p>
+					<p>{$plexResultEmptyLabel|escape}</p>
 				{/if}
 			</div>
 		{/if}

@@ -1,9 +1,9 @@
 <?php
 /**
  * Streams one of a film/season's own alternate images (FisheyeSeason::reloadPlexImages()'s
- * shared images/ folder under the TV storage root, a season's own per-episode Plex thumb, or -
- * since 2026-09-04 - FisheyeFilm's own downloaded Plex alternates, which live in
- * storage/attachments/<branch>/ instead) - a small PHP-mediated server, same "no nginx location
+ * shared images/ folder under the TV storage root, a season's own per-episode Plex thumb, or
+ * FisheyeFilm's own downloaded Plex alternates, which live in storage/attachments/<branch>/
+ * instead) - a small PHP-mediated server, same "no nginx location
  * for that tree yet" situation mime_film_download() is already in for the external tree (see
  * mime.film.php's own note on this).
  *
@@ -34,7 +34,7 @@ $gBitSystem->verifyPackage( 'fisheye' );
 
 $xrefId = (int)( $_REQUEST['xref_id'] ?? 0 );
 $row = $xrefId ? $gBitDb->getRow(
-	"SELECT content_id, item, xkey_ext, data FROM `".BIT_DB_PREFIX."liberty_xref` WHERE xref_id = ? AND item IN ('image','episode')",
+	"SELECT content_id, item, xkey_ext, data FROM `".BIT_DB_PREFIX."liberty_xref` WHERE xref_id = ? AND item IN ('image','episode','featurette')",
 	[ $xrefId ]
 ) : null;
 if( !$row ) {
@@ -49,12 +49,12 @@ if( !$gContent || !$gContent->isValid() ) {
 // than the film's own primary artwork, but shouldn't bypass a private gallery's access control.
 $gContent->verifyViewPermission();
 
-// an 'episode' row's own xkey_ext is its real video file - the image to serve here is the
-// per-episode Plex thumb path stashed in its JSON data blob instead (see FisheyeSeason::
-// reloadPlexEpisodes()'s 'thumb' key).
-if( $row['item'] === 'episode' ) {
-	$episodeData = !empty( $row['data'] ) ? json_decode( $row['data'], true ) : [];
-	$relativePath = $episodeData['thumb'] ?? null;
+// an 'episode'/'featurette' row's own xkey_ext is its real video file - the image to serve here
+// is the thumb path stashed in its JSON data blob instead (see FisheyeSeason::
+// reloadPlexEpisodes()'s and FisheyeBase::registerFeaturettesFromFolder()'s own 'thumb' keys).
+if( $row['item'] === 'episode' || $row['item'] === 'featurette' ) {
+	$itemData = !empty( $row['data'] ) ? json_decode( $row['data'], true ) : [];
+	$relativePath = $itemData['thumb'] ?? null;
 } else {
 	$relativePath = $row['xkey_ext'];
 }

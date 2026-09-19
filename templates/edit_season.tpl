@@ -20,7 +20,7 @@
 					<p>{$plexResultLabel|escape}:</p>
 					<ul>{foreach from=$plexResult.items item=line}<li>{$line|escape}</li>{/foreach}</ul>
 				{else}
-					<p>{tr}No matching Plex entry found for this season.{/tr}</p>
+					<p>{$plexResultEmptyLabel|escape}</p>
 				{/if}
 			</div>
 		{/if}

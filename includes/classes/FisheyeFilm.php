@@ -276,6 +276,31 @@ class FisheyeFilm extends FisheyeImage {
 		return $this->registerFeaturettesFromFolder( $root.dirname( $pRelativePath ).'/', dirname( $pRelativePath ) );
 	}
 
+	/**
+	 * This film's own attachment path, relative to getImageStorageRoot() - the input
+	 * registerFeaturettesFromDisk() needs, re-derived for an already-stored film rather than
+	 * passed down from the original import call. getField('file_name') is NOT this - it only
+	 * ever holds a bare basename (getSourceFile()'s own fallback-to-basename branch is what
+	 * generally applies in practice), not the full relative path liberty_files.file_name
+	 * actually stores; found live when a real edit_film.php "Reload Featurettes" click on a film
+	 * nested under a Collection sub-folder silently resolved to the storage root itself instead
+	 * of the film's own folder. mStorage's own already-resolved absolute source_file (same one
+	 * matchPlexMetadataItem() below relies on) is the one value proven to always point at the
+	 * real file, so this strips the storage root back off that instead of trusting getField().
+	 *
+	 * @return string|null  relative path, or null if the film's own file can't be resolved
+	 */
+	public function getRelativeFilePath(): ?string {
+		$this->load();
+		$sourceFile = $this->mStorage[$this->mContentId]['source_file'] ?? null;
+		$realPath = $sourceFile ? realpath( $sourceFile ) : null;
+		$root = realpath( $this->getImageStorageRoot() );
+		if( empty( $realPath ) || empty( $root ) || !str_starts_with( $realPath, $root ) ) {
+			return null;
+		}
+		return ltrim( substr( $realPath, strlen( $root ) ), '/' );
+	}
+
 	private function matchPlexMetadataItem(): ?array {
 		// refresh mStorage - needed when called right after store() on a just-created film,
 		// whose in-memory object hasn't necessarily loaded its attachment row yet.

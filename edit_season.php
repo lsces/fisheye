@@ -4,8 +4,11 @@
  * (list_xref.tpl / add_xref.php / edit_xref.php) for genre/director/writer/star/rating/duration/
  * imdb/tvdb/tmdb/episodes/images - same reuse-the-generic-table decision as edit_film.php.
  *
- * Hosts 'Reload Images' (FisheyeSeason::reloadPlexImages()) and 'Load Episodes'
- * (FisheyeSeason::reloadPlexEpisodes()) - no season-level 'Reload Metadata' exists deliberately,
+ * Hosts 'Reload Images' (FisheyeSeason::reloadPlexImages()), 'Load Episodes'
+ * (FisheyeSeason::reloadPlexEpisodes()), and 'Reload Featurettes'
+ * (FisheyeSeason::registerFeaturettesFromDisk(), separate from the episode reload since a new
+ * Featurettes/ file can turn up independently of any episode change) - no season-level
+ * 'Reload Metadata' exists deliberately,
  * since Plex itself has none: it's the TV that toggles to display a selected episode's metadata
  * as you select each. genre/director/writer/star/
  * rating/duration live per-episode instead, fetched by 'Load Episodes' and shown per-episode on
@@ -32,6 +35,10 @@ $gContent->verifyUpdatePermission();
 
 $plexResult = null;
 $plexResultLabel = null;
+// Shown when $plexResult comes back empty - overridden per action below for the disk-based
+// Featurettes/frame-grab actions, neither of which have anything to do with Plex and shouldn't
+// blame it for an empty result.
+$plexResultEmptyLabel = KernelTools::tra( 'No matching Plex entry found for this season.' );
 if( !empty( $_REQUEST['fCancel'] ) ) {
 	KernelTools::bit_redirect( $gContent->getDisplayUrl() );
 } elseif( !empty( $_REQUEST['fSave'] ) ) {
@@ -49,6 +56,10 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 } elseif( !empty( $_REQUEST['fReloadEpisodes'] ) ) {
 	$plexResult = $gContent->reloadPlexEpisodes();
 	$plexResultLabel = KernelTools::tra( 'Episodes loaded from Plex' );
+} elseif( !empty( $_REQUEST['fReloadFeaturettes'] ) ) {
+	$plexResult = $gContent->registerFeaturettesFromDisk();
+	$plexResultLabel = KernelTools::tra( 'Featurettes reloaded' );
+	$plexResultEmptyLabel = KernelTools::tra( 'No Featurettes/ folder found for this season.' );
 } elseif( !empty( $_REQUEST['fGrabFrame'] ) ) {
 	// The "Grab Thumbnail from Video" action on the Images tab (templates/xref/
 	// view_images_group.tpl) - on-demand version of reloadPlexImages()'s own automatic fallback,
@@ -56,6 +67,7 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 	$relativePath = $gContent->grabVideoFrameImage();
 	$plexResult = [ 'items' => $relativePath ? [ "frame grab: $relativePath" ] : [] ];
 	$plexResultLabel = KernelTools::tra( 'Grabbed a frame from the episode video' );
+	$plexResultEmptyLabel = KernelTools::tra( 'Could not grab a frame from any episode video.' );
 } elseif( !empty( $_REQUEST['delete'] ) ) {
 	// Same delete flow as edit_film.php's own - safe to wire up properly since
 	// LibertyMime::expunge() actually reaches LibertyContent::expunge(). The episode video files
@@ -79,8 +91,8 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 		// edit_program.php's own parent-gallery redirect - grab it before expunge() removes the
 		// membership row getParentGalleries() itself reads. Uses the real, type-correct show
 		// object's own getDisplayUrl() (-> view_program.php) rather than FisheyeGallery's generic
-		// getDisplayUrlFromHash() (-> view.php) - same "wrong link" bug already fixed once today in
-		// image_order.tpl, not worth repeating here.
+		// getDisplayUrlFromHash() (-> view.php) - same "wrong link" bug already fixed once
+		// elsewhere in image_order.tpl, not worth repeating here.
 		$parentGalleries = $gContent->getParentGalleries();
 		$redirectUrl = FISHEYE_PKG_URL.'?user_id='.$userId;
 		if( !empty( $parentGalleries ) ) {
@@ -102,5 +114,6 @@ $gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
 $gBitSmarty->assign( 'gContent', $gContent );
 $gBitSmarty->assign( 'plexResult', $plexResult );
 $gBitSmarty->assign( 'plexResultLabel', $plexResultLabel );
+$gBitSmarty->assign( 'plexResultEmptyLabel', $plexResultEmptyLabel );
 
 $gBitSystem->display( 'bitpackage:fisheye/edit_season.tpl', KernelTools::tra( 'Edit Season: ' ).$gContent->getTitle(), [ 'display_mode' => 'edit' ] );
