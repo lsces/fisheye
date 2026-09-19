@@ -263,38 +263,17 @@ class FisheyeFilm extends FisheyeImage {
 	 * @return array  Summary of what was found/stored, for the calling page's result display.
 	 */
 	public function registerFeaturettesFromDisk( string $pRelativePath ): array {
-		$summary = [ 'items' => [] ];
 		$root = $this->getImageStorageRoot();
 		if( empty( $root ) ) {
-			return $summary;
+			return [ 'items' => [] ];
 		}
-		$featurettesDir = $root.dirname( $pRelativePath ).'/Featurettes/';
-		if( !is_dir( $featurettesDir ) ) {
-			return $summary;
-		}
-		self::deleteXrefByItem( $this->mContentId, [ 'featurette' ] );
-		$xorder = 0;
-		$files = scandir( $featurettesDir );
-		natsort( $files );
-		foreach( $files as $file ) {
-			if( !is_file( $featurettesDir.$file ) ) {
-				continue;
-			}
-			if( !in_array( strtolower( pathinfo( $file, PATHINFO_EXTENSION ) ), [ 'mkv', 'mp4', 'm4v', 'avi' ], true ) ) {
-				continue;
-			}
-			$xorder++;
-			$xrefHash = [
-				'content_id' => $this->mContentId,
-				'item'       => 'featurette',
-				'xkey_ext'   => dirname( $pRelativePath ).'/Featurettes/'.$file,
-				'edit'       => json_encode( [ 'title' => pathinfo( $file, PATHINFO_FILENAME ) ] ),
-				'xorder'     => $xorder,
-			];
-			$this->storeXref( $xrefHash );
-			$summary['items'][] = $file;
-		}
-		return $summary;
+		// See FisheyeBase::registerFeaturettesFromFolder()'s own docblock - the scan-and-register
+		// half was an exact duplicate of FisheyeSeason's own version, factored out from both
+		// 2026-09-19. This method's only remaining job is resolving *this* film's own containing
+		// directory (a bare single file directly under Films/ has dirname()=='Films' itself,
+		// whose sibling 'Featurettes' would only ever be the top-level Films/Featurettes/ that
+		// doesn't exist on this install - a safe no-op for that common case).
+		return $this->registerFeaturettesFromFolder( $root.dirname( $pRelativePath ).'/', dirname( $pRelativePath ) );
 	}
 
 	private function matchPlexMetadataItem(): ?array {

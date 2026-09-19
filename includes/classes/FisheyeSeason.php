@@ -489,12 +489,14 @@ class FisheyeSeason extends FisheyeImage {
 
 	/**
 	 * A season's own bonus-content folder, DVD-era-style - "Featurettes/" directly inside the
-	 * season's own folder, same convention and same 'featurette' xref item/rebuild-not-diff
-	 * pattern as FisheyeFilm::registerFeaturettesFromDisk(). (Star Trek Voyager originally shipped
-	 * this content as a differently-shaped "Extras/<season folder>/" sibling structure - Lester's
-	 * call 2026-09-19 was to physically move each season's extras inside its own folder instead,
-	 * so this can just reuse Film's exact pattern rather than needing separate handling for a
-	 * different folder shape.)
+	 * season's own folder, same convention and same 'featurette' xref item as
+	 * FisheyeFilm::registerFeaturettesFromDisk(). (Star Trek Voyager originally shipped this
+	 * content as a differently-shaped "Extras/<season folder>/" sibling structure - Lester's call
+	 * 2026-09-19 was to physically move each season's extras inside its own folder instead, so
+	 * this can just reuse Film's exact pattern.) The scan-and-register logic itself lives in
+	 * FisheyeBase::registerFeaturettesFromFolder() (shared with Film, factored out 2026-09-19
+	 * after being found duplicated) - this method's only job is resolving *this* season's own
+	 * containing directory.
 	 *
 	 * No-op (empty summary, not an error) when there's no real season folder to resolve at all, or
 	 * no "Featurettes/" subfolder exists - most seasons genuinely have no bonus content.
@@ -502,42 +504,11 @@ class FisheyeSeason extends FisheyeImage {
 	 * @return array{items:array}  Summary shape matching every other reload* method here.
 	 */
 	public function registerFeaturettesFromDisk(): array {
-		$summary = [ 'items' => [] ];
-
 		$dirInfo = $this->resolveSeasonDirectoryFromDisk();
 		if( !$dirInfo ) {
-			return $summary;
+			return [ 'items' => [] ];
 		}
-		$featurettesDir = $dirInfo['dir'].'Featurettes/';
-		if( !is_dir( $featurettesDir ) ) {
-			return $summary;
-		}
-
-		self::deleteXrefByItem( $this->mContentId, [ 'featurette' ] );
-
-		$files = scandir( $featurettesDir );
-		natsort( $files );
-		$xorder = 0;
-		foreach( $files as $file ) {
-			if( !is_file( $featurettesDir.$file ) ) {
-				continue;
-			}
-			if( !in_array( strtolower( pathinfo( $file, PATHINFO_EXTENSION ) ), [ 'mkv', 'mp4', 'm4v', 'avi' ], true ) ) {
-				continue;
-			}
-			$xorder++;
-			$xrefHash = [
-				'content_id' => $this->mContentId,
-				'item'       => 'featurette',
-				'xkey_ext'   => $dirInfo['relative'].'/Featurettes/'.$file,
-				'edit'       => json_encode( [ 'title' => pathinfo( $file, PATHINFO_FILENAME ) ] ),
-				'xorder'     => $xorder,
-			];
-			$this->storeXref( $xrefHash );
-			$summary['items'][] = pathinfo( $file, PATHINFO_FILENAME );
-		}
-
-		return $summary;
+		return $this->registerFeaturettesFromFolder( $dirInfo['dir'], $dirInfo['relative'] );
 	}
 
 	/**

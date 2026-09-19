@@ -548,6 +548,58 @@ not ready for primetime
 	}
 
 	/**
+	 * Shared engine behind FisheyeFilm::registerFeaturettesFromDisk() and
+	 * FisheyeSeason::registerFeaturettesFromDisk() (previously two near-identical copies of this
+	 * same scan-and-register logic, found duplicated 2026-09-19 sorting Star Trek Voyager) -
+	 * scans a "Featurettes/" subfolder inside the given containing directory and registers each
+	 * real video file as a 'featurette' xref on this content object. Rebuild-not-diff, same as
+	 * every other reload* method here. Each subclass still owns resolving its own containing
+	 * directory (a film's own folder via `dirname($pRelativePath)`; a season's via
+	 * `resolveSeasonDirectoryFromDisk()`) - genuinely different logic per type, not worth forcing
+	 * into a shared shape - only the scan-and-register half was actually duplicated.
+	 *
+	 * @param string $pContainingDirAbsolute  absolute path to the film/season's own folder,
+	 *                                         trailing slash
+	 * @param string $pContainingDirRelative  same folder, relative to the storage root (no
+	 *                                         trailing slash) - used to build each featurette's
+	 *                                         xkey_ext
+	 * @return array{items:array}
+	 */
+	protected function registerFeaturettesFromFolder( string $pContainingDirAbsolute, string $pContainingDirRelative ): array {
+		$summary = [ 'items' => [] ];
+		$featurettesDir = $pContainingDirAbsolute.'Featurettes/';
+		if( !is_dir( $featurettesDir ) ) {
+			return $summary;
+		}
+
+		self::deleteXrefByItem( $this->mContentId, [ 'featurette' ] );
+
+		$files = scandir( $featurettesDir );
+		natsort( $files );
+		$xorder = 0;
+		foreach( $files as $file ) {
+			if( !is_file( $featurettesDir.$file ) ) {
+				continue;
+			}
+			if( !in_array( strtolower( pathinfo( $file, PATHINFO_EXTENSION ) ), [ 'mkv', 'mp4', 'm4v', 'avi' ], true ) ) {
+				continue;
+			}
+			$xorder++;
+			$xrefHash = [
+				'content_id' => $this->mContentId,
+				'item'       => 'featurette',
+				'xkey_ext'   => $pContainingDirRelative.'/Featurettes/'.$file,
+				'edit'       => json_encode( [ 'title' => pathinfo( $file, PATHINFO_FILENAME ) ] ),
+				'xorder'     => $xorder,
+			];
+			$this->storeXref( $xrefHash );
+			$summary['items'][] = pathinfo( $file, PATHINFO_FILENAME );
+		}
+
+		return $summary;
+	}
+
+	/**
 	 * Move an uploaded file into this content's own images/ folder as a brand new, uniquely-named
 	 * image - the "create" counterpart to replaceXrefFile()'s "overwrite an existing row's file
 	 * in place" (edit_image_item.tpl/edit_xref.php). Built for add_image_xref.php, the dedicated
