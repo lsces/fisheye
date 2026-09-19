@@ -550,9 +550,9 @@ not ready for primetime
 	/**
 	 * Shared engine behind FisheyeFilm::registerFeaturettesFromDisk() and
 	 * FisheyeSeason::registerFeaturettesFromDisk() (previously two near-identical copies of this
-	 * same scan-and-register logic, found duplicated 2026-09-19 sorting Star Trek Voyager) -
-	 * scans a "Featurettes/" subfolder inside the given containing directory and registers each
-	 * real video file as a 'featurette' xref on this content object. Rebuild-not-diff, same as
+	 * same scan-and-register logic) - scans a "Featurettes/" subfolder inside the given
+	 * containing directory and registers each real video file as a 'featurette' xref on this
+	 * content object. Rebuild-not-diff, same as
 	 * every other reload* method here. Each subclass still owns resolving its own containing
 	 * directory (a film's own folder via `dirname($pRelativePath)`; a season's via
 	 * `resolveSeasonDirectoryFromDisk()`) - genuinely different logic per type, not worth forcing

@@ -268,11 +268,11 @@ class FisheyeFilm extends FisheyeImage {
 			return [ 'items' => [] ];
 		}
 		// See FisheyeBase::registerFeaturettesFromFolder()'s own docblock - the scan-and-register
-		// half was an exact duplicate of FisheyeSeason's own version, factored out from both
-		// 2026-09-19. This method's only remaining job is resolving *this* film's own containing
-		// directory (a bare single file directly under Films/ has dirname()=='Films' itself,
-		// whose sibling 'Featurettes' would only ever be the top-level Films/Featurettes/ that
-		// doesn't exist on this install - a safe no-op for that common case).
+		// half is shared with FisheyeSeason's own version. This method's only remaining job is
+		// resolving *this* film's own containing directory (a bare single file directly under
+		// Films/ has dirname()=='Films' itself, whose sibling 'Featurettes' would only ever be
+		// the top-level Films/Featurettes/ that doesn't exist on this install - a safe no-op for
+		// that common case).
 		return $this->registerFeaturettesFromFolder( $root.dirname( $pRelativePath ).'/', dirname( $pRelativePath ) );
 	}
 

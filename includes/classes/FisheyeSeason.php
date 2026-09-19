@@ -420,9 +420,9 @@ class FisheyeSeason extends FisheyeImage {
 	 * Resolves this season's real on-disk folder, preferring one of its own 'episode' xref's
 	 * xkey_ext (unambiguous when available) but falling back to reconstructing it from the
 	 * season's own title when there's no episode left to derive it from at all - e.g. every
-	 * episode was deleted (found live 2026-09-19: getEpisodeFileCountOnDisk() silently returned
-	 * null forever afterwards, since it had no other way to find the folder again, making a
-	 * deleted-then-reload cycle permanently impossible without this).
+	 * episode was deleted, leaving nothing else to derive the folder from: without this fallback,
+	 * getEpisodeFileCountOnDisk() would silently return null forever afterwards, making a
+	 * deleted-then-reload cycle permanently impossible.
 	 *
 	 * The reconstruction still can't just trust the title outright, because a flat (no-subfolder)
 	 * season's synthetic title ("Show - Season 1") is textually indistinguishable from a real
@@ -490,13 +490,11 @@ class FisheyeSeason extends FisheyeImage {
 	/**
 	 * A season's own bonus-content folder, DVD-era-style - "Featurettes/" directly inside the
 	 * season's own folder, same convention and same 'featurette' xref item as
-	 * FisheyeFilm::registerFeaturettesFromDisk(). (Star Trek Voyager originally shipped this
-	 * content as a differently-shaped "Extras/<season folder>/" sibling structure - Lester's call
-	 * 2026-09-19 was to physically move each season's extras inside its own folder instead, so
-	 * this can just reuse Film's exact pattern.) The scan-and-register logic itself lives in
-	 * FisheyeBase::registerFeaturettesFromFolder() (shared with Film, factored out 2026-09-19
-	 * after being found duplicated) - this method's only job is resolving *this* season's own
-	 * containing directory.
+	 * FisheyeFilm::registerFeaturettesFromDisk(). A show shipping this content as a differently-
+	 * shaped "Extras/<season folder>/" sibling structure instead needs its extras physically
+	 * moved inside each season's own folder first to fit this convention. The scan-and-register
+	 * logic itself lives in FisheyeBase::registerFeaturettesFromFolder() (shared with Film) - this
+	 * method's only job is resolving *this* season's own containing directory.
 	 *
 	 * No-op (empty summary, not an error) when there's no real season folder to resolve at all, or
 	 * no "Featurettes/" subfolder exists - most seasons genuinely have no bonus content.
@@ -532,9 +530,9 @@ class FisheyeSeason extends FisheyeImage {
 	/**
 	 * How many real episode files actually sit in this season's own folder right now - compared
 	 * against countRegisteredEpisodes() below by load_program.php to offer a "Reload Episodes"
-	 * action directly from the show page whenever a season (almost always the only one, per
-	 * Lester's own usage - most of these shows are single-season) has picked up more files than
-	 * are currently registered, without needing to visit edit_season.php at all.
+	 * action directly from the show page whenever a season (typically the only one - a
+	 * single-season show is the common case) has picked up more files than are currently
+	 * registered, without needing to visit edit_season.php at all.
 	 *
 	 * @return int|null  null if the season's own folder can't be resolved at all (see
 	 *                    resolveSeasonDirectoryFromDisk())
