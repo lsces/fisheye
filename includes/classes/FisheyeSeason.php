@@ -344,8 +344,12 @@ class FisheyeSeason extends FisheyeImage {
 		// so calling it every time (including a re-run against an already-registered season) is
 		// safe, not wasted re-downloading.
 		$images = $season->reloadPlexImages();
+		// Same "always safe to re-run" reasoning - a "Featurettes/" folder appearing after the
+		// season was already registered (e.g. moved into place later) gets picked up on the next
+		// ordinary reload, not just at first creation.
+		$featurettes = $season->registerFeaturettesFromDisk();
 
-		return [ 'created' => $season->mContentId, 'episodes' => $episodes, 'images' => $images ];
+		return [ 'created' => $season->mContentId, 'episodes' => $episodes, 'images' => $images, 'featurettes' => $featurettes ];
 	}
 
 	private function matchPlexSeasonMetadataItem(): ?array {
@@ -481,6 +485,59 @@ class FisheyeSeason extends FisheyeImage {
 		}
 
 		return null;
+	}
+
+	/**
+	 * A season's own bonus-content folder, DVD-era-style - "Featurettes/" directly inside the
+	 * season's own folder, same convention and same 'featurette' xref item/rebuild-not-diff
+	 * pattern as FisheyeFilm::registerFeaturettesFromDisk(). (Star Trek Voyager originally shipped
+	 * this content as a differently-shaped "Extras/<season folder>/" sibling structure - Lester's
+	 * call 2026-09-19 was to physically move each season's extras inside its own folder instead,
+	 * so this can just reuse Film's exact pattern rather than needing separate handling for a
+	 * different folder shape.)
+	 *
+	 * No-op (empty summary, not an error) when there's no real season folder to resolve at all, or
+	 * no "Featurettes/" subfolder exists - most seasons genuinely have no bonus content.
+	 *
+	 * @return array{items:array}  Summary shape matching every other reload* method here.
+	 */
+	public function registerFeaturettesFromDisk(): array {
+		$summary = [ 'items' => [] ];
+
+		$dirInfo = $this->resolveSeasonDirectoryFromDisk();
+		if( !$dirInfo ) {
+			return $summary;
+		}
+		$featurettesDir = $dirInfo['dir'].'Featurettes/';
+		if( !is_dir( $featurettesDir ) ) {
+			return $summary;
+		}
+
+		self::deleteXrefByItem( $this->mContentId, [ 'featurette' ] );
+
+		$files = scandir( $featurettesDir );
+		natsort( $files );
+		$xorder = 0;
+		foreach( $files as $file ) {
+			if( !is_file( $featurettesDir.$file ) ) {
+				continue;
+			}
+			if( !in_array( strtolower( pathinfo( $file, PATHINFO_EXTENSION ) ), [ 'mkv', 'mp4', 'm4v', 'avi' ], true ) ) {
+				continue;
+			}
+			$xorder++;
+			$xrefHash = [
+				'content_id' => $this->mContentId,
+				'item'       => 'featurette',
+				'xkey_ext'   => $dirInfo['relative'].'/Featurettes/'.$file,
+				'edit'       => json_encode( [ 'title' => pathinfo( $file, PATHINFO_FILENAME ) ] ),
+				'xorder'     => $xorder,
+			];
+			$this->storeXref( $xrefHash );
+			$summary['items'][] = pathinfo( $file, PATHINFO_FILENAME );
+		}
+
+		return $summary;
 	}
 
 	/**
