@@ -1,22 +1,22 @@
 <?php
 /**
- * Lists real on-disk artist/composer folders directly under a chosen base folder (a subdirectory
- * of fisheye_disk_storage_root's own Music/) that don't have a matching gallery yet, so an admin
- * can create the gallery before ever importing the albums inside it - same one-off "create the
- * gallery first, cheap/instant" step load_collection.php already established for Films,
- * load_album.php then handles the (more expensive) album import into that gallery. This page's
- * own icon lives on the top-level "Music" gallery only (music_gallery_icons_inc.tpl's "Add Music
- * Collection"), same gating as Film's own "Load Collections" icon.
+ * Lists real on-disk artist/composer folders directly under fisheye_disk_storage_root's own
+ * Music/ that don't have a matching gallery yet, so an admin can create the gallery before ever
+ * importing the albums inside it - same one-off "create the gallery first, cheap/instant" step
+ * load_collection.php already established for Films, load_album.php then handles the (more
+ * expensive) album import into that gallery. This page's own icon lives on the top-level "Music"
+ * gallery only (music_gallery_icons_inc.tpl's "Add Music Collection"), same gating as Film's own
+ * "Load Collections" icon.
  *
- * No base folder hardcoded to exactly two names - scans whatever real subdirectories actually sit
- * directly under Music/, so adding another base later needs no code change here.
+ * No intermediate base-folder tier (there was one - a Classical/Modern-style split - until Lester
+ * flattened the tidied portion of the library to sit directly under Music/; every real
+ * artist/composer/collection folder now lives at exactly this one level, matching load_album.php's
+ * own folder resolution).
  *
- * "Real collection" vs a single album sitting in its own folder - same distinction load_collection.
- * php makes for Films: a base folder holding more than one album unit (a subfolder containing at
- * least one recognised track file, or a CD-numbered subfolder) is offered; a folder holding just
- * one gets no gallery of its own; it can still be registered directly via FisheyeAlbum::
- * registerFromDisk() without one (same graceful-degrade FisheyeAlbum's own registerFromDisk()
- * already has for a missing gallery title).
+ * Every artist/composer folder gets offered here, even one holding just a single album today -
+ * an artist with one album now commonly gains a second later, and a bare album registered without
+ * a gallery would need retrofitting into one at that point. Uniformly gallery-first avoids that:
+ * load_album.php's own import step works the same whether it's populating one album or several.
  *
  * @package fisheye
  */
@@ -47,8 +47,9 @@ function load_music_gallery_id_for_title( string $pTitle ) {
 
 // An artist/composer folder's own "album unit" count - a subfolder counts as one album unit if it
 // either directly contains a recognised track file, or looks like a disc subfolder (CD1/CD2/etc,
-// same convention FisheyeAlbum::registerFromDisk() already scans for) - more than one makes this a
-// real collection worth its own gallery.
+// same convention FisheyeAlbum::registerFromDisk() already scans for). Any real folder with at
+// least one album unit is worth its own gallery - see this file's own docblock for why a lone
+// album today still gets one, not just folders already holding several.
 function load_music_unit_count( string $pDir ): int {
 	$units = 0;
 	foreach( scandir( $pDir ) ?: [] as $entry ) {
@@ -83,32 +84,15 @@ $topGalleryId = FisheyeGallery::getTopGalleryId( 'Music' );
 $root = \Bitweaver\Liberty\mime_film_get_storage_root();
 $musicDir = $root.'Music/';
 
-$baseFolders = [];
-if( !empty( $root ) && is_dir( $musicDir ) ) {
-	foreach( scandir( $musicDir ) ?: [] as $entry ) {
-		if( str_starts_with( $entry, '.' ) || !is_dir( $musicDir.$entry ) ) {
-			continue;
-		}
-		$baseFolders[] = $entry;
-	}
-	natsort( $baseFolders );
-}
-
-// See load_film.php's own comment on this same decode - detoxify() HTML-escapes every $_REQUEST
-// value, which breaks a raw filesystem lookup like this one for any collection name containing &, <, or >.
-$base = htmlspecialchars_decode( trim( (string)( $_REQUEST['base'] ?? '' ) ), ENT_NOQUOTES );
-if( $base !== '' && !in_array( $base, $baseFolders, true ) ) {
-	$base = '';
-}
-$baseDir = $base !== '' ? $musicDir.$base.'/' : null;
-
 $result = null;
-if( $base !== '' && !empty( $_REQUEST['fCreate'] ) ) {
+if( !empty( $_REQUEST['fCreate'] ) ) {
 	$result = [ 'created' => [], 'errors' => [] ];
 	foreach( (array)( $_REQUEST['selected'] ?? [] ) as $folderName ) {
-		// Same detoxify() decode as $base above - these came from checkbox values.
+		// See load_film.php's own comment on this same decode - detoxify() HTML-escapes every
+		// $_REQUEST value, which breaks a raw filesystem lookup like this one for any collection
+		// name containing &, <, or >.
 		$folderName = htmlspecialchars_decode( trim( (string)$folderName ), ENT_NOQUOTES );
-		if( empty( $folderName ) || !is_dir( $baseDir.$folderName ) ) {
+		if( empty( $folderName ) || !is_dir( $musicDir.$folderName ) ) {
 			continue;
 		}
 		if( load_music_gallery_id_for_title( $folderName ) ) {
@@ -129,14 +113,14 @@ if( $base !== '' && !empty( $_REQUEST['fCreate'] ) ) {
 }
 
 $candidates = [];
-if( $baseDir && is_dir( $baseDir ) ) {
-	$entries = scandir( $baseDir );
+if( !empty( $root ) && is_dir( $musicDir ) ) {
+	$entries = scandir( $musicDir );
 	natsort( $entries );
 	foreach( $entries as $entry ) {
-		if( str_starts_with( $entry, '.' ) || !is_dir( $baseDir.$entry ) ) {
+		if( str_starts_with( $entry, '.' ) || !is_dir( $musicDir.$entry ) ) {
 			continue;
 		}
-		if( load_music_unit_count( $baseDir.$entry.'/' ) <= 1 ) {
+		if( load_music_unit_count( $musicDir.$entry.'/' ) < 1 ) {
 			continue;
 		}
 		if( load_music_gallery_id_for_title( $entry ) ) {
@@ -148,8 +132,6 @@ if( $baseDir && is_dir( $baseDir ) ) {
 
 $topGalleryUrlHash = [ 'gallery_id' => $topGalleryId ];
 $gBitSmarty->assign( 'topGalleryUrl', FisheyeGallery::getDisplayUrlFromHash( $topGalleryUrlHash ) );
-$gBitSmarty->assign( 'baseFolders', $baseFolders );
-$gBitSmarty->assign( 'base', $base );
 $gBitSmarty->assign( 'candidates', $candidates );
 $gBitSmarty->assign( 'result', $result );
 

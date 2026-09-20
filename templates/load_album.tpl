@@ -41,6 +41,7 @@
 				<input type="hidden" name="gallery_id" value="{$galleryIdParam}" />
 				<p>{tr}Showing up to{/tr} {$candidateLimit} {tr}not-yet-loaded albums for{/tr} "{$galleryTitle|escape}":</p>
 				<p><label><input type="checkbox" id="loadAlbumToggleAll" checked="checked" /> <strong>{tr}Select All{/tr}</strong></label></p>
+				<input type="submit" class="btn btn-primary" name="fImportAlbums" value="{tr}Load Selected Albums{/tr}" />
 				<ul>
 					{foreach from=$candidates item=album}
 						<li>

@@ -13,10 +13,9 @@
  * gallery's own folder.
  *
  * Folder resolution: a collection gallery's title is expected to match a real folder directly
- * under one of the base folders under fisheye_disk_storage_root's own Music/ (no separate config
- * key for this - same fisheye_disk_storage_root as Films). All of Music/'s own subfolders are
- * checked; whichever actually contains a matching folder wins - same generic "don't hardcode
- * exactly two names" approach as load_music.php.
+ * under fisheye_disk_storage_root's own Music/ (no separate config key for this - same
+ * fisheye_disk_storage_root as Films) - same one-level layout load_music.php's own candidate scan
+ * uses.
  *
  * @package fisheye
  * @subpackage functions
@@ -37,7 +36,7 @@ $gBitSystem->verifyPermission( 'p_fisheye_admin' );
 // load_collection.php all already needed.
 require_once dirname( __DIR__ ).'/liberty/plugins/mime.film.php';
 
-const LOAD_ALBUM_LIMIT = 40;
+const LOAD_ALBUM_LIMIT = 20;
 
 $galleryIdParam = (int)( $_REQUEST['gallery_id'] ?? 0 );
 if( !$galleryIdParam ) {
@@ -53,18 +52,10 @@ $galleryTitle = $gallery->getTitle();
 $root = \Bitweaver\Liberty\mime_film_get_storage_root();
 $musicDir = $root.'Music/';
 $artistDir = null;
-if( !empty( $root ) && is_dir( $musicDir ) ) {
-	foreach( scandir( $musicDir ) ?: [] as $subDir ) {
-		if( str_starts_with( $subDir, '.' ) || !is_dir( $musicDir.$subDir ) ) {
-			continue;
-		}
-		$candidateDir = $musicDir.$subDir.'/'.$galleryTitle.'/';
-		if( is_dir( $candidateDir ) ) {
-			$artistDir = $candidateDir;
-			$artistRelative = 'Music/'.$subDir.'/'.$galleryTitle.'/';
-			break;
-		}
-	}
+$artistRelative = null;
+if( !empty( $root ) && is_dir( $musicDir.$galleryTitle.'/' ) ) {
+	$artistDir = $musicDir.$galleryTitle.'/';
+	$artistRelative = 'Music/'.$galleryTitle.'/';
 }
 
 $importResult = null;
