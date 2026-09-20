@@ -489,7 +489,10 @@ class FisheyeFilm extends FisheyeImage {
 			$qualityInfo = \Bitweaver\Liberty\mime_film_get_quality_info( $sourceFile );
 			foreach( [ 'resolution', 'audio' ] as $item ) {
 				if( $qualityInfo[$item] !== null ) {
-					$this->storeXref( [ 'content_id' => $this->mContentId, 'item' => $item, 'xkey_ext' => $qualityInfo[$item] ] );
+					// storeXref() takes its param by reference - a literal array expression
+					// fatals ("could not be passed by reference"), needs a named variable.
+					$xrefParamHash = [ 'content_id' => $this->mContentId, 'item' => $item, 'xkey_ext' => $qualityInfo[$item] ];
+					$this->storeXref( $xrefParamHash );
 					$summary['items'][] = "$item: {$qualityInfo[$item]}";
 				}
 			}
