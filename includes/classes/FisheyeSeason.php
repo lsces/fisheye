@@ -278,6 +278,32 @@ class FisheyeSeason extends FisheyeImage {
 	}
 
 	/**
+	 * This season's own episode titles, for LibertyContent::verify()/setIndexData()'s shared
+	 * getExtraIndexWords() hook - an episode has no liberty_content row of its own (it's an xref
+	 * on this season's own content_id), so without this it could never be searched for at all.
+	 * Lets a search for a specific episode ("newton", "oasis") surface the season it actually
+	 * belongs to.
+	 *
+	 * @param array $pParamHash  unused here - this season's own already-stored xrefs are the
+	 *                           source, not anything from the calling save
+	 * @return string
+	 */
+	public function getExtraIndexWords( array $pParamHash ): string {
+		$this->loadXrefInfo();
+		$words = [];
+		if( $this->mXrefInfo ) {
+			foreach( $this->mXrefInfo->allXrefs() as $xref ) {
+				if( $xref['item'] !== 'episode' ) {
+					continue;
+				}
+				$data = !empty( $xref['data'] ) ? json_decode( $xref['data'], true ) : [];
+				$words[] = $data['title'] ?? pathinfo( $xref['xkey_ext'], PATHINFO_FILENAME );
+			}
+		}
+		return implode( ' ', $words );
+	}
+
+	/**
 	 * Locate this season in the local Plex library. A season has no file of its own to match by
 	 * (unlike a film) - matched instead via one of its own episodes' file path (an 'episode'
 	 * xref row's xkey_ext), walking Plex's own metadata_items.parent_id from that episode

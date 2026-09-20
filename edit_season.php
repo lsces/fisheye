@@ -58,6 +58,14 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 } elseif( !empty( $_REQUEST['fReloadEpisodes'] ) ) {
 	$plexResult = $gContent->reloadPlexEpisodes();
 	$plexResultLabel = KernelTools::tra( 'Episodes loaded from Plex' );
+	// Episode titles only become searchable via this season's own getExtraIndexWords() hook
+	// (LibertyContent::verify()/setIndexData()) - but that only fires on this season's own
+	// store(), which a plain episode xref reload never calls. Refresh explicitly here instead of
+	// waiting for this season's title to happen to get edited some other time.
+	if( $gBitSystem->isPackageActive( 'search' ) ) {
+		require_once SEARCH_PKG_INCLUDE_PATH.'refresh_functions.php';
+		\Bitweaver\Liberty\refresh_index( $gContent );
+	}
 } elseif( !empty( $_REQUEST['fReloadFeaturettes'] ) ) {
 	$plexResult = $gContent->registerFeaturettesFromDisk();
 	$plexResultLabel = KernelTools::tra( 'Featurettes reloaded' );
