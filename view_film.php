@@ -17,83 +17,22 @@ global $gBitSystem, $gBitSmarty;
 
 $gBitSystem->verifyPackage( 'fisheye' );
 
+// FisheyeImage::lookup() with a bare content_id resolves whatever content type actually owns
+// that content_id, not necessarily a film - isValid() alone only confirms it loaded as ITS OWN
+// (possibly unrelated) type. See view_program.php's own identical fix for why this matters.
 $gContent = FisheyeImage::lookup( $_REQUEST );
-if( !$gContent || !$gContent->isValid() ) {
+if( !$gContent || !$gContent->isValid() || !( $gContent instanceof FisheyeFilm ) ) {
 	$gBitSystem->fatalError( KernelTools::tra( 'No film exists with the given ID' ), 'error.tpl' );
 }
 $gContent->verifyViewPermission();
 $gContent->addHit();
 
-// bucket the film's xref data into template-friendly arrays - one flat pass over every group
-// via allXrefs(), keyed by item name only. Deliberately not keyed off which x_group an item
-// happens to be organised under (that's a tab-layout concern - see media.php's xref_schemes) -
-// hardcoding group names here already broke silently once, when 'star' moved out of 'metadata'
-// into its own 'cast' tab and this page kept reading only 'metadata'.
-$gContent->loadXrefInfo();
-$genres = $directors = $writers = $stars = [];
-$contentRating = $durationMs = null;
-$externalLinks = [];
-// this film's own alternate poster/backdrop images (FisheyeFilm::reloadPlexImages()) - xref-based,
-// not a second liberty_attachments row per image. Rendered via view_extra_image.php (xref_id only,
-// never a raw path - see that script's own docblock for why) rather than a direct URL, since these
-// files live outside storage/attachments/ with no nginx location serving that tree yet.
-$filmImages = [];
-// this film's own bonus content, for a DVD-rip-with-extras style folder - Featurettes/ is no
-// different to Season/, same xref-on-the-parent's-own-content_id shape
-// as a season's episodes, played via the same play_episode.php (xref_id only, widened to accept
-// either item).
-$featurettes = [];
-if( $gContent->mXrefInfo ) {
-	foreach( $gContent->mXrefInfo->allXrefs() as $xref ) {
-		switch( $xref['item'] ) {
-			case 'genre':          $genres[]     = $xref['xkey_ext']; break;
-			case 'director':       $directors[]  = $xref['xkey_ext']; break;
-			case 'writer':         $writers[]    = $xref['xkey_ext']; break;
-			case 'star':           $stars[]      = $xref['xkey_ext']; break;
-			case 'content_rating': $contentRating = $xref['xkey_ext']; break;
-			case 'duration':       $durationMs    = (int)$xref['xkey_ext']; break;
-			case 'image':          $filmImages[]  = [ 'xref_id' => $xref['xref_id'] ]; break;
-			case 'featurette':
-				$data = !empty( $xref['data'] ) ? json_decode( $xref['data'], true ) : [];
-				$featurettes[] = [
-					'xref_id'    => $xref['xref_id'],
-					'title'      => $data['title'] ?? $xref['xkey_ext'],
-					'summary'    => $data['summary'] ?? '',
-					'thumb'      => $data['thumb'] ?? null,
-					'durationMs' => $data['duration'] ?? null,
-				];
-				break;
-		}
-		// external links (imdb/tvdb/tmdb/...) - identified by having a cross_ref_href
-		// (the href template's marker, loaded onto every xref row already, see
-		// LibertyXrefType.php), not by group name - built into a real url here since
-		// nothing generic renders these outside the admin xref-list table.
-		if( !empty( $xref['cross_ref_href'] ) && !empty( $xref['xkey'] )) {
-			$externalLinks[] = [
-				'title' => $xref['xref_title'] ?? strtoupper( $xref['item'] ),
-				'url'   => $xref['cross_ref_href'].$xref['xkey'],
-			];
-		}
-	}
+// One shaped array instead of a dozen individual assign() calls - same consolidation
+// FisheyeSeason::getSeasonViewData() already does for view_season.php/view_program.php.
+$filmData = $gContent->getFilmViewData();
+foreach( $filmData as $key => $value ) {
+	$gBitSmarty->assign( $key === 'firstTab' ? 'firstFilmTab' : $key, $value );
 }
-$gBitSmarty->assign( 'genres', $genres );
-$gBitSmarty->assign( 'directors', $directors );
-$gBitSmarty->assign( 'writers', $writers );
-$gBitSmarty->assign( 'stars', $stars );
-$gBitSmarty->assign( 'contentRating', $contentRating );
-$gBitSmarty->assign( 'durationMs', $durationMs );
-$gBitSmarty->assign( 'externalLinks', $externalLinks );
-$gBitSmarty->assign( 'filmImages', $filmImages );
-$gBitSmarty->assign( 'featurettes', $featurettes );
-// Which of the Featurettes/Images tabs starts active - same "whichever actually has content"
-// reasoning as FisheyeSeason::getSeasonViewData()'s own $firstTab, just without an Episodes
-// option since a film has no episode grid of its own.
-$firstFilmTab = match( true ) {
-	(bool)$featurettes => 'featurettes',
-	(bool)$filmImages  => 'images',
-	default            => null,
-};
-$gBitSmarty->assign( 'firstFilmTab', $firstFilmTab );
 
 $gBitSmarty->assign( 'gContent', $gContent );
 

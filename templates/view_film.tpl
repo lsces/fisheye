@@ -40,6 +40,8 @@
 				<dl class="film-info">
 					{if $contentRating}<dt>{tr}Rating{/tr}</dt><dd>{$contentRating|escape}</dd>{/if}
 					{if $durationMs}<dt>{tr}Duration{/tr}</dt><dd>{($durationMs/1000)|display_duration}</dd>{/if}
+					{if $resolution}<dt>{tr}Video{/tr}</dt><dd>{$resolution|escape}</dd>{/if}
+					{if $audio}<dt>{tr}Audio{/tr}</dt><dd>{$audio|escape}</dd>{/if}
 					{if $writers|@count}<dt>{tr}Writer{/tr}{if $writers|@count > 1}s{/if}</dt><dd>{$writers|@implode:", "|escape}</dd>{/if}
 				</dl>
 				{if $externalLinks|@count}

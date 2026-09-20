@@ -251,6 +251,8 @@ class FisheyeSeason extends FisheyeImage {
 							'content_rating' => $data['content_rating'] ?? '',
 							'durationMs'     => $data['duration'] ?? null,
 							'thumb'          => $data['thumb'] ?? null,
+							'resolution'     => $data['resolution'] ?? null,
+							'audio'          => $data['audio'] ?? null,
 						];
 						break;
 					case 'featurette':
@@ -260,6 +262,8 @@ class FisheyeSeason extends FisheyeImage {
 							'summary'    => $data['summary'] ?? '',
 							'thumb'      => $data['thumb'] ?? null,
 							'durationMs' => $data['duration'] ?? null,
+							'resolution' => $data['resolution'] ?? null,
+							'audio'      => $data['audio'] ?? null,
 						];
 						break;
 				}
@@ -706,6 +710,13 @@ class FisheyeSeason extends FisheyeImage {
 			if( $durationMs !== null ) {
 				$episodeData['duration'] = $durationMs;
 			}
+			$qualityInfo = \Bitweaver\Liberty\mime_film_get_quality_info( $seasonDir.$file );
+			if( $qualityInfo['resolution'] !== null ) {
+				$episodeData['resolution'] = $qualityInfo['resolution'];
+			}
+			if( $qualityInfo['audio'] !== null ) {
+				$episodeData['audio'] = $qualityInfo['audio'];
+			}
 			// Named after the episode's own source file (unique within this folder), not its
 			// xorder position - same reasoning as the featurette fallback's identical fix: a
 			// position-based name mis-attaches an old thumb the moment episode numbering shifts,
@@ -849,6 +860,15 @@ class FisheyeSeason extends FisheyeImage {
 				if( $durationMs !== null ) {
 					$episodeData['duration'] = $durationMs;
 				}
+			}
+			// Plex has no resolution/audio-layout fields of its own worth trusting here either -
+			// straight from the file's own container via ffprobe, same as the no-Plex path.
+			$qualityInfo = \Bitweaver\Liberty\mime_film_get_quality_info( $row['file'] );
+			if( $qualityInfo['resolution'] !== null ) {
+				$episodeData['resolution'] = $qualityInfo['resolution'];
+			}
+			if( $qualityInfo['audio'] !== null ) {
+				$episodeData['audio'] = $qualityInfo['audio'];
 			}
 
 			// this episode's own Plex-generated screenshot ("thumb") - a real per-episode still,

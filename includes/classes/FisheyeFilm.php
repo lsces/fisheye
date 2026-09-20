@@ -301,6 +301,96 @@ class FisheyeFilm extends FisheyeImage {
 		return ltrim( substr( $realPath, strlen( $root ) ), '/' );
 	}
 
+	/**
+	 * This film's own facts, xref data and tab content, bucketed once for view_film.php/
+	 * view_film.tpl - same "one flat pass over allXrefs(), keyed by item name only" shape as
+	 * FisheyeSeason::getSeasonViewData(), rather than view_film.php hand-rolling its own near-
+	 * identical bucketing loop. Deliberately not keyed off which x_group an item happens to be
+	 * organised under (that's a tab-layout concern - see media.php's xref_schemes) - hardcoding
+	 * group names here already broke silently once, when 'star' moved out of 'metadata' into its
+	 * own 'cast' tab and this page kept reading only 'metadata'.
+	 *
+	 * @return array{genres:array,directors:array,writers:array,stars:array,contentRating:?string,
+	 *               durationMs:?int,resolution:?string,audio:?string,externalLinks:array,
+	 *               filmImages:array,featurettes:array,firstTab:?string}
+	 */
+	public function getFilmViewData(): array {
+		$this->loadXrefInfo();
+		$genres = $directors = $writers = $stars = [];
+		$contentRating = $durationMs = $resolution = $audio = null;
+		$externalLinks = [];
+		// this film's own alternate poster/backdrop images (reloadPlexImages()) - xref-based, not
+		// a second liberty_attachments row per image. Rendered via view_extra_image.php (xref_id
+		// only, never a raw path - see that script's own docblock for why) rather than a direct
+		// URL, since these files live outside storage/attachments/ with no nginx location serving
+		// that tree yet.
+		$filmImages = [];
+		// this film's own bonus content, for a DVD-rip-with-extras style folder - Featurettes/ is
+		// no different to Season/, same xref-on-the-parent's-own-content_id shape as a season's
+		// episodes, played via the same play_episode.php (xref_id only, widened to accept either
+		// item).
+		$featurettes = [];
+		if( $this->mXrefInfo ) {
+			foreach( $this->mXrefInfo->allXrefs() as $xref ) {
+				switch( $xref['item'] ) {
+					case 'genre':          $genres[]     = $xref['xkey_ext']; break;
+					case 'director':       $directors[]  = $xref['xkey_ext']; break;
+					case 'writer':         $writers[]    = $xref['xkey_ext']; break;
+					case 'star':           $stars[]      = $xref['xkey_ext']; break;
+					case 'content_rating': $contentRating = $xref['xkey_ext']; break;
+					case 'duration':       $durationMs    = (int)$xref['xkey_ext']; break;
+					case 'resolution':     $resolution    = $xref['xkey_ext']; break;
+					case 'audio':          $audio         = $xref['xkey_ext']; break;
+					case 'image':          $filmImages[]  = [ 'xref_id' => $xref['xref_id'] ]; break;
+					case 'featurette':
+						$data = !empty( $xref['data'] ) ? json_decode( $xref['data'], true ) : [];
+						$featurettes[] = [
+							'xref_id'    => $xref['xref_id'],
+							'title'      => $data['title'] ?? $xref['xkey_ext'],
+							'summary'    => $data['summary'] ?? '',
+							'thumb'      => $data['thumb'] ?? null,
+							'durationMs' => $data['duration'] ?? null,
+							'resolution' => $data['resolution'] ?? null,
+							'audio'      => $data['audio'] ?? null,
+						];
+						break;
+				}
+				// external links (imdb/tvdb/tmdb/...) - identified by having a cross_ref_href
+				// (the href template's marker, loaded onto every xref row already, see
+				// LibertyXrefType.php), not by group name - built into a real url here since
+				// nothing generic renders these outside the admin xref-list table.
+				if( !empty( $xref['cross_ref_href'] ) && !empty( $xref['xkey'] )) {
+					$externalLinks[] = [
+						'title' => $xref['xref_title'] ?? strtoupper( $xref['item'] ),
+						'url'   => $xref['cross_ref_href'].$xref['xkey'],
+					];
+				}
+			}
+		}
+		// Which of the Featurettes/Images tabs starts active - same "whichever actually has
+		// content" reasoning as FisheyeSeason::getSeasonViewData()'s own $firstTab, just without
+		// an Episodes option since a film has no episode grid of its own.
+		$firstTab = match( true ) {
+			(bool)$featurettes => 'featurettes',
+			(bool)$filmImages  => 'images',
+			default            => null,
+		};
+		return [
+			'genres'        => $genres,
+			'directors'     => $directors,
+			'writers'       => $writers,
+			'stars'         => $stars,
+			'contentRating' => $contentRating,
+			'durationMs'    => $durationMs,
+			'resolution'    => $resolution,
+			'audio'         => $audio,
+			'externalLinks' => $externalLinks,
+			'filmImages'    => $filmImages,
+			'featurettes'   => $featurettes,
+			'firstTab'      => $firstTab,
+		];
+	}
+
 	private function matchPlexMetadataItem(): ?array {
 		// refresh mStorage - needed when called right after store() on a just-created film,
 		// whose in-memory object hasn't necessarily loaded its attachment row yet.
@@ -388,6 +478,22 @@ class FisheyeFilm extends FisheyeImage {
 	public function reloadPlexMetadata(): array {
 		global $gBitSystem;
 		$summary = [ 'matched' => false, 'items' => [] ];
+
+		// Resolution/audio layout come straight from the file's own container via ffprobe, not
+		// Plex - unlike everything else this method fetches, so this runs regardless of whether a
+		// Plex match exists at all below (a no-Plex-match film would otherwise never get these).
+		$this->load();
+		$sourceFile = $this->mStorage[$this->mContentId]['source_file'] ?? null;
+		if( !empty( $sourceFile ) && is_file( $sourceFile ) ) {
+			self::deleteXrefByItem( $this->mContentId, [ 'resolution', 'audio' ] );
+			$qualityInfo = \Bitweaver\Liberty\mime_film_get_quality_info( $sourceFile );
+			foreach( [ 'resolution', 'audio' ] as $item ) {
+				if( $qualityInfo[$item] !== null ) {
+					$this->storeXref( [ 'content_id' => $this->mContentId, 'item' => $item, 'xkey_ext' => $qualityInfo[$item] ] );
+					$summary['items'][] = "$item: {$qualityInfo[$item]}";
+				}
+			}
+		}
 
 		$plexMatch = $this->matchPlexMetadataItem();
 		if( !$plexMatch ) {

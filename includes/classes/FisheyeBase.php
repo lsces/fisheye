@@ -592,11 +592,19 @@ not ready for primetime
 			$xorder++;
 			$title = pathinfo( $file, PATHINFO_FILENAME );
 			$featuretteData = [ 'title' => $title ];
-			// Plex never catalogues bonus content, so there's no metadata source for duration
-			// here at all - straight from the file's own container via ffprobe instead.
+			// Plex never catalogues bonus content, so there's no metadata source for duration,
+			// resolution or audio layout here at all - straight from the file's own container via
+			// ffprobe instead.
 			$durationMs = \Bitweaver\Liberty\mime_film_get_duration_ms( $featurettesDir.$file );
 			if( $durationMs !== null ) {
 				$featuretteData['duration'] = $durationMs;
+			}
+			$qualityInfo = \Bitweaver\Liberty\mime_film_get_quality_info( $featurettesDir.$file );
+			if( $qualityInfo['resolution'] !== null ) {
+				$featuretteData['resolution'] = $qualityInfo['resolution'];
+			}
+			if( $qualityInfo['audio'] !== null ) {
+				$featuretteData['audio'] = $qualityInfo['audio'];
 			}
 			// Named after the featurette's own source file (unique within this folder), not its
 			// xorder position - reload is rebuild-not-diff (every xref row deleted and re-created
