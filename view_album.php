@@ -37,10 +37,15 @@ if( $gContent->mXrefInfo ) {
 			case 'track':
 				$data = !empty( $xref['data'] ) ? json_decode( $xref['data'], true ) : [];
 				$tracks[] = [
-					'xref_id' => $xref['xref_id'],
-					'title'   => $data['title'] ?? $xref['xkey_ext'],
-					'disc'    => $data['disc'] ?? 1,
-					'xorder'  => (int)$xref['xorder'],
+					'xref_id'    => $xref['xref_id'],
+					'title'      => $data['title'] ?? $xref['xkey_ext'],
+					'disc'       => $data['disc'] ?? 1,
+					// The track's own per-credit performer (a various-artists compilation's real
+					// value-add over the album-level 'artist' xref already shown above the list) -
+					// null on a normal single-artist album, where it'd just repeat that same value.
+					'artist'     => $data['ARTIST'] ?? null,
+					'durationMs' => $data['duration'] ?? null,
+					'xorder'     => (int)$xref['xorder'],
 				];
 				break;
 			case 'artist': $artist = $xref['xkey_ext']; break;
