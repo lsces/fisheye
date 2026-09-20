@@ -13,9 +13,19 @@
 	<div class="featurette-detail" id="featurette-detail-{$smarty.foreach.featuretteDetails.index}"{if !$smarty.foreach.featuretteDetails.first} style="display:none;"{/if}>
 		<h3>{$featurette.title|escape}</h3>
 		{if $featurette.summary}<p>{$featurette.summary|escape}</p>{/if}
-		{if $featurette.durationMs}<dl><dt>{tr}Duration{/tr}</dt><dd>{($featurette.durationMs/1000)|display_duration}</dd></dl>{/if}
+		{if $featurette.durationMs || $featurette.resolution || $featurette.audio}
+			<dl>
+				{if $featurette.durationMs}<dt>{tr}Duration{/tr}</dt><dd>{($featurette.durationMs/1000)|display_duration}</dd>{/if}
+				{if $featurette.resolution}<dt>{tr}Video{/tr}</dt><dd>{$featurette.resolution|escape}</dd>{/if}
+				{if $featurette.audio}<dt>{tr}Audio{/tr}</dt><dd>{$featurette.audio|escape}</dd>{/if}
+			</dl>
+		{/if}
 		<p class="episode-play-action">
 			<a class="btn btn-primary" href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$featurette.xref_id}" data-title="{$featurette.title|escape}" onclick="return {$playToggleFn|default:'fisheyeToggleEpisodePlayback'}(this, this.href);">&#9658; {tr}Play{/tr}</a>
+			{* Same reasoning as episode_detail_panels_inc.tpl's own download link - `download`
+			   saves rather than plays inline, the only reliable way to get 5.1+ audio out of a
+			   featurette whose in-page playback commonly downmixes or goes silent on it. *}
+			<a class="btn btn-default" href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$featurette.xref_id}" download>{tr}Download original file{/tr}</a>
 		</p>
 	</div>
 {/foreach}

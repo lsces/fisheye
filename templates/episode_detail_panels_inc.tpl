@@ -14,9 +14,18 @@
 			{if $episode.stars|@count}<dt>{tr}Starring{/tr}</dt><dd>{$episode.stars|@implode:", "|escape}</dd>{/if}
 			{if $episode.content_rating}<dt>{tr}Rating{/tr}</dt><dd>{$episode.content_rating|escape}</dd>{/if}
 			{if $episode.durationMs}<dt>{tr}Duration{/tr}</dt><dd>{($episode.durationMs/1000)|display_duration}</dd>{/if}
+			{if $episode.resolution}<dt>{tr}Video{/tr}</dt><dd>{$episode.resolution|escape}</dd>{/if}
+			{if $episode.audio}<dt>{tr}Audio{/tr}</dt><dd>{$episode.audio|escape}</dd>{/if}
 		</dl>
 		<p class="episode-play-action">
 			<a class="btn btn-primary" id="episode-play-btn-{$smarty.foreach.episodeDetails.index}" href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$episode.xref_id}" target="_blank" rel="noopener" onclick="return fisheyeToggleEpisodePlayback(this, this.href);">&#9658; {tr}Play Episode{/tr}</a>
+			{* `download` asks the browser to save rather than play inline (play_episode.php always
+			   serves Content-Disposition: inline, needed for the Play button's own use above) -
+			   the only reliable way to get full multichannel audio out of an episode whose audio
+			   track is 5.1+: the in-page <video> element commonly downmixes or goes silent on
+			   it, even though a real media player handles the exact same file's surround track
+			   correctly once it's saved locally. *}
+			<a class="btn btn-default" href="{$smarty.const.FISHEYE_PKG_URL}play_episode.php?xref_id={$episode.xref_id}" download>{tr}Download original file{/tr}</a>
 		</p>
 	</div>
 {/foreach}
