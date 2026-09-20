@@ -40,10 +40,13 @@ if( $gContent->mXrefInfo ) {
 					'xref_id'    => $xref['xref_id'],
 					'title'      => $data['title'] ?? $xref['xkey_ext'],
 					'disc'       => $data['disc'] ?? 1,
-					// The track's own per-credit performer (a various-artists compilation's real
-					// value-add over the album-level 'artist' xref already shown above the list) -
-					// null on a normal single-artist album, where it'd just repeat that same value.
-					'artist'     => $data['ARTIST'] ?? null,
+					// The track's own per-credit performer (a various-artists/composers
+					// compilation's real value-add over the album-level 'artist' xref already
+					// shown above the list) - null on a normal single-artist album, where it'd
+					// just repeat that same value. ARTISTS (MusicBrainz's own raw multi-artist
+					// credit) is the fallback for a release with no plain ARTIST tag at all - seen
+					// on Classic Composers, which only carries ARTISTS/ARTISTSORT per track.
+					'artist'     => $data['ARTIST'] ?? $data['ARTISTS'] ?? null,
 					'durationMs' => $data['duration'] ?? null,
 					'xorder'     => (int)$xref['xorder'],
 				];

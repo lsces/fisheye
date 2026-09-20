@@ -47,9 +47,12 @@ const FISHEYEALBUM_COVER_NAMES = [ 'cover.jpg', 'folder.jpg', 'front.jpg', 'cove
 // ALBUMARTISTSORT (raw ID3v2 frame and Vorbis spellings of the same "album artist sort order"
 // concept) duplicate the value the 'artist' xref item already promotes - unlike ARTIST/ARTISTS/
 // ARTISTSORT, which hold genuinely different per-credit information left as-is for now (see
-// FISHEYEALBUM_COMMON_TAG_ALTERNATES's own 'artist' entry).
+// FISHEYEALBUM_COMMON_TAG_ALTERNATES's own 'artist' entry); TRACKTOTAL/TOTALTRACKS and DISCTOTAL/
+// TOTALDISCS (again two spellings each for the same two concepts) are just counts already implicit
+// in how many track xrefs actually got stored, not real metadata to display.
 const FISHEYEALBUM_IGNORED_TAG_KEYS = [
 	'ID3V2_PRIV_PEAKVALUE', 'ID3V2_PRIV_AVERAGELEVEL', 'TLEN', 'SCRIPT', 'ALBUM', 'TSO2', 'ALBUMARTISTSORT',
+	'TRACKTOTAL', 'TOTALTRACKS', 'DISCTOTAL', 'TOTALDISCS',
 ];
 
 // Embedded tag name -> xref item, for tags that only ever make sense at album/disc level, not
@@ -59,7 +62,6 @@ const FISHEYEALBUM_IGNORED_TAG_KEYS = [
 // track's own data instead.
 const FISHEYEALBUM_COMMON_TAG_MAP = [
 	'GENRE'                      => 'genre',
-	'COMPOSER'                   => 'composer',
 	'CATALOGNUMBER'              => 'catalog_number',
 	'BARCODE'                    => 'barcode',
 	'MUSICBRAINZ_ALBUMID'        => 'mbid',
@@ -76,12 +78,15 @@ const FISHEYEALBUM_COMMON_TAG_ALTERNATES = [
 	// TORY is the raw ID3v2.3 frame id for "original release year" - same concept as ORIGINALYEAR.
 	'release_date'   => [ 'DATE', 'ORIGINALDATE', 'ORIGINALYEAR', 'TORY' ],
 	'mb_artistid'    => [ 'MUSICBRAINZ_ALBUMARTISTID', 'MUSICBRAINZ_ARTISTID' ],
-	// TMED is the raw ID3v2 frame id for "media type" - same concept as MEDIA.
-	'format'         => [ 'MEDIA', 'TMED' ],
+	// TMED/IMED are two different taggers' own raw frame ids for "media type" - same concept as MEDIA.
+	'format'         => [ 'MEDIA', 'TMED', 'IMED' ],
 	// PUBLISHER (ID3v2 TPUB) and LABEL (Vorbis) - same "record label" concept, different naming.
 	'label'          => [ 'LABEL', 'PUBLISHER' ],
 	'artist'         => [ 'ALBUM_ARTIST', 'ARTIST' ],
-	'country'        => [ 'RELEASECOUNTRY', 'MUSICBRAINZ_ALBUM_RELEASE_COUNTRY' ],
+	// IMUS is another non-standard tagger's own frame for composer, same concept as COMPOSER.
+	'composer'       => [ 'COMPOSER', 'IMUS' ],
+	// ICNT is another non-standard tagger's own frame for country, same concept as RELEASECOUNTRY.
+	'country'        => [ 'RELEASECOUNTRY', 'MUSICBRAINZ_ALBUM_RELEASE_COUNTRY', 'ICNT' ],
 	'release_type'   => [ 'RELEASETYPE', 'MUSICBRAINZ_ALBUM_TYPE' ],
 	'release_status' => [ 'RELEASESTATUS', 'MUSICBRAINZ_ALBUM_STATUS' ],
 ];
@@ -104,16 +109,47 @@ class FisheyeAlbum extends FisheyeImage {
 	}
 
 	/**
-	 * The storage root this album's own 'track' xref rows (xkey_ext) live relative to -
-	 * play_track.php calls this generically via method_exists(), same convention FisheyeSeason's
-	 * own version already established. Unlike a season (A-M/N-Z per-show split), an album's
-	 * tracks all live under the one plain fisheye_disk_storage_root - no per-title resolution
-	 * needed, same simple case Films themselves would use if they needed this method at all.
+	 * The root this album's own 'track' xref rows (xkey_ext) live relative to - play_track.php
+	 * calls this generically via method_exists(), same convention FisheyeSeason's own version
+	 * already established. Unlike a season (A-M/N-Z per-show split, but still one fixed root for
+	 * every season), this is genuinely per-album: this album's own real folder
+	 * (Music/<gallery>/<title>/), not the bare fisheye_disk_storage_root - so a track's own
+	 * xkey_ext only ever needs to store its bare filename (or "CDxx/filename" for an album that
+	 * kept its own CD-subfolder layer without being split into a box set), not the whole nested
+	 * path down to it. Found necessary live against a real box set - Firebird's xkey_ext column
+	 * is capped at 250 characters, and a deeply-nested path (artist/box set/CDxx/long track title)
+	 * already overflowed that on its own without this.
 	 *
-	 * @return string empty string if the config is unset
+	 * A box set disc's own album sits one level deeper than a normal top-level album though
+	 * (Music/<artist>/<box set>/<disc folder>/, not Music/<box set>/<disc folder>/) - walks up the
+	 * real gallery chain, trying an extra level each time, until a candidate actually exists on
+	 * disk (a box set is never nested more than one level deep, see
+	 * FisheyeAlbum::isBoxSetFolder()'s own docblock, so this never needs to go further than that).
+	 *
+	 * @return string  the deepest-resolved guess if this album isn't linked into any gallery yet
+	 *                 (folder can't be resolved) or nothing on disk actually matches, or the bare
+	 *                 storage root if the config is unset
 	 */
 	public function getImageStorageRoot(): string {
-		return \Bitweaver\Liberty\mime_film_get_storage_root();
+		$root = \Bitweaver\Liberty\mime_film_get_storage_root();
+		if( empty( $root ) ) {
+			return $root;
+		}
+		$pathSegments = [ $this->getTitle() ];
+		$contentId = $this->mContentId;
+		for( $i = 0; $i < 3; $i++ ) {
+			$candidate = $root.'Music/'.implode( '/', $pathSegments ).'/';
+			if( is_dir( $candidate ) ) {
+				return $candidate;
+			}
+			$parentGalleries = $this->getParentGalleries( $contentId );
+			if( empty( $parentGalleries ) ) {
+				break;
+			}
+			$contentId = key( $parentGalleries );
+			array_unshift( $pathSegments, current( $parentGalleries )['title'] );
+		}
+		return $root.'Music/'.implode( '/', $pathSegments ).'/';
 	}
 
 	/**
@@ -605,6 +641,122 @@ class FisheyeAlbum extends FisheyeImage {
 	}
 
 	/**
+	 * Whether a folder under an artist/composer's own directory is a real album worth offering -
+	 * used by load_album.php's own candidate scan to skip a same-level folder that isn't one at
+	 * all (an "Artwork"/"Videos"/scans-style extras folder sitting alongside real albums), rather
+	 * than listing it and only finding out via a failed import ("No track files found in ..."). No
+	 * name-based denylist - genuinely checking for real track files handles any such folder by
+	 * whatever it happens to be called, not just the ones already seen.
+	 *
+	 * @param string $pAbsoluteFolder
+	 * @return bool
+	 */
+	public static function folderHasTracks( string $pAbsoluteFolder ): bool {
+		return !empty( self::scanTrackFiles( $pAbsoluteFolder ) );
+	}
+
+	/**
+	 * Whether a folder is really a box set of distinct recordings rather than one multi-disc
+	 * release - a real CDxx/Discxx subfolder still sitting directly inside it. Deliberately not a
+	 * count threshold (">1 disc") - every genuine single-work multi-disc release already got its
+	 * CD1/CD2 layer flattened away by hand this same session (tracks carrying their own real DISC
+	 * tag need no folder-level grouping at all), so any CDxx folder still surviving now means it
+	 * was kept on purpose, however many there are.
+	 *
+	 * @param string $pAbsoluteFolder
+	 * @return bool
+	 */
+	public static function isBoxSetFolder( string $pAbsoluteFolder ): bool {
+		foreach( scandir( $pAbsoluteFolder ) ?: [] as $entry ) {
+			if( preg_match( '/^CD\s*\d+/i', $entry ) && is_dir( $pAbsoluteFolder.$entry ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * One disc's own title within a box set, distinct from the box's overall ALBUM tag (which
+	 * FISHEYEALBUM_IGNORED_TAG_KEYS already drops as noise everywhere else, since it's normally
+	 * identical to the album's own already-known title) - TSST (ID3v2) / DISCSUBTITLE (Vorbis,
+	 * Picard's own equivalent naming) is where a disc's real content actually lives, confirmed
+	 * live varying disc-to-disc on a real 22-disc release ("Ballets, Volume 1", "Concertos", ...)
+	 * while ALBUM stayed fixed at the box's own title on every single track.
+	 *
+	 * @param string $pAbsoluteDiscFolder
+	 * @return string|null
+	 */
+	public static function getDiscTitle( string $pAbsoluteDiscFolder ): ?string {
+		foreach( scandir( $pAbsoluteDiscFolder ) ?: [] as $entry ) {
+			$ext = strtolower( pathinfo( $entry, PATHINFO_EXTENSION ) );
+			if( in_array( $ext, FISHEYEALBUM_TRACK_EXTENSIONS, true ) ) {
+				$tags = self::readTrackTags( $pAbsoluteDiscFolder.$entry );
+				return $tags['TSST'] ?? $tags['DISCSUBTITLE'] ?? null;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Create (or find) a box set's own nested gallery, linked into $pParentGalleryTitle (the
+	 * artist/composer's own gallery - nesting a gallery inside another is a safe, already-
+	 * anticipated case, see FisheyeGallery::addItem()'s own docblock). Deliberately cheap - no
+	 * track scanning at all, same one-off "create the gallery first, cheap/instant" step
+	 * load_music.php's own top-level version already establishes for an artist/composer gallery.
+	 * Populating it with real per-disc albums is then just a normal load_album.php visit pointed
+	 * at this new gallery - CDxx subfolders show up as ordinary candidates there, letting Lester
+	 * pick a handful at a time rather than every disc importing (and every one of its few hundred
+	 * tracks) in one single request.
+	 *
+	 * @param string $pRelativeFolderPath  the box set's own folder, relative to
+	 *                                     mime_film_get_storage_root() - same shape
+	 *                                     registerFromDisk() takes
+	 * @param string $pParentGalleryTitle  the artist/composer gallery this box set's own nested
+	 *                                     gallery gets linked into
+	 * @return array 'gallery_id'=>the box set's own new/existing gallery, or 'error'=>string
+	 */
+	public static function createBoxSetGallery( string $pRelativeFolderPath, string $pParentGalleryTitle ): array {
+		global $gBitDb;
+
+		$root = \Bitweaver\Liberty\mime_film_get_storage_root();
+		if( empty( $root ) ) {
+			return [ 'error' => 'fisheye_disk_storage_root is not configured.' ];
+		}
+		if( !is_dir( $root.rtrim( $pRelativeFolderPath, '/' ).'/' ) ) {
+			return [ 'error' => 'Folder not found under the configured storage root: '.$pRelativeFolderPath ];
+		}
+		$boxSetTitle = basename( rtrim( $pRelativeFolderPath, '/' ) );
+
+		$galleryContentId = $gBitDb->getOne(
+			"SELECT lc.content_id FROM liberty_content lc INNER JOIN fisheye_gallery fg ON fg.content_id = lc.content_id WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ?",
+			[ $boxSetTitle ]
+		);
+		if( $galleryContentId ) {
+			return [ 'gallery_id' => $galleryContentId, 'already' => true ];
+		}
+
+		$gallery = new FisheyeGallery();
+		$storeHash = [ 'title' => $boxSetTitle, 'gallery_pagination' => FISHEYE_PAGINATION_MUSIC_GRID ];
+		if( !$gallery->store( $storeHash ) ) {
+			return [ 'error' => implode( '; ', $gallery->mErrors ) ];
+		}
+		$gallery->storePreference( 'gallery_pagination', FISHEYE_PAGINATION_MUSIC_GRID );
+		$galleryContentId = $gallery->mContentId;
+
+		$parentGalleryContentId = $gBitDb->getOne(
+			"SELECT lc.content_id FROM liberty_content lc INNER JOIN fisheye_gallery fg ON fg.content_id = lc.content_id WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ?",
+			[ $pParentGalleryTitle ]
+		);
+		if( $parentGalleryContentId ) {
+			$parentGallery = new FisheyeGallery( null, $parentGalleryContentId );
+			$parentGallery->load();
+			$parentGallery->addItem( $galleryContentId );
+		}
+
+		return [ 'gallery_id' => $galleryContentId ];
+	}
+
+	/**
 	 * Re-scan an already-registered album's own folder and refresh its track/common-tag xrefs -
 	 * for a re-tag in Picard after the fact, or a metadata-schema change here (a newly-promoted
 	 * common tag, like this file's own compilation/release_status additions) that a plain edit
@@ -619,25 +771,17 @@ class FisheyeAlbum extends FisheyeImage {
 	 * @return array 'tracks'=>count, or 'error'=>string on failure
 	 */
 	public function reloadTracks(): array {
-		$root = \Bitweaver\Liberty\mime_film_get_storage_root();
-		if( empty( $root ) ) {
-			return [ 'error' => 'fisheye_disk_storage_root is not configured.' ];
-		}
-
-		$parentGalleries = $this->getParentGalleries();
-		if( empty( $parentGalleries ) ) {
+		if( empty( $this->getParentGalleries() ) ) {
 			return [ 'error' => 'This album is not linked into a collection gallery - cannot resolve its folder.' ];
 		}
-		$galleryTitle = current( $parentGalleries )['title'];
-		$folderPath = 'Music/'.$galleryTitle.'/'.$this->getTitle().'/';
-		$absoluteFolder = $root.$folderPath;
-		if( !is_dir( $absoluteFolder ) ) {
-			return [ 'error' => 'Folder not found under the configured storage root: '.$folderPath ];
+		$absoluteFolder = $this->getImageStorageRoot();
+		if( empty( $absoluteFolder ) || !is_dir( $absoluteFolder ) ) {
+			return [ 'error' => 'Folder not found under the configured storage root: '.$absoluteFolder ];
 		}
 
 		$trackFiles = self::scanTrackFiles( $absoluteFolder );
 		if( empty( $trackFiles ) ) {
-			return [ 'error' => 'No track files found in '.$folderPath ];
+			return [ 'error' => 'No track files found in '.$absoluteFolder ];
 		}
 		[ $commonTags, $promotedTagKeys ] = self::extractCommonTags( $trackFiles );
 
@@ -657,7 +801,10 @@ class FisheyeAlbum extends FisheyeImage {
 			$xrefHash = [
 				'content_id' => $this->mContentId,
 				'item'       => 'track',
-				'xkey_ext'   => $folderPath.$track['relative'],
+				// Bare (or "CDxx/filename" for an album keeping its own CD-subfolder layer) -
+				// see getImageStorageRoot()'s own docblock for why the album's folder itself is
+				// never baked into this.
+				'xkey_ext'   => $track['relative'],
 				'edit'       => json_encode( array_merge( [ 'title' => $track['title'], 'disc' => $track['disc'], 'duration' => $track['duration_ms'] ], $trackTagsForData ) ),
 				'xorder'     => ++$xorder,
 			];
@@ -685,13 +832,23 @@ class FisheyeAlbum extends FisheyeImage {
 	 *                                     'Music Classical/Classic Composers/Vivaldi, Antonio
 	 *                                     Lucio - VIVALDI Venetian Splendour (The Classic
 	 *                                     Composers - Baroque 1)'
-	 * @param string|null $pTitle          defaults to the folder's own basename
+	 * @param string|null $pTitle          defaults to the folder's own basename - deliberately
+	 *                                     never anything else, even when a nicer display name is
+	 *                                     known (a box set disc's own TSST-derived title, say):
+	 *                                     getImageStorageRoot() resolves this album's real folder
+	 *                                     from its title, so the two must always match exactly. A
+	 *                                     nicer name belongs in $pDescription instead.
 	 * @param string $pGalleryTitle        collection gallery to link this album into (created
 	 *                                     separately, same convention as FisheyeFilm)
+	 * @param string|null $pDescription    shown on the album's own view page (same content_store
+	 *                                     'edit'/description field every other content type uses) -
+	 *                                     for a box set disc's own real content (its TSST/
+	 *                                     DISCSUBTITLE tag), which the bare "CD01"-style folder
+	 *                                     name the title is stuck with never conveys on its own
 	 * @return array 'already'=>content_id, or 'created'=>content_id plus 'tracks'/'cover'
 	 *               summary info, or 'error'=>string on failure
 	 */
-	public static function registerFromDisk( string $pRelativeFolderPath, ?string $pTitle = null, string $pGalleryTitle = 'Music' ): array {
+	public static function registerFromDisk( string $pRelativeFolderPath, ?string $pTitle = null, string $pGalleryTitle = 'Music', ?string $pDescription = null ): array {
 		global $gBitDb;
 
 		$root = \Bitweaver\Liberty\mime_film_get_storage_root();
@@ -722,6 +879,9 @@ class FisheyeAlbum extends FisheyeImage {
 		$album = new FisheyeAlbum();
 		[ $commonTags, $promotedTagKeys ] = self::extractCommonTags( $trackFiles );
 		$storeHash = [ 'title' => $title ];
+		if( $pDescription !== null && $pDescription !== '' ) {
+			$storeHash['edit'] = $pDescription;
+		}
 		if( !$album->store( $storeHash ) ) {
 			return [ 'error' => implode( '; ', $album->mErrors ) ];
 		}
@@ -754,7 +914,10 @@ class FisheyeAlbum extends FisheyeImage {
 			$xrefHash = [
 				'content_id' => $album->mContentId,
 				'item'       => 'track',
-				'xkey_ext'   => $folderPath.$track['relative'],
+				// Bare (or "CDxx/filename" for an album keeping its own CD-subfolder layer) -
+				// see getImageStorageRoot()'s own docblock for why the album's folder itself is
+				// never baked into this.
+				'xkey_ext'   => $track['relative'],
 				'edit'       => json_encode( array_merge( [ 'title' => $track['title'], 'disc' => $track['disc'], 'duration' => $track['duration_ms'] ], $trackTagsForData ) ),
 				'xorder'     => ++$xorder,
 			];

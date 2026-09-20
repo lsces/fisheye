@@ -28,6 +28,20 @@
 					</ul>
 				</div>
 			{/if}
+			{if $importResult.boxsets}
+				<div class="alert alert-success">
+					<p>{tr}Box set collections created{/tr} ({tr}pick which discs to load next{/tr}):</p>
+					<ul>
+						{foreach from=$importResult.boxsets item=boxset}
+							<li>
+								<a href="{$boxset.url|escape}">{$boxset.folder|escape}</a>
+								{if $boxset.already}({tr}already existed{/tr}){/if}
+								- <a href="{$boxset.loadUrl|escape}">{tr}Load its discs now{/tr}</a>
+							</li>
+						{/foreach}
+					</ul>
+				</div>
+			{/if}
 			{if $importResult.errors}
 				<div class="alert alert-danger">
 					<p>{tr}Failed{/tr}:</p>
