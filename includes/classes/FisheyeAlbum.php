@@ -39,6 +39,18 @@ define( 'FISHEYEALBUM_CONTENT_TYPE_GUID', 'fisheyealbum' );
 
 const FISHEYEALBUM_TRACK_EXTENSIONS = [ 'mp3', 'flac', 'm4a', 'ogg', 'wav' ];
 const FISHEYEALBUM_COVER_NAMES = [ 'cover.jpg', 'folder.jpg', 'front.jpg', 'cover.png', 'folder.png' ];
+// Neither album-level nor worth keeping per-track - dropped outright rather than promoted:
+// ID3V2_PRIV.* are opaque binary loudness-normalization frames (MP3Gain/ReplayGain-adjacent), not
+// human-readable metadata at all; TLEN (ID3v2 track length in ms) just duplicates the file's own
+// real duration, already probed separately; SCRIPT is just the writing-system code (e.g. "Latn"),
+// no display value; ALBUM duplicates the album object's own already-known title; TSO2/
+// ALBUMARTISTSORT (raw ID3v2 frame and Vorbis spellings of the same "album artist sort order"
+// concept) duplicate the value the 'artist' xref item already promotes - unlike ARTIST/ARTISTS/
+// ARTISTSORT, which hold genuinely different per-credit information left as-is for now (see
+// FISHEYEALBUM_COMMON_TAG_ALTERNATES's own 'artist' entry).
+const FISHEYEALBUM_IGNORED_TAG_KEYS = [
+	'ID3V2_PRIV_PEAKVALUE', 'ID3V2_PRIV_AVERAGELEVEL', 'TLEN', 'SCRIPT', 'ALBUM', 'TSO2', 'ALBUMARTISTSORT',
+];
 
 // Embedded tag name -> xref item, for tags that only ever make sense at album/disc level, not
 // per-track. Only promoted to a real xref if the value is identical across every track on the
@@ -48,24 +60,30 @@ const FISHEYEALBUM_COVER_NAMES = [ 'cover.jpg', 'folder.jpg', 'front.jpg', 'cove
 const FISHEYEALBUM_COMMON_TAG_MAP = [
 	'GENRE'                      => 'genre',
 	'COMPOSER'                   => 'composer',
-	'LABEL'                      => 'label',
 	'CATALOGNUMBER'              => 'catalog_number',
 	'BARCODE'                    => 'barcode',
-	'RELEASECOUNTRY'             => 'country',
-	'RELEASETYPE'                => 'release_type',
-	'MEDIA'                      => 'format',
 	'MUSICBRAINZ_ALBUMID'        => 'mbid',
 	'MUSICBRAINZ_RELEASEGROUPID' => 'mb_releasegroupid',
 	'MUSICBRAINZ_DISCID'         => 'mb_discid',
 	'ASIN'                       => 'asin',
+	'COMPILATION'                => 'compilation',
 ];
-// A handful of xref items have more than one possible tag name (taggers disagree, or a fallback
-// makes sense) - first match wins, same preference order FisheyeSeason/FisheyeFilm's own Plex
-// metadata already uses elsewhere for "prefer the more specific field".
+// A handful of xref items have more than one possible tag name (taggers disagree between Vorbis-
+// style, ID3v2/MusicBrainz-Picard-style, and raw ID3v2 4-letter frame IDs for the exact same
+// concept, or a fallback makes sense) - first match wins, same preference order FisheyeSeason/
+// FisheyeFilm's own Plex metadata already uses elsewhere for "prefer the more specific field".
 const FISHEYEALBUM_COMMON_TAG_ALTERNATES = [
-	'release_date' => [ 'DATE', 'ORIGINALDATE', 'ORIGINALYEAR' ],
-	'mb_artistid'   => [ 'MUSICBRAINZ_ALBUMARTISTID', 'MUSICBRAINZ_ARTISTID' ],
-	'artist'        => [ 'ALBUM_ARTIST', 'ARTIST' ],
+	// TORY is the raw ID3v2.3 frame id for "original release year" - same concept as ORIGINALYEAR.
+	'release_date'   => [ 'DATE', 'ORIGINALDATE', 'ORIGINALYEAR', 'TORY' ],
+	'mb_artistid'    => [ 'MUSICBRAINZ_ALBUMARTISTID', 'MUSICBRAINZ_ARTISTID' ],
+	// TMED is the raw ID3v2 frame id for "media type" - same concept as MEDIA.
+	'format'         => [ 'MEDIA', 'TMED' ],
+	// PUBLISHER (ID3v2 TPUB) and LABEL (Vorbis) - same "record label" concept, different naming.
+	'label'          => [ 'LABEL', 'PUBLISHER' ],
+	'artist'         => [ 'ALBUM_ARTIST', 'ARTIST' ],
+	'country'        => [ 'RELEASECOUNTRY', 'MUSICBRAINZ_ALBUM_RELEASE_COUNTRY' ],
+	'release_type'   => [ 'RELEASETYPE', 'MUSICBRAINZ_ALBUM_TYPE' ],
+	'release_status' => [ 'RELEASESTATUS', 'MUSICBRAINZ_ALBUM_STATUS' ],
 ];
 
 class FisheyeAlbum extends FisheyeImage {
@@ -385,7 +403,7 @@ class FisheyeAlbum extends FisheyeImage {
 	 * scale, so the parallel xargs pattern that needs isn't worth the complexity here).
 	 *
 	 * @param string $pAbsolutePath
-	 * @return array<string,string>  uppercased tag name => value, empty if ffprobe found none
+	 * @return array<string,string>  normalized tag name => value, empty if ffprobe found none
 	 */
 	private static function readTrackTags( string $pAbsolutePath ): array {
 		$cmd = 'ffprobe -v error -show_entries format_tags -of default=noprint_wrappers=1 '.escapeshellarg( $pAbsolutePath ).' 2>/dev/null';
@@ -397,10 +415,24 @@ class FisheyeAlbum extends FisheyeImage {
 			}
 			$parts = explode( '=', substr( $line, 4 ), 2 );
 			if( count( $parts ) === 2 ) {
-				$tags[strtoupper( $parts[0] )] = $parts[1];
+				$tags[self::normalizeTagKey( $parts[0] )] = $parts[1];
 			}
 		}
 		return $tags;
+	}
+
+	/**
+	 * Same embedded tag, different spelling depending on container/tagger: Vorbis comments (FLAC/
+	 * OGG) conventionally get written upper-case-with-underscores (MUSICBRAINZ_ALBUMID), while an
+	 * ID3v2 TXXX frame (MP3) has no fixed enum for a MusicBrainz field - it's a free-text
+	 * description, and Picard writes the human-readable form there ("MusicBrainz Album Id")
+	 * instead. Both are the same tag - stripping every non-alphanumeric character before comparing
+	 * collapses both spellings (and any stray case/spacing variant) to one key, rather than the
+	 * ID3v2 form silently reading as "not tagged" against FISHEYEALBUM_COMMON_TAG_MAP's Vorbis-
+	 * style constants.
+	 */
+	private static function normalizeTagKey( string $pKey ): string {
+		return strtoupper( preg_replace( '/[^A-Za-z0-9]/', '', $pKey ) );
 	}
 
 	/**
@@ -411,18 +443,27 @@ class FisheyeAlbum extends FisheyeImage {
 	 *
 	 * @param array $pTrackFiles  registerFromDisk()'s own $trackFiles, each with a 'tags' entry
 	 * @return array{0: array<string,string>, 1: array<string,true>}  [ xref item => value,
-	 *         uppercased tag name => true for every tag that got promoted (so the caller can
-	 *         strip exactly those out of each track's own data) ]
+	 *         normalized tag name => true for every tag that got promoted to an xref OR is on
+	 *         FISHEYEALBUM_IGNORED_TAG_KEYS (so the caller can strip exactly those out of each
+	 *         track's own data) ]
 	 */
 	private static function extractCommonTags( array $pTrackFiles ): array {
 		$common = [];
 		$promotedTagKeys = [];
+		foreach( FISHEYEALBUM_IGNORED_TAG_KEYS as $tagKey ) {
+			$promotedTagKeys[self::normalizeTagKey( $tagKey )] = true;
+		}
 
 		foreach( FISHEYEALBUM_COMMON_TAG_MAP as $tagKey => $xrefItem ) {
 			$value = self::commonTagValue( $pTrackFiles, $tagKey );
 			if( $value !== null ) {
 				$common[$xrefItem] = $value;
-				$promotedTagKeys[$tagKey] = true;
+				// Keyed by the normalized form, same as $track['tags'] itself (readTrackTags()
+				// normalizes on the way in) - the raw constant spelling here is Vorbis-style
+				// ('MUSICBRAINZ_ALBUMID'), which never matches an ID3v2-tagged track's own
+				// normalized key ('MUSICBRAINZALBUMID') in the array_diff_key() below otherwise,
+				// silently leaving every promoted tag sitting in track data anyway.
+				$promotedTagKeys[self::normalizeTagKey( $tagKey )] = true;
 			}
 		}
 		foreach( FISHEYEALBUM_COMMON_TAG_ALTERNATES as $xrefItem => $tagKeys ) {
@@ -437,8 +478,12 @@ class FisheyeAlbum extends FisheyeImage {
 				// winner - a tagger commonly writes more than one of these redundantly (DATE and
 				// ORIGINALDATE with the same value, say), and a losing alternate still duplicates
 				// exactly what the winner already promoted, so it belongs out of track data too.
+				// commonTagValue() already only returns non-null for a value that's identical
+				// across every track, so a genuinely track-varying alternate (a various-artists
+				// compilation's own per-track MUSICBRAINZ_ARTISTID, say) correctly stays null here
+				// and never gets marked - only true album-wide duplicates do.
 				if( $value !== null ) {
-					$promotedTagKeys[$tagKey] = true;
+					$promotedTagKeys[self::normalizeTagKey( $tagKey )] = true;
 				}
 			}
 		}
@@ -450,10 +495,13 @@ class FisheyeAlbum extends FisheyeImage {
 	 * from any track, or differing between tracks - either way, not safe to treat as album-wide).
 	 *
 	 * @param array $pTrackFiles
-	 * @param string $pTagKey  uppercased embedded tag name
+	 * @param string $pTagKey  embedded tag name (normalizeTagKey() applied here, so callers can
+	 *                         pass FISHEYEALBUM_COMMON_TAG_MAP/_ALTERNATES' own Vorbis-style
+	 *                         spelling regardless of how this particular file's tagger wrote it)
 	 * @return string|null
 	 */
 	private static function commonTagValue( array $pTrackFiles, string $pTagKey ): ?string {
+		$pTagKey = self::normalizeTagKey( $pTagKey );
 		$value = null;
 		foreach( $pTrackFiles as $track ) {
 			$trackValue = $track['tags'][$pTagKey] ?? null;
@@ -484,6 +532,143 @@ class FisheyeAlbum extends FisheyeImage {
 		}
 		@unlink( $tmpFile );
 		return null;
+	}
+
+	/**
+	 * Scan one album folder's track files, read each one's embedded tags, and sort into final
+	 * (disc, track) order - shared by registerFromDisk() (a brand new album) and reloadTracks()
+	 * (re-scanning an already-registered one, e.g. after re-tagging in Picard or a metadata-schema
+	 * change like promoting a new common tag).
+	 *
+	 * @param string $pAbsoluteFolder
+	 * @return array  each entry: 'relative' (path relative to $pAbsoluteFolder), 'disc', 'tags',
+	 *                'track_num', 'title' - empty if no track files found
+	 */
+	private static function scanTrackFiles( string $pAbsoluteFolder ): array {
+		// Multi-disc sets (Black Sabbath-style CD1/CD2 subfolders) walked one level deep; a flat
+		// album folder (Bob Marley/Classic Composers-style) has its track files directly inside -
+		// both shapes scanned the same way, disc number just stays 1 for the flat case.
+		$trackFiles = []; // [ 'relative' => path relative to $pAbsoluteFolder, 'disc' => int ]
+		foreach( scandir( $pAbsoluteFolder ) as $entry ) {
+			if( $entry === '.' || $entry === '..' ) {
+				continue;
+			}
+			$entryPath = $pAbsoluteFolder.$entry;
+			if( is_dir( $entryPath ) ) {
+				if( !preg_match( '/^CD\s*(\d+)/i', $entry, $discMatch ) ) {
+					continue; // not a disc subfolder - e.g. artwork scans sitting alongside
+				}
+				foreach( scandir( $entryPath ) as $subEntry ) {
+					$ext = strtolower( pathinfo( $subEntry, PATHINFO_EXTENSION ) );
+					if( is_file( $entryPath.'/'.$subEntry ) && in_array( $ext, FISHEYEALBUM_TRACK_EXTENSIONS, true ) ) {
+						$trackFiles[] = [ 'relative' => $entry.'/'.$subEntry, 'disc' => (int)$discMatch[1] ];
+					}
+				}
+			} elseif( is_file( $entryPath ) ) {
+				$ext = strtolower( pathinfo( $entry, PATHINFO_EXTENSION ) );
+				if( in_array( $ext, FISHEYEALBUM_TRACK_EXTENSIONS, true ) ) {
+					$trackFiles[] = [ 'relative' => $entry, 'disc' => 1 ];
+				}
+			}
+		}
+		if( empty( $trackFiles ) ) {
+			return [];
+		}
+
+		// Read tags and sort by (disc, track-number-from-tag-or-filename) - embedded tags take
+		// priority, since most tracks already carry their own real metadata; filename order is
+		// only the fallback for untagged files (some releases have zero embedded tags at all).
+		foreach( $trackFiles as &$track ) {
+			$tags = self::readTrackTags( $pAbsoluteFolder.$track['relative'] );
+			$track['tags'] = $tags;
+			$trackNum = $tags['TRACK'] ?? $tags['TRACKNUMBER'] ?? null;
+			if( $trackNum !== null ) {
+				$track['track_num'] = (int)explode( '/', $trackNum )[0];
+			} else {
+				// Fallback: leading "NN " / "NN - " / "NN." in the filename, same convention
+				// mpeg2_tidy's own TV-episode naming already relies on.
+				preg_match( '/^(\d+)/', basename( $track['relative'] ), $m );
+				$track['track_num'] = isset( $m[1] ) ? (int)$m[1] : 0;
+			}
+			if( !empty( $tags['DISC'] ) ) {
+				$track['disc'] = (int)explode( '/', $tags['DISC'] )[0];
+			}
+			$track['title'] = $tags['TITLE'] ?? pathinfo( $track['relative'], PATHINFO_FILENAME );
+			// From the file's own container, not the (culled, unreliable) embedded TLEN tag - same
+			// source episodes/featurettes already use for their own duration.
+			$track['duration_ms'] = \Bitweaver\Liberty\mime_film_get_duration_ms( $pAbsoluteFolder.$track['relative'] );
+		}
+		unset( $track );
+		usort( $trackFiles, fn( $a, $b ) => [ $a['disc'], $a['track_num'] ] <=> [ $b['disc'], $b['track_num'] ] );
+
+		return $trackFiles;
+	}
+
+	/**
+	 * Re-scan an already-registered album's own folder and refresh its track/common-tag xrefs -
+	 * for a re-tag in Picard after the fact, or a metadata-schema change here (a newly-promoted
+	 * common tag, like this file's own compilation/release_status additions) that a plain edit
+	 * page reload can't retroactively apply to already-registered albums. Cover art is untouched -
+	 * only 'track' and whichever common-tag items are currently defined get cleared and re-stored,
+	 * same distinction registerFromDisk() itself already draws between the two.
+	 *
+	 * Folder resolution mirrors load_album.php's own: this album's title is expected to match a
+	 * real folder directly under its parent gallery's own folder under Music/ - same one-level
+	 * layout load_music.php's candidate scan uses.
+	 *
+	 * @return array 'tracks'=>count, or 'error'=>string on failure
+	 */
+	public function reloadTracks(): array {
+		$root = \Bitweaver\Liberty\mime_film_get_storage_root();
+		if( empty( $root ) ) {
+			return [ 'error' => 'fisheye_disk_storage_root is not configured.' ];
+		}
+
+		$parentGalleries = $this->getParentGalleries();
+		if( empty( $parentGalleries ) ) {
+			return [ 'error' => 'This album is not linked into a collection gallery - cannot resolve its folder.' ];
+		}
+		$galleryTitle = current( $parentGalleries )['title'];
+		$folderPath = 'Music/'.$galleryTitle.'/'.$this->getTitle().'/';
+		$absoluteFolder = $root.$folderPath;
+		if( !is_dir( $absoluteFolder ) ) {
+			return [ 'error' => 'Folder not found under the configured storage root: '.$folderPath ];
+		}
+
+		$trackFiles = self::scanTrackFiles( $absoluteFolder );
+		if( empty( $trackFiles ) ) {
+			return [ 'error' => 'No track files found in '.$folderPath ];
+		}
+		[ $commonTags, $promotedTagKeys ] = self::extractCommonTags( $trackFiles );
+
+		// 'image' xrefs (cover art) are deliberately left alone - this is a track/tag refresh only.
+		$clearableItems = array_unique( array_merge(
+			[ 'track' ],
+			array_values( FISHEYEALBUM_COMMON_TAG_MAP ),
+			array_keys( FISHEYEALBUM_COMMON_TAG_ALTERNATES )
+		) );
+		\Bitweaver\Liberty\LibertyContent::deleteXrefByItem( $this->mContentId, $clearableItems );
+
+		$xorder = 0;
+		foreach( $trackFiles as $track ) {
+			// See registerFromDisk()'s own identical block for why this is flattened rather than
+			// nested under a 'tags' key, and why TITLE/DISC are excluded here.
+			$trackTagsForData = array_diff_key( $track['tags'], $promotedTagKeys, [ 'TITLE' => true, 'DISC' => true ] );
+			$xrefHash = [
+				'content_id' => $this->mContentId,
+				'item'       => 'track',
+				'xkey_ext'   => $folderPath.$track['relative'],
+				'edit'       => json_encode( array_merge( [ 'title' => $track['title'], 'disc' => $track['disc'], 'duration' => $track['duration_ms'] ], $trackTagsForData ) ),
+				'xorder'     => ++$xorder,
+			];
+			$this->storeXref( $xrefHash );
+		}
+		foreach( $commonTags as $xrefItem => $value ) {
+			$commonXrefHash = [ 'content_id' => $this->mContentId, 'item' => $xrefItem, 'xkey_ext' => $value ];
+			$this->storeXref( $commonXrefHash );
+		}
+
+		return [ 'tracks' => count( $trackFiles ) ];
 	}
 
 	/**
@@ -529,58 +714,10 @@ class FisheyeAlbum extends FisheyeImage {
 			return [ 'already' => $existingContentId ];
 		}
 
-		// Multi-disc sets (Black Sabbath-style CD1/CD2 subfolders) walked one level deep; a flat
-		// album folder (Bob Marley/Classic Composers-style) has its track files directly inside -
-		// both shapes scanned the same way, disc number just stays 1 for the flat case.
-		$trackFiles = []; // [ 'relative' => path relative to $absoluteFolder, 'disc' => int ]
-		foreach( scandir( $absoluteFolder ) as $entry ) {
-			if( $entry === '.' || $entry === '..' ) {
-				continue;
-			}
-			$entryPath = $absoluteFolder.$entry;
-			if( is_dir( $entryPath ) ) {
-				if( !preg_match( '/^CD\s*(\d+)/i', $entry, $discMatch ) ) {
-					continue; // not a disc subfolder - e.g. artwork scans sitting alongside
-				}
-				foreach( scandir( $entryPath ) as $subEntry ) {
-					$ext = strtolower( pathinfo( $subEntry, PATHINFO_EXTENSION ) );
-					if( is_file( $entryPath.'/'.$subEntry ) && in_array( $ext, FISHEYEALBUM_TRACK_EXTENSIONS, true ) ) {
-						$trackFiles[] = [ 'relative' => $entry.'/'.$subEntry, 'disc' => (int)$discMatch[1] ];
-					}
-				}
-			} elseif( is_file( $entryPath ) ) {
-				$ext = strtolower( pathinfo( $entry, PATHINFO_EXTENSION ) );
-				if( in_array( $ext, FISHEYEALBUM_TRACK_EXTENSIONS, true ) ) {
-					$trackFiles[] = [ 'relative' => $entry, 'disc' => 1 ];
-				}
-			}
-		}
+		$trackFiles = self::scanTrackFiles( $absoluteFolder );
 		if( empty( $trackFiles ) ) {
 			return [ 'error' => 'No track files found in '.$folderPath ];
 		}
-
-		// Read tags and sort by (disc, track-number-from-tag-or-filename) - embedded tags take
-		// priority, since most tracks already carry their own real metadata; filename order is
-		// only the fallback for untagged files (some releases have zero embedded tags at all).
-		foreach( $trackFiles as &$track ) {
-			$tags = self::readTrackTags( $absoluteFolder.$track['relative'] );
-			$track['tags'] = $tags;
-			$trackNum = $tags['TRACK'] ?? $tags['TRACKNUMBER'] ?? null;
-			if( $trackNum !== null ) {
-				$track['track_num'] = (int)explode( '/', $trackNum )[0];
-			} else {
-				// Fallback: leading "NN " / "NN - " / "NN." in the filename, same convention
-				// mpeg2_tidy's own TV-episode naming already relies on.
-				preg_match( '/^(\d+)/', basename( $track['relative'] ), $m );
-				$track['track_num'] = isset( $m[1] ) ? (int)$m[1] : 0;
-			}
-			if( !empty( $tags['DISC'] ) ) {
-				$track['disc'] = (int)explode( '/', $tags['DISC'] )[0];
-			}
-			$track['title'] = $tags['TITLE'] ?? pathinfo( $track['relative'], PATHINFO_FILENAME );
-		}
-		unset( $track );
-		usort( $trackFiles, fn( $a, $b ) => [ $a['disc'], $a['track_num'] ] <=> [ $b['disc'], $b['track_num'] ] );
 
 		$album = new FisheyeAlbum();
 		[ $commonTags, $promotedTagKeys ] = self::extractCommonTags( $trackFiles );
@@ -603,18 +740,22 @@ class FisheyeAlbum extends FisheyeImage {
 
 		$xorder = 0;
 		foreach( $trackFiles as $track ) {
-			// 'tags' here is track-specific only - anything identical across every track (real
+			// Flattened alongside title/disc rather than nested under its own 'tags' key - the
+			// generic json-list xref template (view_json-list_item.tpl) just dumps every top-level
+			// key as its own row, so nesting only bought a Smarty "Array" render instead of a
+			// usable one. TITLE/DISC themselves are excluded here since they're already surfaced
+			// as the clean 'title'/'disc' fields - anything identical across every track (real
 			// MusicBrainz ids, label/catalog/barcode/country/genre/composer/artist) has already
 			// been promoted to a real xref on the album itself instead (see extractCommonTags()),
 			// so it isn't duplicated into every single track's own data. A tag that happens to
 			// vary per track this time (a various-artists compilation's own per-track ARTIST, a
 			// disc id that only applies within one disc of a multi-disc set) stays here.
-			$trackTagsForData = array_diff_key( $track['tags'], $promotedTagKeys );
+			$trackTagsForData = array_diff_key( $track['tags'], $promotedTagKeys, [ 'TITLE' => true, 'DISC' => true ] );
 			$xrefHash = [
 				'content_id' => $album->mContentId,
 				'item'       => 'track',
 				'xkey_ext'   => $folderPath.$track['relative'],
-				'edit'       => json_encode( [ 'title' => $track['title'], 'disc' => $track['disc'], 'tags' => $trackTagsForData ] ),
+				'edit'       => json_encode( array_merge( [ 'title' => $track['title'], 'disc' => $track['disc'], 'duration' => $track['duration_ms'] ], $trackTagsForData ) ),
 				'xorder'     => ++$xorder,
 			];
 			$album->storeXref( $xrefHash );

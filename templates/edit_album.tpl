@@ -20,7 +20,7 @@
 					<p>{$plexResultLabel|escape}:</p>
 					<ul>{foreach from=$plexResult.items item=line}<li>{$line|escape}</li>{/foreach}</ul>
 				{else}
-					<p>{tr}No matching Plex entry found for this album.{/tr}</p>
+					<p>{$plexResultEmptyLabel|escape}</p>
 				{/if}
 			</div>
 		{/if}
@@ -62,6 +62,7 @@
 				<input type="submit" class="btn btn-default" name="fCancel" value="{tr}Cancel{/tr}" />
 				<input type="submit" class="btn btn-primary" name="fSave" value="{tr}Save{/tr}" />
 				<input type="submit" class="btn btn-secondary" name="fReloadImages" value="{tr}Reload Images{/tr}" />
+				<input type="submit" class="btn btn-secondary" name="fReloadTracks" value="{tr}Reload Tracks{/tr}" />
 			</div>
 		{/form}
 	</div><!-- end .body -->

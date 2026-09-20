@@ -4,9 +4,10 @@
  * (list_xref.tpl / add_xref.php / edit_xref.php) for genre/artist/composer/mbid/discogs/tracks/
  * images - same reuse-the-generic-table decision as edit_season.php.
  *
- * Hosts 'Reload Images' (FisheyeAlbum::reloadPlexImages()) - no track-reload action here, unlike
- * edit_season.php's 'Load Episodes': tracks come from registerFromDisk()'s own initial scan, not
- * a separate reload step.
+ * Hosts 'Reload Images' (FisheyeAlbum::reloadPlexImages()) and 'Reload Tracks'
+ * (FisheyeAlbum::reloadTracks()) - the latter re-scans the album's own folder from scratch (a
+ * re-tag in Picard after the fact, or a metadata-schema change promoting a new common tag that
+ * only takes effect for already-registered albums via an explicit reload).
  *
  * @package fisheye
  * @subpackage functions
@@ -29,6 +30,9 @@ $gContent->verifyUpdatePermission();
 
 $plexResult = null;
 $plexResultLabel = null;
+// Shown when $plexResult comes back empty - overridden for the disk-based track reload below,
+// which has nothing to do with Plex and shouldn't blame it for an empty result.
+$plexResultEmptyLabel = KernelTools::tra( 'No matching Plex entry found for this album.' );
 if( !empty( $_REQUEST['fCancel'] ) ) {
 	KernelTools::bit_redirect( $gContent->getDisplayUrl() );
 } elseif( !empty( $_REQUEST['fSave'] ) ) {
@@ -40,6 +44,15 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 } elseif( !empty( $_REQUEST['fReloadImages'] ) ) {
 	$plexResult = $gContent->reloadPlexImages();
 	$plexResultLabel = KernelTools::tra( 'Images reloaded from Plex' );
+} elseif( !empty( $_REQUEST['fReloadTracks'] ) ) {
+	$reloadResult = $gContent->reloadTracks();
+	$plexResultLabel = KernelTools::tra( 'Tracks reloaded from disk' );
+	if( !empty( $reloadResult['error'] ) ) {
+		$plexResult = [ 'items' => [] ];
+		$plexResultEmptyLabel = $reloadResult['error'];
+	} else {
+		$plexResult = [ 'items' => [ ( $reloadResult['tracks'] ?? 0 ).' track(s) re-scanned' ] ];
+	}
 } elseif( !empty( $_REQUEST['delete'] ) ) {
 	// Same delete flow as edit_film.php/edit_program.php's own - the track/cover files on disk
 	// are never touched either way, same reasoning as those (external, un-owned storage).
@@ -71,5 +84,6 @@ $gBitSmarty->assign( 'gXrefInfo', $gContent->mXrefInfo );
 $gBitSmarty->assign( 'gContent', $gContent );
 $gBitSmarty->assign( 'plexResult', $plexResult );
 $gBitSmarty->assign( 'plexResultLabel', $plexResultLabel );
+$gBitSmarty->assign( 'plexResultEmptyLabel', $plexResultEmptyLabel );
 
 $gBitSystem->display( 'bitpackage:fisheye/edit_album.tpl', KernelTools::tra( 'Edit Album: ' ).$gContent->getTitle(), [ 'display_mode' => 'edit' ] );
