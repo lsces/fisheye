@@ -27,8 +27,10 @@ require_once '../kernel/includes/setup_inc.php';
 
 global $gBitSystem, $gBitSmarty;
 
+// see view_program.php's own identical fix - a bare content_id can resolve to an unrelated
+// content type entirely, which isValid() alone doesn't catch.
 $gContent = FisheyeImage::lookup( $_REQUEST );
-if( !$gContent || !$gContent->isValid() ) {
+if( !$gContent || !$gContent->isValid() || !( $gContent instanceof FisheyeSeason ) ) {
 	$gBitSystem->fatalError( KernelTools::tra( 'No season exists with the given ID' ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
 }
 $gContent->verifyUpdatePermission();

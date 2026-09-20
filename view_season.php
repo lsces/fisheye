@@ -25,8 +25,11 @@ global $gBitSystem, $gBitSmarty;
 
 $gBitSystem->verifyPackage( 'fisheye' );
 
+// FisheyeImage::lookup() with a bare content_id resolves whatever content type actually owns
+// that content_id, not necessarily a season - isValid() alone only confirms it loaded as ITS OWN
+// (possibly unrelated) type. See view_program.php's own identical fix for why this matters.
 $gContent = FisheyeImage::lookup( $_REQUEST );
-if( !$gContent || !$gContent->isValid() ) {
+if( !$gContent || !$gContent->isValid() || !( $gContent instanceof FisheyeSeason ) ) {
 	$gBitSystem->fatalError( KernelTools::tra( 'No season exists with the given ID' ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
 }
 $gContent->verifyViewPermission();

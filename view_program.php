@@ -28,8 +28,13 @@ global $gBitSystem, $gBitSmarty;
 
 $gBitSystem->verifyPackage( 'fisheye' );
 
+// FisheyeGallery::lookup() with a bare content_id (no gallery_id) resolves whatever content
+// type actually owns that content_id, gallery-family or not - a content_id belonging to some
+// unrelated package (found live crashing on a Food record) loads validly as ITS OWN type, so
+// isValid() alone doesn't catch it. The instanceof check below is what actually confirms this
+// page got a show, not just any successfully-loaded content.
 $gContent = FisheyeGallery::lookup( $_REQUEST );
-if( !$gContent || !$gContent->isValid() ) {
+if( !$gContent || !$gContent->isValid() || !( $gContent instanceof FisheyeProgram ) ) {
 	$gBitSystem->fatalError( KernelTools::tra( 'No show exists with the given ID' ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
 }
 $gContent->verifyViewPermission();
