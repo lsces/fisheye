@@ -118,7 +118,7 @@ if( !empty( $_REQUEST['fImportAlbums'] ) ) {
 		// own default, required so getImageStorageRoot() can resolve this disc's real folder back
 		// from it), but its real content (getDiscTitle()) goes into the description instead, same
 		// field view_album.tpl already renders for every other album.
-		$discTitle = preg_match( '/^CD\s*\d+/i', $albumFolder ) ? FisheyeAlbum::getDiscTitle( $artistDir.$albumFolder.'/' ) : null;
+		$discTitle = preg_match( FISHEYEALBUM_DISC_FOLDER_PATTERN, $albumFolder ) ? FisheyeAlbum::getDiscTitle( $artistDir.$albumFolder.'/' ) : null;
 		$row = FisheyeAlbum::registerFromDisk( $artistRelative.$albumFolder, null, $galleryTitle, $discTitle );
 		if( !empty( $row['error'] ) ) {
 			$importResult['errors'][] = [ 'folder' => $albumFolder, 'error' => $row['error'] ];

@@ -714,6 +714,49 @@ class FisheyeGallery extends FisheyeBase {
 	}
 
 	/**
+	 * Find (by title) or create a gallery nested one level inside a named parent gallery - e.g. a
+	 * "Videos" gallery under an artist/composer's own top-level gallery, or a box set's own gallery
+	 * under its artist (see FisheyeAlbum::createBoxSetGallery(), the original of this same shape,
+	 * generalized here since nesting isn't a music-only concern - any FisheyeGallery can hold
+	 * another, see addItem()'s own docblock). Deliberately cheap - just the gallery row, no scanning
+	 * or importing of whatever will eventually live inside it.
+	 *
+	 * @param string $pTitle              the nested gallery's own title
+	 * @param string $pParentGalleryTitle the existing gallery this one gets linked into
+	 * @return array 'gallery_id'=>int, plus 'already'=>true if it already existed, or
+	 *               'error'=>string on failure
+	 */
+	public static function findOrCreateNestedGallery( string $pTitle, string $pParentGalleryTitle ): array {
+		global $gBitDb;
+
+		$galleryContentId = $gBitDb->getOne(
+			"SELECT lc.content_id FROM `".BIT_DB_PREFIX."liberty_content` lc INNER JOIN `".BIT_DB_PREFIX."fisheye_gallery` fg ON fg.content_id = lc.content_id WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ?",
+			[ $pTitle ]
+		);
+		if( $galleryContentId ) {
+			return [ 'gallery_id' => $galleryContentId, 'already' => true ];
+		}
+
+		$gallery = new FisheyeGallery();
+		if( !$gallery->store( [ 'title' => $pTitle ] ) ) {
+			return [ 'error' => implode( '; ', $gallery->mErrors ) ];
+		}
+		$galleryContentId = $gallery->mContentId;
+
+		$parentGalleryContentId = $gBitDb->getOne(
+			"SELECT lc.content_id FROM `".BIT_DB_PREFIX."liberty_content` lc INNER JOIN `".BIT_DB_PREFIX."fisheye_gallery` fg ON fg.content_id = lc.content_id WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ?",
+			[ $pParentGalleryTitle ]
+		);
+		if( $parentGalleryContentId ) {
+			$parentGallery = new FisheyeGallery( null, $parentGalleryContentId );
+			$parentGallery->load();
+			$parentGallery->addItem( $galleryContentId );
+		}
+
+		return [ 'gallery_id' => $galleryContentId ];
+	}
+
+	/**
 	* Function that returns link to display a piece of content
 	* @param array pGalleryId id of gallery to link
 	* @return string the url to display the gallery.

@@ -39,6 +39,19 @@ define( 'FISHEYEALBUM_CONTENT_TYPE_GUID', 'fisheyealbum' );
 
 const FISHEYEALBUM_TRACK_EXTENSIONS = [ 'mp3', 'flac', 'm4a', 'ogg', 'wav' ];
 const FISHEYEALBUM_COVER_NAMES = [ 'cover.jpg', 'folder.jpg', 'front.jpg', 'cover.png', 'folder.png' ];
+// A box set's own per-release subfolder naming - CDxx for a set of otherwise-anonymous discs
+// (Stravinsky's "Works of Igor Stravinsky", CD01..CD22), or Volume/Vol. N when each one already
+// has a real distinguishing name of its own (Pachelbel's "Joseph Payne - 10 CD" - despite the
+// parent folder's own "10 CD" name, each "The Complete Organ Works, Volume N" is its own distinct
+// MusicBrainz release with its own date, same as Beethoven's "Complete Beethoven Edition Vol. N"
+// set turned out to be - not one shared box, confirmed by checking real tag data before assuming
+// "Volume" always means this).
+// Not anchored to the start - real folder names commonly lead with the release/performer name
+// instead ("Alkan - Organ Works, Vol. 1 - Bowyer", "The Complete Organ Works, Volume 1"), not
+// "CD01"-style bare disc numbering alone. Checked against real album titles that must NOT match
+// ("CD Pool - Dance Hits...", "100 Hits Christmas") - the required digit immediately after CD/Vol
+// keeps this from false-firing on ordinary prose.
+const FISHEYEALBUM_DISC_FOLDER_PATTERN = '/(CD|Vol(ume)?\.?)\s*\d+/i';
 // Neither album-level nor worth keeping per-track - dropped outright rather than promoted:
 // ID3V2_PRIV.* are opaque binary loudness-normalization frames (MP3Gain/ReplayGain-adjacent), not
 // human-readable metadata at all; TLEN (ID3v2 track length in ms) just duplicates the file's own
@@ -648,11 +661,38 @@ class FisheyeAlbum extends FisheyeImage {
 	 * name-based denylist - genuinely checking for real track files handles any such folder by
 	 * whatever it happens to be called, not just the ones already seen.
 	 *
+	 * Deliberately NOT scanTrackFiles() - that reads embedded tags and probes real duration (an
+	 * ffprobe spawn each) for every track it finds, fine for actually registering one album but
+	 * far too expensive just to answer "does this folder have anything in it at all", run once per
+	 * candidate on every load_album.php page view. A 22-disc box set with ~20 tracks each turned a
+	 * page load into ~900 ffprobe spawns before this - same file-extension check, stopping at the
+	 * first match instead of reading every file found.
+	 *
 	 * @param string $pAbsoluteFolder
 	 * @return bool
 	 */
 	public static function folderHasTracks( string $pAbsoluteFolder ): bool {
-		return !empty( self::scanTrackFiles( $pAbsoluteFolder ) );
+		foreach( scandir( $pAbsoluteFolder ) ?: [] as $entry ) {
+			if( $entry === '.' || $entry === '..' ) {
+				continue;
+			}
+			$entryPath = $pAbsoluteFolder.$entry;
+			if( is_dir( $entryPath ) ) {
+				if( !preg_match( FISHEYEALBUM_DISC_FOLDER_PATTERN, $entry ) ) {
+					continue;
+				}
+				foreach( scandir( $entryPath ) ?: [] as $subEntry ) {
+					if( is_file( $entryPath.'/'.$subEntry )
+						&& in_array( strtolower( pathinfo( $subEntry, PATHINFO_EXTENSION ) ), FISHEYEALBUM_TRACK_EXTENSIONS, true ) ) {
+						return true;
+					}
+				}
+			} elseif( is_file( $entryPath )
+				&& in_array( strtolower( pathinfo( $entry, PATHINFO_EXTENSION ) ), FISHEYEALBUM_TRACK_EXTENSIONS, true ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -668,7 +708,7 @@ class FisheyeAlbum extends FisheyeImage {
 	 */
 	public static function isBoxSetFolder( string $pAbsoluteFolder ): bool {
 		foreach( scandir( $pAbsoluteFolder ) ?: [] as $entry ) {
-			if( preg_match( '/^CD\s*\d+/i', $entry ) && is_dir( $pAbsoluteFolder.$entry ) ) {
+			if( preg_match( FISHEYEALBUM_DISC_FOLDER_PATTERN, $entry ) && is_dir( $pAbsoluteFolder.$entry ) ) {
 				return true;
 			}
 		}
@@ -716,8 +756,6 @@ class FisheyeAlbum extends FisheyeImage {
 	 * @return array 'gallery_id'=>the box set's own new/existing gallery, or 'error'=>string
 	 */
 	public static function createBoxSetGallery( string $pRelativeFolderPath, string $pParentGalleryTitle ): array {
-		global $gBitDb;
-
 		$root = \Bitweaver\Liberty\mime_film_get_storage_root();
 		if( empty( $root ) ) {
 			return [ 'error' => 'fisheye_disk_storage_root is not configured.' ];
@@ -727,33 +765,15 @@ class FisheyeAlbum extends FisheyeImage {
 		}
 		$boxSetTitle = basename( rtrim( $pRelativeFolderPath, '/' ) );
 
-		$galleryContentId = $gBitDb->getOne(
-			"SELECT lc.content_id FROM liberty_content lc INNER JOIN fisheye_gallery fg ON fg.content_id = lc.content_id WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ?",
-			[ $boxSetTitle ]
-		);
-		if( $galleryContentId ) {
-			return [ 'gallery_id' => $galleryContentId, 'already' => true ];
+		$result = FisheyeGallery::findOrCreateNestedGallery( $boxSetTitle, $pParentGalleryTitle );
+		if( empty( $result['error'] ) && empty( $result['already'] ) ) {
+			// Music-grid pagination only makes sense freshly created, not re-applied to a gallery
+			// that might already have its own preference set some other way.
+			$gallery = new FisheyeGallery( null, $result['gallery_id'] );
+			$gallery->load();
+			$gallery->storePreference( 'gallery_pagination', FISHEYE_PAGINATION_MUSIC_GRID );
 		}
-
-		$gallery = new FisheyeGallery();
-		$storeHash = [ 'title' => $boxSetTitle, 'gallery_pagination' => FISHEYE_PAGINATION_MUSIC_GRID ];
-		if( !$gallery->store( $storeHash ) ) {
-			return [ 'error' => implode( '; ', $gallery->mErrors ) ];
-		}
-		$gallery->storePreference( 'gallery_pagination', FISHEYE_PAGINATION_MUSIC_GRID );
-		$galleryContentId = $gallery->mContentId;
-
-		$parentGalleryContentId = $gBitDb->getOne(
-			"SELECT lc.content_id FROM liberty_content lc INNER JOIN fisheye_gallery fg ON fg.content_id = lc.content_id WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ?",
-			[ $pParentGalleryTitle ]
-		);
-		if( $parentGalleryContentId ) {
-			$parentGallery = new FisheyeGallery( null, $parentGalleryContentId );
-			$parentGallery->load();
-			$parentGallery->addItem( $galleryContentId );
-		}
-
-		return [ 'gallery_id' => $galleryContentId ];
+		return $result;
 	}
 
 	/**
