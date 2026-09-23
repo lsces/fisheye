@@ -116,11 +116,11 @@ document.addEventListener('DOMContentLoaded', updateGalleryPagination);
 								</div>
 
 								<div id="film_grid-pagination">
-									{formhelp note="Fixed responsive grid - 8 films across on a wide monitor, folding to 4 then 2 on narrower screens. Not admin-configurable: 32 per page, matching a whole number of full-width rows."}
+									{formhelp note="Fixed responsive grid - 8 films across on a wide monitor, folding to 4 then 2 on narrower screens. Not admin-configurable: 24 per page, matching a whole number of full-width rows."}
 								</div>
 
 								<div id="program_grid-pagination">
-									{formhelp note="Fixed responsive grid - 8 shows across on a wide monitor, folding to 4 then 2 on narrower screens. Not admin-configurable: 32 per page, matching a whole number of full-width rows."}
+									{formhelp note="Fixed responsive grid - 8 shows across on a wide monitor, folding to 4 then 2 on narrower screens. Not admin-configurable: 24 per page, matching a whole number of full-width rows."}
 								</div>
 
 								<div id="music_grid-pagination">

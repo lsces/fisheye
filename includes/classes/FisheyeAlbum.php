@@ -859,7 +859,11 @@ class FisheyeAlbum extends FisheyeImage {
 		}
 		$containerTitle = basename( rtrim( $pRelativeFolderPath, '/' ) );
 
-		$result = FisheyeGallery::findOrCreateNestedGallery( $containerTitle, $pParentGalleryTitle );
+		// Passing the pagination style through to the initial store() call itself (not just the
+		// storePreference() below) is what gets rows_per_page/cols_per_page force-set to 4*8 at
+		// creation time - see findOrCreateNestedGallery()'s own docblock for why a freshly created
+		// gallery without it kept a generic default row count instead.
+		$result = FisheyeGallery::findOrCreateNestedGallery( $containerTitle, $pParentGalleryTitle, FISHEYE_PAGINATION_MUSIC_GRID );
 		if( empty( $result['error'] ) && empty( $result['already'] ) ) {
 			// Music-grid pagination only makes sense freshly created, not re-applied to a gallery
 			// that might already have its own preference set some other way. content_id (not

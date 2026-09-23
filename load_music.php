@@ -50,6 +50,34 @@ function load_music_gallery_id_for_title( string $pTitle ) {
 // same convention FisheyeAlbum::registerFromDisk() already scans for). Any real folder with at
 // least one album unit is worth its own gallery - see this file's own docblock for why a lone
 // album today still gets one, not just folders already holding several.
+//
+// A discography-category folder (Studio/Live/Compilation/... - FisheyeAlbum::isCategoryFolder())
+// holds its own real album folders one level deeper still, same shape a CD1/CD2 disc subfolder
+// already got special-cased for - missing this here meant any artist already reorganised into
+// categories on disk, but not yet given a top-level gallery, silently showed zero units and
+// dropped out of the candidate list entirely (found live: several modern artists vanished from
+// the alphabetical list the moment their folders were split into Studio/Live/Compilation).
+function load_music_has_track_folder( string $pFullPath, string $pEntryName ): bool {
+	if( !is_dir( $pFullPath ) ) {
+		return false;
+	}
+	foreach( scandir( $pFullPath ) ?: [] as $subEntry ) {
+		$subPath = $pFullPath.$subEntry;
+		$ext = strtolower( pathinfo( $subEntry, PATHINFO_EXTENSION ) );
+		if( in_array( $ext, FISHEYEALBUM_TRACK_EXTENSIONS, true ) ) {
+			return true;
+		}
+		// A disc subfolder (CD1/CD2/etc) holds its own track files one level deeper still.
+		if( is_dir( $subPath ) && preg_match( '/^CD\s*\d+/i', $subEntry ) && array_filter(
+			scandir( $subPath ) ?: [],
+			fn( $discEntry ) => in_array( strtolower( pathinfo( $discEntry, PATHINFO_EXTENSION ) ), FISHEYEALBUM_TRACK_EXTENSIONS, true )
+		) ) {
+			return true;
+		}
+	}
+	return false;
+}
+
 function load_music_unit_count( string $pDir ): int {
 	$units = 0;
 	foreach( scandir( $pDir ) ?: [] as $entry ) {
@@ -60,21 +88,16 @@ function load_music_unit_count( string $pDir ): int {
 		if( !is_dir( $fullPath ) ) {
 			continue;
 		}
-		foreach( scandir( $fullPath ) ?: [] as $subEntry ) {
-			$subPath = $fullPath.$subEntry;
-			$ext = strtolower( pathinfo( $subEntry, PATHINFO_EXTENSION ) );
-			// A disc subfolder (CD1/CD2/etc, same convention FisheyeAlbum::registerFromDisk()
-			// scans for) holds its own track files one level deeper - check inside it too, or a
-			// multi-disc album would otherwise count as zero units here.
-			if( in_array( $ext, FISHEYEALBUM_TRACK_EXTENSIONS, true )
-				|| ( is_dir( $subPath ) && preg_match( '/^CD\s*\d+/i', $subEntry ) && array_filter(
-					scandir( $subPath ) ?: [],
-					fn( $discEntry ) => in_array( strtolower( pathinfo( $discEntry, PATHINFO_EXTENSION ) ), FISHEYEALBUM_TRACK_EXTENSIONS, true )
-				) )
-			) {
-				$units++;
-				break;
+		if( FisheyeAlbum::isCategoryFolder( $entry ) ) {
+			foreach( scandir( $fullPath ) ?: [] as $albumEntry ) {
+				if( load_music_has_track_folder( $fullPath.$albumEntry.'/', $albumEntry ) ) {
+					$units++;
+				}
 			}
+			continue;
+		}
+		if( load_music_has_track_folder( $fullPath, $entry ) ) {
+			$units++;
 		}
 	}
 	return $units;

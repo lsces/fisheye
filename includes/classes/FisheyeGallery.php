@@ -385,14 +385,19 @@ class FisheyeGallery extends FisheyeBase {
 	public function verifyGalleryData(&$pParamHash) {
 		global $gBitSystem;
 
-		// film_grid/program_grid's own row/column counts aren't admin-configurable - the visual
-		// column count (8 across on a wide monitor, folding to 4 then 2) is pure CSS in each style's own
-		// _inc.tpl now, decoupled from cols_per_page entirely (Bootstrap's 12-column grid doesn't
-		// divide evenly into eighths anyway). rows_per_page/cols_per_page still get set here
-		// regardless - images_per_page (= rows*cols) is what the existing shared pagination
-		// mechanism reads - fixed at 4*8=32, a page size that happens to fill a whole number of
-		// desktop-width rows.
-		if( in_array( $pParamHash['gallery_pagination'] ?? null, [ FISHEYE_PAGINATION_FILM_GRID, FISHEYE_PAGINATION_PROGRAM_GRID, FISHEYE_PAGINATION_MUSIC_GRID ], true ) ) {
+		// film_grid/program_grid/music_grid's own row/column counts aren't admin-configurable - the
+		// visual column count (8 across on a wide monitor, folding to 4 then 2) is pure CSS in each
+		// style's own _inc.tpl now, decoupled from cols_per_page entirely (Bootstrap's 12-column
+		// grid doesn't divide evenly into eighths anyway). rows_per_page/cols_per_page still get set
+		// here regardless - images_per_page (= rows*cols) is what the existing shared pagination
+		// mechanism reads. film_grid/program_grid trimmed to 3*8=24 (Lester: leaves room top/bottom
+		// for extra features); music_grid stays at 4*8=32 pending a separate artist-page redesign
+		// (a Plex-style per-category strip layout, still being thought through) that may replace its
+		// own grid pagination entirely.
+		if( in_array( $pParamHash['gallery_pagination'] ?? null, [ FISHEYE_PAGINATION_FILM_GRID, FISHEYE_PAGINATION_PROGRAM_GRID ], true ) ) {
+			$pParamHash['rows_per_page'] = 3;
+			$pParamHash['cols_per_page'] = 8;
+		} elseif( ( $pParamHash['gallery_pagination'] ?? null ) === FISHEYE_PAGINATION_MUSIC_GRID ) {
 			$pParamHash['rows_per_page'] = 4;
 			$pParamHash['cols_per_page'] = 8;
 		} else {
@@ -726,7 +731,7 @@ class FisheyeGallery extends FisheyeBase {
 	 * @return array 'gallery_id'=>int, plus 'already'=>true if it already existed, or
 	 *               'error'=>string on failure
 	 */
-	public static function findOrCreateNestedGallery( string $pTitle, string $pParentGalleryTitle ): array {
+	public static function findOrCreateNestedGallery( string $pTitle, string $pParentGalleryTitle, ?string $pGalleryPagination = null ): array {
 		global $gBitDb;
 
 		$parentGalleryContentId = $gBitDb->getOne(
@@ -765,6 +770,16 @@ class FisheyeGallery extends FisheyeBase {
 
 		$gallery = new FisheyeGallery();
 		$storeHash = [ 'title' => $pTitle ];
+		if( $pGalleryPagination !== null ) {
+			// Must be set in this same store() call, not a storePreference() bolted on afterward -
+			// verifyGalleryData() (called from inside store()) only forces rows_per_page/cols_per_page
+			// to the fixed 4*8 a grid style needs when gallery_pagination is already present in the
+			// param hash it's checking. A gallery created without it here, then switched to music_grid
+			// via a separate storePreference() call, kept whatever generic default rows/cols it got at
+			// creation - found live: a category gallery only showed 2 rows of 8 instead of 4 until
+			// manually re-saved via the edit form (which does pass gallery_pagination on save).
+			$storeHash['gallery_pagination'] = $pGalleryPagination;
+		}
 		if( !$gallery->store( $storeHash ) ) {
 			return [ 'error' => implode( '; ', $gallery->mErrors ) ];
 		}
