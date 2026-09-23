@@ -1,13 +1,13 @@
 {literal}
 <script>//<![CDATA[
 function updateGalleryPagination() {
-	var paginationIds = ['fixed_grid','auto_flow','position_number','simple_list','matteo','galleriffic','film_grid','program_grid'];
-	// music_grid still shares fixed_grid's rows*cols settings panel - same underlying grid
-	// pagination math (see FisheyeGallery::getList()'s layout branch), just its own view
-	// template/floaticons - not worth a duplicate panel for it alone. film_grid/program_grid
-	// have their own settings panel too, fixed at 4*8=32 by FisheyeGallery::
-	// verifyGalleryData(), not admin-configurable, the visual column count is pure CSS now.
-	var styleGroup = { music_grid: 'fixed_grid' };
+	var paginationIds = ['fixed_grid','auto_flow','position_number','simple_list','matteo','galleriffic','film_grid','program_grid','music_grid'];
+	// film_grid/program_grid/music_grid all get their own fixed settings panel - 4*8=32 per
+	// page, forced by FisheyeGallery::verifyGalleryData() regardless of what an editable
+	// rows/cols panel might suggest, so showing that editable panel for music_grid was
+	// misleading (found it still silently overriding a typed-in value on desktop) - the visual
+	// column count is pure CSS now, not admin-configurable.
+	var styleGroup = {};
 	paginationIds.forEach(function(id) {
 		var div = document.getElementById(id+'-pagination');
 		div.style.display = 'none';
@@ -121,6 +121,10 @@ document.addEventListener('DOMContentLoaded', updateGalleryPagination);
 
 								<div id="program_grid-pagination">
 									{formhelp note="Fixed responsive grid - 8 shows across on a wide monitor, folding to 4 then 2 on narrower screens. Not admin-configurable: 32 per page, matching a whole number of full-width rows."}
+								</div>
+
+								<div id="music_grid-pagination">
+									{formhelp note="Fixed responsive grid - 8 albums across on a wide monitor, folding to 4 then 2 on narrower screens. Not admin-configurable: 32 per page, matching a whole number of full-width rows."}
 								</div>
 							{/forminput}
 						</div>

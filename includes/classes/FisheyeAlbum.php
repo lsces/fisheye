@@ -52,6 +52,18 @@ const FISHEYEALBUM_COVER_NAMES = [ 'cover.jpg', 'folder.jpg', 'front.jpg', 'cove
 // ("CD Pool - Dance Hits...", "100 Hits Christmas") - the required digit immediately after CD/Vol
 // keeps this from false-firing on ordinary prose.
 const FISHEYEALBUM_DISC_FOLDER_PATTERN = '/(CD|Vol(ume)?\.?)\s*\d+/i';
+// An artist/composer's own discography split by release type (Lester moving away from one flat
+// "Discography" dumping-ground folder) - Studio/Live/Compilation/Remaster/Single etc.
+// sit directly under the artist folder and themselves contain the real album folders, same
+// "container, not an album itself" shape as a box set folder but not disc-numbered so
+// FISHEYEALBUM_DISC_FOLDER_PATTERN doesn't (and shouldn't) match them. Fixed list rather than
+// generic "any subfolder with no tracks of its own but real album subfolders inside" detection -
+// deliberately chosen since a name-based list is simpler to reason about than a content-shape
+// heuristic. Singular only, standardised naming going forward (Lester) - no
+// "Albums"/plurals, and no separate EP category, EPs file under Single. Case-insensitive exact
+// match against the whole folder name (see isCategoryFolder()) - not a substring/prefix match, so
+// a real album title that happens to start with one of these words never false-fires.
+const FISHEYEALBUM_CATEGORY_FOLDER_NAMES = [ 'studio', 'live', 'compilation', 'remaster', 'single', 'soundtrack', 'tribute', 'other' ];
 // Neither album-level nor worth keeping per-track - dropped outright rather than promoted:
 // ID3V2_PRIV.* are opaque binary loudness-normalization frames (MP3Gain/ReplayGain-adjacent), not
 // human-readable metadata at all; TLEN (ID3v2 track length in ms) just duplicates the file's own
@@ -159,8 +171,15 @@ class FisheyeAlbum extends FisheyeImage {
 			if( empty( $parentGalleries ) ) {
 				break;
 			}
-			$contentId = key( $parentGalleries );
-			array_unshift( $pathSegments, current( $parentGalleries )['title'] );
+			// getParentGalleries() keys its result by gallery_id (fisheye_gallery's own PK), not
+			// content_id - using key() here instead of the row's own 'content_id' field looked up
+			// the WRONG next level's parent every time, silently truncating this walk to one level
+			// short of the real depth (found live: a category-nested album resolved to
+			// Music/<category>/<album>/ instead of Music/<artist>/<category>/<album>/, since the
+			// second iteration's parent lookup used a gallery_id where a content_id belonged).
+			$parentRow = current( $parentGalleries );
+			$contentId = $parentRow['content_id'];
+			array_unshift( $pathSegments, $parentRow['title'] );
 		}
 		return $root.'Music/'.implode( '/', $pathSegments ).'/';
 	}
@@ -338,10 +357,60 @@ class FisheyeAlbum extends FisheyeImage {
 	}
 
 	/**
+	 * Attach a cover from this album's own folder - a real cover.jpg/folder.jpg/front.jpg
+	 * (FISHEYEALBUM_COVER_NAMES) first, falling back to whatever cover art is embedded directly in
+	 * the first track's own tags (FLAC/MP3 METADATA_BLOCK_PICTURE/APIC, common on a single-CD
+	 * classical release with no separate cover file) - same two-step logic registerFromDisk() has
+	 * always used at import time, factored out here so reloadPlexImages() can fall back to it too
+	 * (an album Plex has no music-library match for - the normal case for most personal rips - used
+	 * to have no path back to its own already-working disk/embedded cover at all).
+	 *
+	 * @param string $pAbsoluteFolder  this album's own real folder (getImageStorageRoot())
+	 * @param array  $pTrackFiles      scanTrackFiles() shape - only trackFiles[0]['relative'] is
+	 *                                 used, for the embedded-art fallback
+	 * @return string|null  the cover filename attached, 'embedded' for the embedded-art fallback,
+	 *                       or null if neither source yielded anything
+	 */
+	public function attachCoverFromDisk( string $pAbsoluteFolder, array $pTrackFiles ): ?string {
+		foreach( FISHEYEALBUM_COVER_NAMES as $coverName ) {
+			if( is_file( $pAbsoluteFolder.$coverName ) ) {
+				return $this->attachThumbnail( $pAbsoluteFolder.$coverName ) ? $coverName : null;
+			}
+		}
+		if( empty( $pTrackFiles[0]['relative'] ) ) {
+			return null;
+		}
+		$embeddedCover = self::extractEmbeddedCoverArt( $pAbsoluteFolder.$pTrackFiles[0]['relative'] );
+		if( !$embeddedCover ) {
+			return null;
+		}
+		$coverAttached = null;
+		if( $this->attachThumbnail( $embeddedCover ) ) {
+			$coverAttached = 'embedded';
+			// Also kept as a real 'image' xref alternate (same storage/attachments/<branch>/ home as
+			// a Plex-fetched alternate) - attachThumbnail() above already deleted its own copy of the
+			// original once thumbs/ existed, so without this there would be no way back to the
+			// embedded art if the primary thumbnail later gets changed to something else (a Plex
+			// poster, a manual upload).
+			$embeddedFileName = 'embedded-cover.jpg';
+			copy( $embeddedCover, $this->getImageStorageBranchPath().$embeddedFileName );
+			$embeddedXrefHash = [ 'content_id' => $this->mContentId, 'item' => 'image', 'xkey_ext' => $embeddedFileName, 'xorder' => 1 ];
+			$this->storeXref( $embeddedXrefHash );
+		}
+		@unlink( $embeddedCover );
+		return $coverAttached;
+	}
+
+	/**
 	 * Fetch an alternate cover image from Plex for this album - simpler than FisheyeSeason's own
 	 * reloadPlexImages() (no separate 'art'/backdrop type for a music album, just one poster per
 	 * fetch, no per-type 5-cap loop needed), same 'selected' pick + xref-based storage shape
 	 * otherwise. See that method's own docblock for the fuller reasoning not repeated here.
+	 *
+	 * Falls back to attachCoverFromDisk() when Plex has no match at all (the normal case for a
+	 * personal rip never scanned into Plex's own music library) - previously left an album stuck
+	 * with "no image" forever if its own disk/embedded cover hadn't been picked up at import time,
+	 * with no way to retry that half short of a full reloadTracks() + re-registration.
 	 *
 	 * @return array Summary of what was found/stored, for the calling page's result display.
 	 */
@@ -351,6 +420,14 @@ class FisheyeAlbum extends FisheyeImage {
 
 		$plexMatch = $this->matchPlexAlbumMetadataItem();
 		if( !$plexMatch ) {
+			$absoluteFolder = $this->getImageStorageRoot();
+			if( !empty( $absoluteFolder ) && is_dir( $absoluteFolder ) ) {
+				$trackFiles = self::scanTrackFiles( $absoluteFolder );
+				$coverAttached = $this->attachCoverFromDisk( $absoluteFolder, $trackFiles );
+				if( $coverAttached ) {
+					$summary['items'][] = 'Cover attached from disk ('.$coverAttached.').';
+				}
+			}
 			return $summary;
 		}
 		$summary['matched'] = true;
@@ -716,6 +793,18 @@ class FisheyeAlbum extends FisheyeImage {
 	}
 
 	/**
+	 * Whether a folder name is one of the fixed discography-category names (Studio/Live/
+	 * Compilations/Remasters/Singles/...) - see FISHEYEALBUM_CATEGORY_FOLDER_NAMES's own docblock
+	 * for why this is a fixed list rather than shape-detected the way isBoxSetFolder() is.
+	 *
+	 * @param string $pFolderName  bare folder name, not a path
+	 * @return bool
+	 */
+	public static function isCategoryFolder( string $pFolderName ): bool {
+		return in_array( strtolower( $pFolderName ), FISHEYEALBUM_CATEGORY_FOLDER_NAMES, true );
+	}
+
+	/**
 	 * One disc's own title within a box set, distinct from the box's overall ALBUM tag (which
 	 * FISHEYEALBUM_IGNORED_TAG_KEYS already drops as noise everywhere else, since it's normally
 	 * identical to the album's own already-known title) - TSST (ID3v2) / DISCSUBTITLE (Vorbis,
@@ -738,24 +827,29 @@ class FisheyeAlbum extends FisheyeImage {
 	}
 
 	/**
-	 * Create (or find) a box set's own nested gallery, linked into $pParentGalleryTitle (the
+	 * Create (or find) a nested "container folder" gallery, linked into $pParentGalleryTitle (the
 	 * artist/composer's own gallery - nesting a gallery inside another is a safe, already-
-	 * anticipated case, see FisheyeGallery::addItem()'s own docblock). Deliberately cheap - no
-	 * track scanning at all, same one-off "create the gallery first, cheap/instant" step
-	 * load_music.php's own top-level version already establishes for an artist/composer gallery.
-	 * Populating it with real per-disc albums is then just a normal load_album.php visit pointed
-	 * at this new gallery - CDxx subfolders show up as ordinary candidates there, letting Lester
-	 * pick a handful at a time rather than every disc importing (and every one of its few hundred
-	 * tracks) in one single request.
+	 * anticipated case, see FisheyeGallery::addItem()'s own docblock). Shared by both of
+	 * load_album.php's container shapes - a box set (isBoxSetFolder(), real CDxx/Volume-numbered
+	 * discs of one work) and a discography category (isCategoryFolder(), Studio/Live/Compilation/
+	 * Remaster/Single/Soundtrack) - both are just "this folder isn't an album itself, it holds real
+	 * album folders underneath", the same nested-gallery treatment either way.
 	 *
-	 * @param string $pRelativeFolderPath  the box set's own folder, relative to
+	 * Deliberately cheap - no track scanning at all, same one-off "create the gallery first, cheap/
+	 * instant" step load_music.php's own top-level version already establishes for an artist/
+	 * composer gallery. Populating it with real albums (or, for a box set, per-disc albums) is then
+	 * just a normal load_album.php visit pointed at this new gallery - its own contents show up as
+	 * ordinary candidates there, letting Lester pick a handful at a time rather than everything
+	 * inside importing (and every track of it) in one single request.
+	 *
+	 * @param string $pRelativeFolderPath  the container's own folder, relative to
 	 *                                     mime_film_get_storage_root() - same shape
 	 *                                     registerFromDisk() takes
-	 * @param string $pParentGalleryTitle  the artist/composer gallery this box set's own nested
+	 * @param string $pParentGalleryTitle  the artist/composer gallery this container's own nested
 	 *                                     gallery gets linked into
-	 * @return array 'gallery_id'=>the box set's own new/existing gallery, or 'error'=>string
+	 * @return array 'gallery_id'=>the container's own new/existing gallery, or 'error'=>string
 	 */
-	public static function createBoxSetGallery( string $pRelativeFolderPath, string $pParentGalleryTitle ): array {
+	public static function createSubGallery( string $pRelativeFolderPath, string $pParentGalleryTitle ): array {
 		$root = \Bitweaver\Liberty\mime_film_get_storage_root();
 		if( empty( $root ) ) {
 			return [ 'error' => 'fisheye_disk_storage_root is not configured.' ];
@@ -763,13 +857,15 @@ class FisheyeAlbum extends FisheyeImage {
 		if( !is_dir( $root.rtrim( $pRelativeFolderPath, '/' ).'/' ) ) {
 			return [ 'error' => 'Folder not found under the configured storage root: '.$pRelativeFolderPath ];
 		}
-		$boxSetTitle = basename( rtrim( $pRelativeFolderPath, '/' ) );
+		$containerTitle = basename( rtrim( $pRelativeFolderPath, '/' ) );
 
-		$result = FisheyeGallery::findOrCreateNestedGallery( $boxSetTitle, $pParentGalleryTitle );
+		$result = FisheyeGallery::findOrCreateNestedGallery( $containerTitle, $pParentGalleryTitle );
 		if( empty( $result['error'] ) && empty( $result['already'] ) ) {
 			// Music-grid pagination only makes sense freshly created, not re-applied to a gallery
-			// that might already have its own preference set some other way.
-			$gallery = new FisheyeGallery( null, $result['gallery_id'] );
+			// that might already have its own preference set some other way. content_id (not
+			// gallery_id, fisheye_gallery's own separate PK - see findOrCreateNestedGallery()'s own
+			// docblock) is what the (null, $pContentId) constructor slot expects.
+			$gallery = new FisheyeGallery( null, $result['content_id'] );
 			$gallery->load();
 			$gallery->storePreference( 'gallery_pagination', FISHEYE_PAGINATION_MUSIC_GRID );
 		}
@@ -858,17 +954,34 @@ class FisheyeAlbum extends FisheyeImage {
 	 *                                     getImageStorageRoot() resolves this album's real folder
 	 *                                     from its title, so the two must always match exactly. A
 	 *                                     nicer name belongs in $pDescription instead.
-	 * @param string $pGalleryTitle        collection gallery to link this album into (created
-	 *                                     separately, same convention as FisheyeFilm)
+	 * @param int $pGalleryContentId       collection gallery to link this album into (created
+	 *                                     separately, same convention as FisheyeFilm) - a
+	 *                                     content_id, not a title: a bare-title lookup here used to
+	 *                                     be safe back when every gallery had a unique name, but
+	 *                                     "Studio"/"Live"/"Compilation" etc. are now deliberately
+	 *                                     shared names across different artists (see
+	 *                                     FisheyeGallery::findOrCreateNestedGallery()'s own
+	 *                                     docblock), so it silently linked into whichever
+	 *                                     same-titled gallery happened to exist first (found live:
+	 *                                     every artist's newly-loaded albums were ending up in Bob
+	 *                                     Marley's own Studio/Live/Compilation instead of their
+	 *                                     own). The caller already has the exact gallery in
+	 *                                     hand (it's the one load_album.php is browsing) - no lookup
+	 *                                     needed at all once addressed by content_id.
 	 * @param string|null $pDescription    shown on the album's own view page (same content_store
 	 *                                     'edit'/description field every other content type uses) -
 	 *                                     for a box set disc's own real content (its TSST/
 	 *                                     DISCSUBTITLE tag), which the bare "CD01"-style folder
 	 *                                     name the title is stuck with never conveys on its own
-	 * @return array 'already'=>content_id, or 'created'=>content_id plus 'tracks'/'cover'
+	 * @param bool $pFetchDiscogs           opt-in, same "slower, one round trip per album" tradeoff
+	 *                                       as load_video.php's own Plex-image checkbox - only
+	 *                                       attempted when a real MUSICBRAINZ_ALBUMID was actually
+	 *                                       found among this album's tags, since fetchDiscogsLink()
+	 *                                       needs one to look up (see its own docblock)
+	 * @return array 'already'=>content_id, or 'created'=>content_id plus 'tracks'/'cover'/'discogs'
 	 *               summary info, or 'error'=>string on failure
 	 */
-	public static function registerFromDisk( string $pRelativeFolderPath, ?string $pTitle = null, string $pGalleryTitle = 'Music', ?string $pDescription = null ): array {
+	public static function registerFromDisk( string $pRelativeFolderPath, ?string $pTitle = null, int $pGalleryContentId = 0, ?string $pDescription = null, bool $pFetchDiscogs = false ): array {
 		global $gBitDb;
 
 		$root = \Bitweaver\Liberty\mime_film_get_storage_root();
@@ -907,13 +1020,9 @@ class FisheyeAlbum extends FisheyeImage {
 		}
 		$album->load();
 
-		$galleryContentId = $gBitDb->getOne(
-			"SELECT lc.content_id FROM liberty_content lc INNER JOIN fisheye_gallery fg ON fg.content_id = lc.content_id WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ?",
-			[ $pGalleryTitle ]
-		);
 		$linked = false;
-		if( $galleryContentId ) {
-			$gallery = new FisheyeGallery( null, $galleryContentId );
+		if( $pGalleryContentId ) {
+			$gallery = new FisheyeGallery( null, $pGalleryContentId );
 			$gallery->load();
 			$linked = $gallery->addItem( $album->mContentId );
 		}
@@ -949,43 +1058,84 @@ class FisheyeAlbum extends FisheyeImage {
 			$album->storeXref( $commonXrefHash );
 		}
 
-		$coverAttached = null;
-		foreach( FISHEYEALBUM_COVER_NAMES as $coverName ) {
-			if( is_file( $absoluteFolder.$coverName ) ) {
-				if( $album->attachThumbnail( $absoluteFolder.$coverName ) ) {
-					$coverAttached = $coverName;
-				}
-				break;
-			}
+		$discogsResult = null;
+		if( $pFetchDiscogs && !empty( $commonTags['mbid'] ) ) {
+			$discogsResult = $album->fetchDiscogsLink();
 		}
-		// No standalone cover file - a single-CD classical release commonly embeds its own cover
-		// art directly in the track (FLAC/MP3 METADATA_BLOCK_PICTURE/APIC) instead, extractable
-		// via ffmpeg the same way ffprobe already reads the rest of a track's own tags.
-		if( !$coverAttached ) {
-			$embeddedCover = self::extractEmbeddedCoverArt( $absoluteFolder.$trackFiles[0]['relative'] );
-			if( $embeddedCover ) {
-				if( $album->attachThumbnail( $embeddedCover ) ) {
-					$coverAttached = 'embedded';
-					// Also kept as a real 'image' xref alternate (same storage/attachments/<branch>/
-					// home as a Plex-fetched alternate) - attachThumbnail() above already deleted its
-					// own copy of the original once thumbs/ existed, so without this there would be no
-					// way back to the embedded art if the primary thumbnail later gets changed to
-					// something else (a Plex poster, a manual upload).
-					$embeddedFileName = 'embedded-cover.jpg';
-					copy( $embeddedCover, $album->getImageStorageBranchPath().$embeddedFileName );
-					$embeddedXrefHash = [ 'content_id' => $album->mContentId, 'item' => 'image', 'xkey_ext' => $embeddedFileName, 'xorder' => 1 ];
-					$album->storeXref( $embeddedXrefHash );
-				}
-				@unlink( $embeddedCover );
-			}
-		}
+
+		$coverAttached = $album->attachCoverFromDisk( $absoluteFolder, $trackFiles );
 
 		return [
 			'created' => $album->mContentId,
 			'linked'  => $linked,
 			'tracks'  => count( $trackFiles ),
 			'cover'   => $coverAttached,
+			'discogs' => $discogsResult,
 		];
+	}
+
+	/**
+	 * Look up this album's own MusicBrainz release (via its already-stored 'mbid' xref) for a
+	 * linked Discogs release, and store it the same way FisheyeFilm stores 'imdb'/'tmdb' - a plain
+	 * 'discogs' xref item whose xkey is the bare Discogs release id, rendered as a real link by
+	 * view_album.php the same generic cross_ref_href way (see the 'liberty_xref_item' row Lester
+	 * added for content_type_guid='fisheyealbum', matching fisheyefilm/fisheyeseason/fisheyeprogram's
+	 * own imdb/tmdb rows exactly: x_group='external', template='href').
+	 *
+	 * MusicBrainz doesn't hand out Discogs ids directly - a release only has one if someone has
+	 * already linked the two as a community edit, discoverable via the release's own url-rels
+	 * (see https://musicbrainz.org/ws/2/release/<mbid>?inc=url-rels&fmt=json). No such link existing
+	 * is a normal, common outcome, not an error - most of Lester's still-unmatched bootleg/demo
+	 * material will never have one either way.
+	 *
+	 * @return array 'discogs_id'=>string plus 'url'=>string on a fresh find, 'already'=>true if a
+	 *               discogs xref already exists (never re-fetched), 'none'=>true if MusicBrainz has
+	 *               no linked Discogs release, or 'error'=>string
+	 */
+	public function fetchDiscogsLink(): array {
+		if( !$this->mContentId ) {
+			return [ 'error' => 'Album not loaded.' ];
+		}
+		$this->loadXrefInfo();
+		$mbid = null;
+		if( $this->mXrefInfo ) {
+			foreach( $this->mXrefInfo->allXrefs() as $xref ) {
+				if( $xref['item'] === 'mbid' ) {
+					$mbid = $xref['xkey_ext'];
+				} elseif( $xref['item'] === 'discogs' ) {
+					return [ 'already' => true ];
+				}
+			}
+		}
+		if( empty( $mbid ) ) {
+			return [ 'error' => 'This album has no MusicBrainz Album Id stored - not MB-matched yet.' ];
+		}
+
+		$context = stream_context_create( [ 'http' => [
+			'header'  => "User-Agent: fisheye-discogs-lookup/1.0 ( lscesuk@gmail.com )\r\n",
+			'timeout' => 15,
+		] ] );
+		$json = @file_get_contents( "https://musicbrainz.org/ws/2/release/$mbid?inc=url-rels&fmt=json", false, $context );
+		if( $json === false ) {
+			return [ 'error' => 'MusicBrainz lookup failed (network error or bad MBID).' ];
+		}
+		$data = json_decode( $json, true );
+		$discogsId = null;
+		foreach( $data['relations'] ?? [] as $relation ) {
+			$url = $relation['url']['resource'] ?? '';
+			if( str_contains( $url, 'discogs.com' ) && preg_match( '/(\d+)\/?$/', $url, $matches ) ) {
+				$discogsId = $matches[1];
+				break;
+			}
+		}
+		if( $discogsId === null ) {
+			return [ 'none' => true ];
+		}
+
+		$discogsXrefHash = [ 'content_id' => $this->mContentId, 'item' => 'discogs', 'xkey' => $discogsId ];
+		$this->storeXref( $discogsXrefHash );
+
+		return [ 'discogs_id' => $discogsId, 'url' => 'https://www.discogs.com/release/'.$discogsId ];
 	}
 
 }

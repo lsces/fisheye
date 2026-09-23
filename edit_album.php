@@ -43,7 +43,17 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 	$gContent->load();
 } elseif( !empty( $_REQUEST['fReloadImages'] ) ) {
 	$plexResult = $gContent->reloadPlexImages();
-	$plexResultLabel = KernelTools::tra( 'Images reloaded from Plex' );
+	// reloadPlexImages() falls back to the album's own disk/embedded cover when Plex has no match
+	// at all (see its own docblock) - label/empty-message reflect whichever actually happened,
+	// rather than always crediting (or blaming) Plex for a result that may not involve it.
+	if( $plexResult['matched'] ) {
+		$plexResultLabel = KernelTools::tra( 'Images reloaded from Plex' );
+	} elseif( !empty( $plexResult['items'] ) ) {
+		$plexResultLabel = KernelTools::tra( 'Cover reloaded from disk' );
+	} else {
+		$plexResultLabel = KernelTools::tra( 'Reload Images' );
+		$plexResultEmptyLabel = KernelTools::tra( 'No matching Plex entry, and no cover.jpg/embedded cover art found on disk either.' );
+	}
 } elseif( !empty( $_REQUEST['fReloadTracks'] ) ) {
 	$reloadResult = $gContent->reloadTracks();
 	$plexResultLabel = KernelTools::tra( 'Tracks reloaded from disk' );

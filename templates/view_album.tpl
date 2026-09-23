@@ -28,6 +28,13 @@
 			<div class="col-md-9">
 				{if $artist}<p><strong>{tr}Artist{/tr}:</strong> {$artist|escape}</p>{/if}
 				{if $gContent->mInfo.data}<p>{$gContent->mInfo.data|escape}</p>{/if}
+				{if $externalLinks|@count}
+					<p class="album-external-links">
+						{foreach from=$externalLinks item=link name=externalLinks}
+							<a href="{$link.url|escape}" target="_blank" rel="noopener">{$link.title|escape}</a>{if !$smarty.foreach.externalLinks.last} &middot; {/if}
+						{/foreach}
+					</p>
+				{/if}
 
 				{if $discs|@count}
 					<section class="album-tracks">

@@ -15,17 +15,24 @@
  * Folder resolution: a collection gallery's title is normally expected to match a real folder
  * directly under fisheye_disk_storage_root's own Music/ (no separate config key for this - same
  * fisheye_disk_storage_root as Films) - same one-level layout load_music.php's own candidate scan
- * uses. A box set's own nested gallery (FisheyeAlbum::createBoxSetGallery()) sits one level deeper
- * than that though - Music/<artist>/<box set>/, not Music/<box set>/ - so a direct lookup falling
- * through tries the gallery's own real parent gallery next, same one level FisheyeAlbum's own
- * getParentGalleries() call already covers (a box set is never nested more than one level deep).
+ * uses. A container's own nested gallery (FisheyeAlbum::createSubGallery(), see below) sits one
+ * level deeper than that though - Music/<artist>/<container>/, not Music/<container>/ - so a
+ * direct lookup falling through tries the gallery's own real parent gallery next, same one level
+ * FisheyeAlbum's own getParentGalleries() call already covers (a container is never nested more
+ * than one level deep).
  *
- * Selecting a box-set-shaped candidate here (still has a real CDxx subfolder - see
- * FisheyeAlbum::isBoxSetFolder()) creates its own nested gallery rather than registering the whole
- * folder as one (very noisy) multi-hundred-track album - deliberately just the gallery, no track
- * scanning at all yet, so picking a handful of discs to import at a time (a normal load_album.php
- * visit pointed at that new gallery, CDxx folders showing up as ordinary candidates) never has to
- * wait on scanning every track in the whole box set first.
+ * Two different "this folder isn't an album itself" shapes both get this same nested-gallery
+ * treatment rather than registering the whole folder as one (very noisy) multi-hundred-track
+ * album - deliberately just the gallery, no track scanning at all yet, so picking a handful of
+ * items to import at a time (a normal load_album.php visit pointed at that new gallery, its real
+ * contents showing up as ordinary candidates) never has to wait on scanning everything inside
+ * first:
+ * - a box-set-shaped candidate (still has a real CDxx/Volume-N subfolder - see
+ *   FisheyeAlbum::isBoxSetFolder()) - one work split across genuinely distinct recordings/discs.
+ * - a discography-category candidate (Studio/Live/Compilation/Remaster/Single/Soundtrack - see
+ *   FisheyeAlbum::isCategoryFolder()) - Lester's own artist-level split replacing one flat
+ *   "Discography" dumping-ground folder, sitting one level *above* normal albums rather than
+ *   inside one.
  *
  * @package fisheye
  * @subpackage functions
@@ -54,7 +61,14 @@ if( !$galleryIdParam ) {
 }
 $gallery = new FisheyeGallery( $galleryIdParam );
 $gallery->load();
-if( !$gallery->isValid() ) {
+// isValid() alone doesn't prove load() actually found a matching row - it only checks that the
+// constructor was given a format-valid positive integer, and the constructor's own mGalleryId
+// assignment is never cleared when load()'s query comes back empty. A bogus/no-longer-existent
+// gallery_id was passing this check and falling through to an empty getTitle(), which degenerated
+// into treating the bare Music/ folder itself as the candidate list (found live, a content_id
+// mistakenly used as a gallery_id - see FisheyeGallery::findOrCreateNestedGallery()'s own docblock
+// for how that number got into a URL in the first place).
+if( !$gallery->isValid() || empty( $gallery->getTitle() ) ) {
 	$gBitSystem->fatalError( KernelTools::tra( 'No gallery exists with the given ID.' ) );
 }
 $galleryTitle = $gallery->getTitle();
@@ -81,7 +95,8 @@ if( !empty( $root ) ) {
 
 $importResult = null;
 if( !empty( $_REQUEST['fImportAlbums'] ) ) {
-	$importResult = [ 'created' => [], 'boxsets' => [], 'errors' => [] ];
+	$fetchDiscogs = !empty( $_REQUEST['fetch_discogs'] );
+	$importResult = [ 'created' => [], 'subgalleries' => [], 'errors' => [] ];
 	foreach( (array)( $_REQUEST['selected'] ?? [] ) as $albumFolder ) {
 		// Same detoxify() decode as load_film.php - HTML-escapes every $_REQUEST value, which
 		// breaks a raw filesystem lookup like this one for any folder name containing &, <, or >.
@@ -91,22 +106,23 @@ if( !empty( $_REQUEST['fImportAlbums'] ) ) {
 		}
 		// A CDxx subfolder still sitting inside means Lester deliberately kept it as a box set of
 		// distinct recordings rather than flattening it into one multi-disc album (see
-		// FisheyeAlbum::isBoxSetFolder()'s own docblock) - create its own nested gallery only, no
-		// track scanning yet (see this file's own docblock for why: letting a subset of discs get
-		// picked afterward via an ordinary load_album.php visit, rather than every disc's every
-		// track scanning in this one request).
-		if( FisheyeAlbum::isBoxSetFolder( $artistDir.$albumFolder.'/' ) ) {
-			$row = FisheyeAlbum::createBoxSetGallery( $artistRelative.$albumFolder, $galleryTitle );
+		// FisheyeAlbum::isBoxSetFolder()'s own docblock); a name like Studio/Live/Compilation/
+		// Remaster/Single/Soundtrack means this is a discography-category container instead (see
+		// FISHEYEALBUM_CATEGORY_FOLDER_NAMES's own docblock) - either way, create its own nested
+		// gallery only, no track scanning yet (see this file's own docblock for why: letting a
+		// subset of its contents get picked afterward via an ordinary load_album.php visit, rather
+		// than everything inside importing, every track of it, in this one request).
+		if( FisheyeAlbum::isBoxSetFolder( $artistDir.$albumFolder.'/' ) || FisheyeAlbum::isCategoryFolder( $albumFolder ) ) {
+			$row = FisheyeAlbum::createSubGallery( $artistRelative.$albumFolder, $galleryTitle );
 			if( !empty( $row['error'] ) ) {
 				$importResult['errors'][] = [ 'folder' => $albumFolder, 'error' => $row['error'] ];
 			} else {
 				// Same getDisplayUrlFromHash() route the top-level "Music" gallery link elsewhere
 				// on this page already uses, not a hardcoded view.php?gallery_id= guess.
-				$boxSetUrlHash = [ 'gallery_id' => $row['gallery_id'] ];
-				$loadUrlHash = [ 'gallery_id' => $row['gallery_id'] ];
-				$importResult['boxsets'][] = [
+				$subGalleryUrlHash = [ 'gallery_id' => $row['gallery_id'] ];
+				$importResult['subgalleries'][] = [
 					'folder'   => $albumFolder,
-					'url'      => FisheyeGallery::getDisplayUrlFromHash( $boxSetUrlHash ),
+					'url'      => FisheyeGallery::getDisplayUrlFromHash( $subGalleryUrlHash ),
 					'loadUrl'  => FISHEYE_PKG_URL.'load_album.php?gallery_id='.$row['gallery_id'],
 					'already'  => !empty( $row['already'] ),
 				];
@@ -119,11 +135,13 @@ if( !empty( $_REQUEST['fImportAlbums'] ) ) {
 		// from it), but its real content (getDiscTitle()) goes into the description instead, same
 		// field view_album.tpl already renders for every other album.
 		$discTitle = preg_match( FISHEYEALBUM_DISC_FOLDER_PATTERN, $albumFolder ) ? FisheyeAlbum::getDiscTitle( $artistDir.$albumFolder.'/' ) : null;
-		$row = FisheyeAlbum::registerFromDisk( $artistRelative.$albumFolder, null, $galleryTitle, $discTitle );
+		// $gallery->mContentId, not $galleryTitle - see registerFromDisk()'s own docblock for why a
+		// bare-title lookup there was linking albums into the wrong same-named gallery.
+		$row = FisheyeAlbum::registerFromDisk( $artistRelative.$albumFolder, null, $gallery->mContentId, $discTitle, $fetchDiscogs );
 		if( !empty( $row['error'] ) ) {
 			$importResult['errors'][] = [ 'folder' => $albumFolder, 'error' => $row['error'] ];
 		} else {
-			$importResult['created'][] = [ 'folder' => $albumFolder, 'content_id' => $row['created'] ?? $row['already'], 'tracks' => $row['tracks'] ?? null, 'cover' => $row['cover'] ?? null ];
+			$importResult['created'][] = [ 'folder' => $albumFolder, 'content_id' => $row['created'] ?? $row['already'], 'tracks' => $row['tracks'] ?? null, 'cover' => $row['cover'] ?? null, 'discogs' => $row['discogs'] ?? null ];
 		}
 	}
 }
@@ -139,7 +157,10 @@ if( $artistDir ) {
 		if( str_starts_with( $entry, '.' ) || !is_dir( $artistDir.$entry ) ) {
 			continue;
 		}
-		if( !FisheyeAlbum::folderHasTracks( $artistDir.$entry.'/' ) ) {
+		// A category container (Studio/Live/Compilation/Remaster/Single/Soundtrack) never has
+		// tracks directly inside it - the real albums are one level further down - so it needs
+		// its own bypass here rather than failing folderHasTracks()'s check.
+		if( !FisheyeAlbum::isCategoryFolder( $entry ) && !FisheyeAlbum::folderHasTracks( $artistDir.$entry.'/' ) ) {
 			continue; // an Artwork/Videos/scans-style extras folder, not a real album
 		}
 		$existingContentId = $gBitDb->getOne(

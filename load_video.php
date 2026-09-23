@@ -50,7 +50,9 @@ if( !$galleryIdParam ) {
 }
 $gallery = new FisheyeGallery( $galleryIdParam );
 $gallery->load();
-if( !$gallery->isValid() ) {
+// isValid() alone doesn't prove load() found a real row - see load_album.php's own identical
+// check for why.
+if( !$gallery->isValid() || empty( $gallery->getTitle() ) ) {
 	$gBitSystem->fatalError( KernelTools::tra( 'No gallery exists with the given ID.' ) );
 }
 $galleryTitle = $gallery->getTitle();
@@ -81,7 +83,10 @@ if( !empty( $_REQUEST['fImport'] ) ) {
 	if( !empty( $videosGalleryResult['error'] ) ) {
 		$result = [ 'error' => $videosGalleryResult['error'] ];
 	} else {
-		$videosGallery = new FisheyeGallery( null, $videosGalleryResult['gallery_id'] );
+		// content_id (not gallery_id, which is fisheye_gallery's own separate PK - see
+		// findOrCreateNestedGallery()'s own docblock) is what the (null, $pContentId) constructor
+		// slot expects.
+		$videosGallery = new FisheyeGallery( null, $videosGalleryResult['content_id'] );
 		$videosGallery->load();
 
 		$result = [ 'imported' => [], 'already' => [], 'errors' => [], 'fetch_images' => $fetchImages ];

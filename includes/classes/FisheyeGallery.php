@@ -715,11 +715,11 @@ class FisheyeGallery extends FisheyeBase {
 
 	/**
 	 * Find (by title) or create a gallery nested one level inside a named parent gallery - e.g. a
-	 * "Videos" gallery under an artist/composer's own top-level gallery, or a box set's own gallery
-	 * under its artist (see FisheyeAlbum::createBoxSetGallery(), the original of this same shape,
-	 * generalized here since nesting isn't a music-only concern - any FisheyeGallery can hold
-	 * another, see addItem()'s own docblock). Deliberately cheap - just the gallery row, no scanning
-	 * or importing of whatever will eventually live inside it.
+	 * "Videos" gallery under an artist/composer's own top-level gallery, or a box set/discography-
+	 * category's own gallery under its artist (see FisheyeAlbum::createSubGallery(), the original
+	 * of this same shape, generalized here since nesting isn't a music-only concern - any
+	 * FisheyeGallery can hold another, see addItem()'s own docblock). Deliberately cheap - just the
+	 * gallery row, no scanning or importing of whatever will eventually live inside it.
 	 *
 	 * @param string $pTitle              the nested gallery's own title
 	 * @param string $pParentGalleryTitle the existing gallery this one gets linked into
@@ -729,31 +729,54 @@ class FisheyeGallery extends FisheyeBase {
 	public static function findOrCreateNestedGallery( string $pTitle, string $pParentGalleryTitle ): array {
 		global $gBitDb;
 
-		$galleryContentId = $gBitDb->getOne(
-			"SELECT lc.content_id FROM `".BIT_DB_PREFIX."liberty_content` lc INNER JOIN `".BIT_DB_PREFIX."fisheye_gallery` fg ON fg.content_id = lc.content_id WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ?",
-			[ $pTitle ]
-		);
-		if( $galleryContentId ) {
-			return [ 'gallery_id' => $galleryContentId, 'already' => true ];
-		}
-
-		$gallery = new FisheyeGallery();
-		if( !$gallery->store( [ 'title' => $pTitle ] ) ) {
-			return [ 'error' => implode( '; ', $gallery->mErrors ) ];
-		}
-		$galleryContentId = $gallery->mContentId;
-
 		$parentGalleryContentId = $gBitDb->getOne(
 			"SELECT lc.content_id FROM `".BIT_DB_PREFIX."liberty_content` lc INNER JOIN `".BIT_DB_PREFIX."fisheye_gallery` fg ON fg.content_id = lc.content_id WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ?",
 			[ $pParentGalleryTitle ]
 		);
+
+		// Scoped to an existing child of THIS parent, not a bare title match - "Compilation"/
+		// "Studio"/"Live"/"Videos" are common enough names that two different artists genuinely
+		// having their own is the normal case, not a collision to dedupe. A bare title lookup here
+		// found live: every artist's own "Compilation"/"Studio"/"Live" folder was silently reusing
+		// whichever one got created first (Bob Marley's, in that case), merging unrelated artists'
+		// albums into it instead of ever creating their own.
+		$existingRow = null;
+		if( $parentGalleryContentId ) {
+			$existingRow = $gBitDb->getRow(
+				"SELECT lc.content_id, fg.gallery_id FROM `".BIT_DB_PREFIX."liberty_content` lc
+				 INNER JOIN `".BIT_DB_PREFIX."fisheye_gallery` fg ON fg.content_id = lc.content_id
+				 INNER JOIN `".BIT_DB_PREFIX."fisheye_gallery_image_map` map ON map.item_content_id = lc.content_id
+				 WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ? AND map.gallery_content_id = ?",
+				[ $pTitle, $parentGalleryContentId ]
+			);
+		}
+		if( $existingRow ) {
+			// 'gallery_id' is fisheye_gallery's own PK (fg.gallery_id) - the one every existing
+			// gallery-URL builder (load_album.php's bootstrap, music_gallery_icons_inc.tpl,
+			// getDisplayUrlFromHash()) already expects under this exact key. Returning content_id
+			// here instead (an easy mistake - content_id is the "primary currency" everywhere else
+			// in this feature) broke the very "Load its contents now" link this method exists to
+			// support: found live sending Whitesnake's own Compilation link to whatever unrelated
+			// gallery happened to share that number as its real gallery_id (or nothing at all, which
+			// degraded further into showing Music/'s own top-level folder as candidates - see
+			// load_album.php's own docblock for that failure mode).
+			return [ 'gallery_id' => $existingRow['gallery_id'], 'content_id' => $existingRow['content_id'], 'already' => true ];
+		}
+
+		$gallery = new FisheyeGallery();
+		$storeHash = [ 'title' => $pTitle ];
+		if( !$gallery->store( $storeHash ) ) {
+			return [ 'error' => implode( '; ', $gallery->mErrors ) ];
+		}
+		$galleryContentId = $gallery->mContentId;
+
 		if( $parentGalleryContentId ) {
 			$parentGallery = new FisheyeGallery( null, $parentGalleryContentId );
 			$parentGallery->load();
 			$parentGallery->addItem( $galleryContentId );
 		}
 
-		return [ 'gallery_id' => $galleryContentId ];
+		return [ 'gallery_id' => $gallery->mGalleryId, 'content_id' => $galleryContentId ];
 	}
 
 	/**

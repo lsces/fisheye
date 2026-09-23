@@ -23,20 +23,20 @@
 					<p>{tr}Albums loaded{/tr}:</p>
 					<ul>
 						{foreach from=$importResult.created item=row}
-							<li><a href="{$smarty.const.FISHEYE_PKG_URL}view_album.php?content_id={$row.content_id}">{$row.folder|escape}</a>{if $row.tracks} - {$row.tracks} {tr}tracks{/tr}{/if}{if !$row.cover} ({tr}no cover art found{/tr}){/if}</li>
+							<li><a href="{$smarty.const.FISHEYE_PKG_URL}view_album.php?content_id={$row.content_id}">{$row.folder|escape}</a>{if $row.tracks} - {$row.tracks} {tr}tracks{/tr}{/if}{if !$row.cover} ({tr}no cover art found{/tr}){/if}{if $row.discogs.url} - {tr}Discogs link found{/tr}{elseif $row.discogs.none} - {tr}no Discogs link on MusicBrainz{/tr}{elseif $row.discogs.error} - {$row.discogs.error|escape}{/if}</li>
 						{/foreach}
 					</ul>
 				</div>
 			{/if}
-			{if $importResult.boxsets}
+			{if $importResult.subgalleries}
 				<div class="alert alert-success">
-					<p>{tr}Box set collections created{/tr} ({tr}pick which discs to load next{/tr}):</p>
+					<p>{tr}Sub-galleries created{/tr} ({tr}pick which albums/discs to load next{/tr}):</p>
 					<ul>
-						{foreach from=$importResult.boxsets item=boxset}
+						{foreach from=$importResult.subgalleries item=subgallery}
 							<li>
-								<a href="{$boxset.url|escape}">{$boxset.folder|escape}</a>
-								{if $boxset.already}({tr}already existed{/tr}){/if}
-								- <a href="{$boxset.loadUrl|escape}">{tr}Load its discs now{/tr}</a>
+								<a href="{$subgallery.url|escape}">{$subgallery.folder|escape}</a>
+								{if $subgallery.already}({tr}already existed{/tr}){/if}
+								- <a href="{$subgallery.loadUrl|escape}">{tr}Load its contents now{/tr}</a>
 							</li>
 						{/foreach}
 					</ul>
@@ -54,6 +54,9 @@
 			{form legend="" action="{$smarty.const.FISHEYE_PKG_URL}load_album.php"}
 				<input type="hidden" name="gallery_id" value="{$galleryIdParam}" />
 				<p>{tr}Showing up to{/tr} {$candidateLimit} {tr}not-yet-loaded albums for{/tr} "{$galleryTitle|escape}":</p>
+				<div class="form-group">
+					<label><input type="checkbox" name="fetch_discogs" value="1" checked="checked" /> {tr}Also fetch a linked Discogs release per album, if one exists on MusicBrainz (slower){/tr}</label>
+				</div>
 				<p><label><input type="checkbox" id="loadAlbumToggleAll" checked="checked" /> <strong>{tr}Select All{/tr}</strong></label></p>
 				<input type="submit" class="btn btn-primary" name="fImportAlbums" value="{tr}Load Selected Albums{/tr}" />
 				<ul>

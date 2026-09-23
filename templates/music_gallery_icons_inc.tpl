@@ -11,6 +11,7 @@
 			   load_album.php doesn't exist yet either - same "button first" reasoning. *}
 			<a title="{tr}Load Album{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}load_album.php?gallery_id={$gContent->mGalleryId}">{biticon ipackage="icons" iname="folder-open" iexplain="Load Album"}</a>
 			<a title="{tr}Load Videos{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}load_video.php?gallery_id={$gContent->mGalleryId}">{biticon ipackage="icons" iname="video-x-generic" iexplain="Load Videos"}</a>
+			<a title="{tr}Fetch Discogs Links{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}fetch_discogs.php?gallery_id={$gContent->mGalleryId}">{biticon ipackage="icons" iname="emblem-web" iexplain="Fetch Discogs Links"}</a>
 		{/if}
 		<a title="{tr}Edit{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}edit.php?gallery_id={$gContent->mGalleryId}">{biticon ipackage="icons" iname="edit"  iexplain="Edit"}</a>
 		<a title="{tr}Image Order{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}image_order.php?gallery_id={$gContent->mGalleryId}">{biticon ipackage="icons" iname="view-sort-ascending" iexplain="Image Order"}</a>

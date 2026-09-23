@@ -109,14 +109,14 @@
 								<optgroup label="{tr}Copy to Gallery{/tr}">
 									{foreach from=$galleryList item=gal key=galleryId}
 										{if $gContent->mInfo.content_id ne $gal.content_id}
-											<option value="gallerycopy:{$gal.content_id}">&raquo; {$gal.title|escape|truncate:50}</option>
+											<option value="gallerycopy:{$gal.content_id}">&raquo; {$gal.title|escape|truncate:50}{if $gal.parentTitle} ({$gal.parentTitle|escape|truncate:30}){/if}</option>
 										{/if}
 									{/foreach}
 								</optgroup>
 								<optgroup label="{tr}Move to Gallery{/tr}">
 									{foreach from=$galleryList item=gal key=galleryId}
 										{if $gContent->mInfo.content_id ne $gal.content_id}
-											<option value="gallerymove:{$gal.content_id}">-&gt; {$gal.title|escape|truncate:50}</option>
+											<option value="gallerymove:{$gal.content_id}">-&gt; {$gal.title|escape|truncate:50}{if $gal.parentTitle} ({$gal.parentTitle|escape|truncate:30}){/if}</option>
 										{/if}
 									{/foreach}
 								</optgroup>

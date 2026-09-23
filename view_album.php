@@ -31,8 +31,24 @@ $gContent->addHit();
 $gContent->loadXrefInfo();
 $tracks = [];
 $artist = null;
+$externalLinks = [];
 if( $gContent->mXrefInfo ) {
 	foreach( $gContent->mXrefInfo->allXrefs() as $xref ) {
+		// External links (mbid/discogs/...) - same generic cross_ref_href convention FisheyeFilm's
+		// own imdb/tmdb links use, identified by having one rather than by item name, so any future
+		// liberty_xref_item source added for fisheyealbum picks this up for free. Unlike imdb/tmdb
+		// (which only ever store their id in xkey), 'mbid' predates this convention and keeps its
+		// value in xkey_ext (extractCommonTags()'s own common-tag storage, shared with every other
+		// FISHEYEALBUM_COMMON_TAG_MAP entry) - falling back to xkey_ext rather than moving where
+		// mbid is stored, since fetchDiscogsLink() and reloadTracks()/registerFromDisk() all already
+		// read/write it there.
+		$linkValue = $xref['xkey'] ?: ( $xref['xkey_ext'] ?? null );
+		if( !empty( $xref['cross_ref_href'] ) && !empty( $linkValue ) ) {
+			$externalLinks[] = [
+				'title' => $xref['xref_title'] ?? strtoupper( $xref['item'] ),
+				'url'   => $xref['cross_ref_href'].$linkValue,
+			];
+		}
 		switch( $xref['item'] ) {
 			case 'track':
 				$data = !empty( $xref['data'] ) ? json_decode( $xref['data'], true ) : [];
@@ -67,6 +83,7 @@ foreach( $tracks as $track ) {
 $gBitSmarty->assign( 'discs', $discs );
 $gBitSmarty->assign( 'multiDisc', count( $discs ) > 1 );
 $gBitSmarty->assign( 'artist', $artist );
+$gBitSmarty->assign( 'externalLinks', $externalLinks );
 $gBitSmarty->assign( 'gContent', $gContent );
 
 $gBitSystem->setCanonicalLink( $gContent->getDisplayUrl() );
