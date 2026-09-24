@@ -35,10 +35,11 @@ a Film, MusicBrainz doesn't show up on a Season, etc.
 | `FisheyeAlbum` | `FisheyeImage` | A music album | Yes — real thumbnail attachment (cover art), tracks are raw xrefs like Season's episodes |
 
 Hierarchy: **Show → Season → Episode** / **Artist → Album → Track**; a Film stands alone
-(single-level). Show/Artist/Composer as a genuine top-level browsable concept (a computed listing
-with no `liberty_content` row of its own, same idea as `food`'s `FoodDay` pattern) is designed but
-not built — for now, a show is just a real `FisheyeProgram` gallery holding `FisheyeSeason`
-members.
+(single-level). Show/Composer as a genuine top-level browsable concept (a computed listing with no
+`liberty_content` row of its own, same idea as `food`'s `FoodDay` pattern) is designed but not
+built — for now, a show is just a real `FisheyeProgram` gallery holding `FisheyeSeason` members.
+**Artist is the one exception** — an artist's own gallery (`music_grid` pagination) has a real
+Plex-style page of its own now, see "Music discography" below, rather than plain drill-down.
 
 **Flat single-season shows** — some shows (a one-off documentary registered as a show rather than a
 film, e.g. to get real cast/episode metadata) have their episode file(s) sitting directly in the
@@ -187,7 +188,16 @@ different tab — already happened once with `star`'s move into `cast`.
 level) — `xkey_ext` holds the video file path relative to the season's storage root, `data` holds
 a JSON blob (title/summary/air_date/director/writer/star/content_rating/duration/a `thumb` image
 path), `xorder` is the episode number. `Track` (album/song) is the same shape, one level down from
-an album.
+an album — see "Music discography" below for its own `data` JSON shape (`disc`/`track` fields) and
+display template.
+
+**A newly-added `liberty_xref_item` row needs a real `role_id` or it's invisible.**
+`loadXrefInfo()`'s query is permission-filtered by `role_id` — a row inserted directly via `isql`
+with `role_id` left `NULL` (rather than copying a sibling item's value, typically `3`/Registered)
+silently drops out of `allXrefs()` everywhere, with no error anywhere in the chain. Found live: the
+`category` item below worked fine at the raw-data level (row present, value correct) but never
+surfaced in either the Album Details display or any PHP code reading it back via `allXrefs()`,
+until `role_id` was set to match its sibling metadata items.
 
 **Alternate images** (`image` item, `images` group) — extra poster/backdrop artwork for a film,
 album, season, or show, stored as ordinary xref rows rather than a second `LibertyMime` attachment
@@ -217,6 +227,81 @@ WHERE x_group='images' AND content_type_guid IN ('fisheyefilm','fisheyeseason','
 "unknown modifier" on this Smarty setup) — only a real method call on an object works. Capability
 checks (`$gContent->supportsAddImage()`, `$gContent->canGrabVideoFrame()`) are real `FisheyeBase`
 methods for exactly this reason, not a `method_exists()` call inlined into the template.
+
+## Music discography (Artist/Album/Track)
+
+**Discography categories are a flat xref, not a nested gallery.** Studio/Live/Compilation/
+Remaster/Single/Soundtrack/Tribute/Other (`FISHEYEALBUM_CATEGORY_FOLDER_NAMES`,
+`isCategoryFolder()`) exist as real folders on disk (`Music/<Artist>/Studio/<Album>/`), but an
+album registered under one is linked *directly* into the artist's own gallery — the category name
+is stored as a plain `category` xref (`item='category'`, `xkey_ext` = the category name) on the
+album itself, not as a nested gallery level. `load_album.php`'s candidate scan transparently
+flattens this: a category folder's own contents show up as `"Category/Album"` entries, never the
+bare category name. **Box sets are the one exception** — a real `CDxx`/`Volume`-numbered set of
+distinct recordings (`isBoxSetFolder()`) still gets a genuine nested gallery via
+`FisheyeAlbum::createSubGallery()`, since that's a real structural grouping (pick a handful of
+discs at a time), not just a type label — this still applies even when the box set sits inside a
+category folder (`"Studio/Some Box Set"`).
+
+Because the gallery hierarchy no longer carries the category folder segment,
+`FisheyeAlbum::getImageStorageRoot()` reads the album's own `category` xref first and prepends it
+to the path before its existing gallery-parent walk, only when the xref has a value — an album
+with no category (there shouldn't be any, but if one existed) resolves exactly as it always did,
+no regression.
+
+**Artist gallery view is a Plex-style strip layout, not a paginated grid.** `music_grid`'s own
+template (`gallery_views/music_grid/fisheye_music_grid_inc.tpl`) no longer paginates at all — it
+calls `FisheyeGallery::getCategorizedItems()`, which loads every item in the gallery in one go and
+buckets each `FisheyeAlbum` by its own `category` xref (one bulk `liberty_xref` query, not
+per-item) into `FISHEYEALBUM_CATEGORY_FOLDER_NAMES` order; a nested `FisheyeGallery` item (a box
+set, or the "Videos" subgallery below) carries no category of its own and lands in a trailing
+"Collections" bucket instead. Each non-empty bucket renders as its own flowing strip, no
+`{pagination}` widget. The **Load Album**/**Load Videos** icons (`music_gallery_icons_inc.tpl`)
+only show when `hasUnloadedAlbumCandidates()`/`hasUnloadedVideoCandidates()` find something
+actually still unregistered — cheap short-circuit scans mirroring `load_album.php`/`load_video.php`'s
+own candidate logic.
+
+**Videos** — a concert DVD or music video sitting in an artist's own `Videos/` subfolder registers
+as a real `FisheyeFilm` (same content type normal Films use), linked into a small nested "Videos"
+gallery under the artist (`FisheyeGallery::findOrCreateNestedGallery()`, `FISHEYE_PAGINATION_FILM_GRID`
+so it renders as a film grid, not the site's default Galleriffic style). Doesn't gate on a Plex
+match the way `load_film.php` does — Plex almost never scans this path, so every selected video
+registers regardless, with Plex metadata fetched opportunistically when a match does exist.
+
+**Fetch Discogs Link** lives on `edit_album.php` as a per-album button now (`fFetchDiscogs` →
+`fetchDiscogsLink()`), not a separate batch page — `fetch_discogs.php`/`templates/fetch_discogs.tpl`
+are removed.
+
+**Track data cleanup** — `extractCommonTags()`'s promote-if-identical-across-every-track mechanism
+(`FISHEYEALBUM_COMMON_TAG_MAP` for a 1:1 tag→xref, `FISHEYEALBUM_COMMON_TAG_ALTERNATES` for a tag
+with more than one common spelling) now also covers `ARTISTS`/`ARTISTSORT`/`LANGUAGE` (previously
+only plain `ARTIST` was promoted, leaving these as per-track noise on every normal, non-tribute
+album). `FISHEYEALBUM_IGNORED_TAG_KEYS` drops `COMMENT`/`ID3V1COMMENT` (ripper-tool artifacts) and
+the four `REPLAYGAIN*` tags (encoder-normalization noise) outright, on both counts regardless of
+punctuation — `normalizeTagKey()` strips all non-alphanumerics before comparison either way.
+
+**Track disc/number is now structural, not just embedded in the title.** Each track's stored `data`
+JSON has its own `track` field always, and a `disc` field only when the album is genuinely
+multi-disc (`reloadTracks()`/`registerFromDisk()` compute this once per album, not per track) — a
+single-disc album never stores `disc` at all. `templates/xref/fisheyealbum/view_json-list_item.tpl`
+(a content-type-specific override of liberty's generic `view_json-list_item.tpl`, resolved via
+`getXrefRecordTemplate()`) shows `Disc-Track` (or bare `Track` when single-disc) in the first
+column instead of the row's auto-numbered title, and excludes `disc`/`track` from the generic
+per-row key-dump table below it. The Tracks tab itself needs `liberty_xref_item.template` set to
+`'json-list'` for the `track` item (a per-site DB value, same caveat as the `images` template
+above — not schema/install-file-driven).
+
+`view_album.php`'s own public track listing (grouped by disc, one `<h3>Disc N</h3>` heading per
+group when `multiDisc`) appends that disc's own `TSST` (ID3v2) / `DISCSUBTITLE` (Vorbis) tag after
+the heading when present — the same tag precedence `getDiscTitle()` already uses for a box set's
+own per-disc title, here just extra context on a single flattened multi-disc album rather than the
+title itself.
+
+**Where this is heading next**: `artist`/`composer`/`conductor`/`orchestra`/`performer` are still
+plain-text xrefs (`template='text'`, a name string in `xkey_ext`) as of this writing — a design for
+linking these to a real `Contact` record instead (shared bio/external-links, one identity reused
+across every credit anywhere in the system) is written up at `contact/MANUAL-WIKI.md`, not yet
+built.
 
 ## Real thumbnail attachments (Season/Program)
 
@@ -414,9 +499,10 @@ Gallery description text is **plain text**, not wiki/rich text — use `data|esc
 
 ## Known limitations / not yet built
 
-- Show/Artist/Composer as a genuine top-level browsable type (the `FoodDay`-pattern computed
-  listing) — not built; a show today is a real gallery object, browsed by drilling down from a
-  parent gallery rather than any kind of aggregated cross-show view.
+- Show/Composer as a genuine top-level browsable type (the `FoodDay`-pattern computed listing) —
+  not built; a show today is a real gallery object, browsed by drilling down from a parent gallery
+  rather than any kind of aggregated cross-show view. Artist got its own real page instead (the
+  "Music discography" section's Plex-style strip layout) rather than this computed-listing pattern.
 - Fully-automatic "scan the whole storage root and register anything new, no picking" import —
   `load_film.php`/`load_program.php` (see above) cover discover-and-pick, capped at 20 at a time;
   nothing yet walks a whole library unattended.
@@ -425,13 +511,15 @@ Gallery description text is **plain text**, not wiki/rich text — use `data|esc
 - A UI for managing the xref vocabulary itself (add/edit groups and items through bitweaver,
   rather than a hand-authored scheme applied via `LibertyXrefScheme::apply()`) — real, separate
   work, not started.
-- Music/album/track build-out — `view_album.php`/`edit_album.php`/`load_album.php`/
-  `play_track.php` exist, `FisheyeAlbum::registerFromDisk()` reads embedded ffprobe tags as the
-  primary metadata source and `reloadPlexImages()` covers Plex cover/alternate-image fetch, same
-  shape as Film/Season/Program. Still not built: `load_collection.php`/`load_discography.php`
-  bulk importers (single-CD registration only so far, one folder at a time), Discogs as an actual
-  image source (the `discogs` xref item is just an external link today, same as `mbid`), and the
-  Artist/Composer top-level browsable concept mentioned above.
+- Music/album/track build-out — see the dedicated "Music discography" section above for current
+  shape (category flattening, artist strip layout, track data cleanup). Still not built: a
+  whole-library unattended scan (per-artist `load_album.php`/`load_video.php` are discover-and-pick,
+  same as Film/Program, not a walk-everything importer); Discogs as an actual image source (the
+  `discogs` xref item is just an external link today, same as `mbid`); linking `artist`/`composer`/
+  `conductor`/`orchestra`/`performer` to a real `Contact` record instead of a plain-text xref
+  (design at `contact/MANUAL-WIKI.md`, not started); and, following on from that, modelling a band/
+  ensemble as a `ContactBusiness` with membership that changes over time — an open question noted
+  in that same design doc, not just an implementation gap.
 - A one-off single-video show is currently registered as a full show/season/episode, faking an
   `S01E01`-style episode number just to fit the model — a plain "Videos" gallery (load_film.php-
   style, no season/episode modeling at all) would fit these better. Not started.
