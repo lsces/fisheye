@@ -48,6 +48,15 @@ season using the sentinel folder name `'.'` (unambiguous — `scandir()` already
 entry); `FisheyeSeason::registerFromDisk()` resolves that sentinel to "season dir == show dir" and
 titles the season plainly `"<show> - Season 1"` rather than `"<show> - ."`.
 
+**A show having only one episode registered is not a workaround — it's just what a genuine one-off
+looks like.** The one real external constraint is the filename itself: Plex's own scanner expects
+an `SxxExx`-style tag to recognize and play TV content at all, so a standalone one-off still needs
+one (`S2003E05`, year-as-season is a common real-world convention for this) purely to satisfy
+Plex's naming scheme — that's a Plex-compatibility requirement on the file on disk, not an internal
+data-model compromise. Fisheye's own Show → Season → Episode model already represents a
+single-episode season correctly and doesn't need a separate "plain Videos gallery" alternative for
+this case.
+
 **Deleting a show** (`FisheyeProgram::expunge()`, an override — not the shared
 `FisheyeGallery::expunge()`, which only ever recurses into sub-*galleries*, never plain gallery
 items like a season) cascades: every season is expunged first (which itself cleans up its own
@@ -512,6 +521,3 @@ Gallery description text is **plain text**, not wiki/rich text — use `data|esc
   (design at `contact/MANUAL-WIKI.md`, not started); and, following on from that, modelling a band/
   ensemble as a `ContactBusiness` with membership that changes over time — an open question noted
   in that same design doc, not just an implementation gap.
-- A one-off single-video show is currently registered as a full show/season/episode, faking an
-  `S01E01`-style episode number just to fit the model — a plain "Videos" gallery (load_film.php-
-  style, no season/episode modeling at all) would fit these better. Not started.
