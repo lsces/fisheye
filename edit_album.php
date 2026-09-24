@@ -54,6 +54,22 @@ if( !empty( $_REQUEST['fCancel'] ) ) {
 		$plexResultLabel = KernelTools::tra( 'Reload Images' );
 		$plexResultEmptyLabel = KernelTools::tra( 'No matching Plex entry, and no cover.jpg/embedded cover art found on disk either.' );
 	}
+} elseif( !empty( $_REQUEST['fFetchDiscogs'] ) ) {
+	// Was its own separate batch page (fetch_discogs.php) scanning a whole gallery at once -
+	// moved here instead: a per-album action fits this page's own existing Reload Images/Tracks
+	// pattern better than a whole extra gallery-level tool for something that's just a one-off
+	// lookup per album.
+	$discogsResult = $gContent->fetchDiscogsLink();
+	if( !empty( $discogsResult['url'] ) ) {
+		$plexResult = [ 'items' => [ KernelTools::tra( 'Discogs link found' ).': '.$discogsResult['url'] ] ];
+		$plexResultLabel = KernelTools::tra( 'Discogs link found' );
+	} else {
+		$plexResult = [ 'items' => [] ];
+		$plexResultLabel = KernelTools::tra( 'Fetch Discogs Link' );
+		$plexResultEmptyLabel = !empty( $discogsResult['error'] ) ? $discogsResult['error']
+			: ( !empty( $discogsResult['already'] ) ? KernelTools::tra( 'This album already has a Discogs link.' )
+			: KernelTools::tra( 'No Discogs link on MusicBrainz for this album.' ) );
+	}
 } elseif( !empty( $_REQUEST['fReloadTracks'] ) ) {
 	$reloadResult = $gContent->reloadTracks();
 	$plexResultLabel = KernelTools::tra( 'Tracks reloaded from disk' );

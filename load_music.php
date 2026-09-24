@@ -35,6 +35,8 @@ global $gBitSystem, $gBitSmarty, $gBitDb;
 
 $gBitSystem->verifyPermission( 'p_fisheye_admin' );
 
+const LOAD_MUSIC_LIMIT = 20;
+
 function load_music_gallery_id_for_title( string $pTitle ) {
 	global $gBitDb;
 	return $gBitDb->getOne(
@@ -140,6 +142,9 @@ if( !empty( $root ) && is_dir( $musicDir ) ) {
 	$entries = scandir( $musicDir );
 	natsort( $entries );
 	foreach( $entries as $entry ) {
+		if( count( $candidates ) >= LOAD_MUSIC_LIMIT ) {
+			break;
+		}
 		if( str_starts_with( $entry, '.' ) || !is_dir( $musicDir.$entry ) ) {
 			continue;
 		}
@@ -155,6 +160,7 @@ if( !empty( $root ) && is_dir( $musicDir ) ) {
 
 $topGalleryUrlHash = [ 'gallery_id' => $topGalleryId ];
 $gBitSmarty->assign( 'topGalleryUrl', FisheyeGallery::getDisplayUrlFromHash( $topGalleryUrlHash ) );
+$gBitSmarty->assign( 'candidateLimit', LOAD_MUSIC_LIMIT );
 $gBitSmarty->assign( 'candidates', $candidates );
 $gBitSmarty->assign( 'result', $result );
 

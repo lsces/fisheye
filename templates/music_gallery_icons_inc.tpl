@@ -8,10 +8,15 @@
 			{* Any collection gallery below the top level - registers one album (a single
 			   FisheyeAlbum::registerFromDisk() folder) into this gallery, as opposed to the
 			   top-level button above which will bulk-scan for whole collections at once.
-			   load_album.php doesn't exist yet either - same "button first" reasoning. *}
-			<a title="{tr}Load Album{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}load_album.php?gallery_id={$gContent->mGalleryId}">{biticon ipackage="icons" iname="folder-open" iexplain="Load Album"}</a>
-			<a title="{tr}Load Videos{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}load_video.php?gallery_id={$gContent->mGalleryId}">{biticon ipackage="icons" iname="video-x-generic" iexplain="Load Videos"}</a>
-			<a title="{tr}Fetch Discogs Links{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}fetch_discogs.php?gallery_id={$gContent->mGalleryId}">{biticon ipackage="icons" iname="emblem-web" iexplain="Fetch Discogs Links"}</a>
+			   Only shown when there's actually something left to load (Lester, 2026-09-24) -
+			   hasUnloadedAlbumCandidates()/hasUnloadedVideoCandidates() are cheap short-circuit
+			   scans, same folder shape load_album.php/load_video.php themselves use. *}
+			{if $gContent->hasUnloadedAlbumCandidates()}
+				<a title="{tr}Load Album{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}load_album.php?gallery_id={$gContent->mGalleryId}">{biticon ipackage="icons" iname="folder-open" iexplain="Load Album"}</a>
+			{/if}
+			{if $gContent->hasUnloadedVideoCandidates()}
+				<a title="{tr}Load Videos{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}load_video.php?gallery_id={$gContent->mGalleryId}">{biticon ipackage="icons" iname="video-x-generic" iexplain="Load Videos"}</a>
+			{/if}
 		{/if}
 		<a title="{tr}Edit{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}edit.php?gallery_id={$gContent->mGalleryId}">{biticon ipackage="icons" iname="edit"  iexplain="Edit"}</a>
 		<a title="{tr}Image Order{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}image_order.php?gallery_id={$gContent->mGalleryId}">{biticon ipackage="icons" iname="view-sort-ascending" iexplain="Image Order"}</a>

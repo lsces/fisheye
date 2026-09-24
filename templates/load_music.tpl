@@ -31,7 +31,7 @@
 
 		{if $candidates}
 			{form legend="" action="{$smarty.const.FISHEYE_PKG_URL}load_music.php"}
-				<p>{tr}Artist/composer folders under Music/ with no gallery yet{/tr}:</p>
+				<p>{tr}Showing up to{/tr} {$candidateLimit} {tr}artist/composer folders under Music/ with no gallery yet{/tr}:</p>
 				<ul>
 					{foreach from=$candidates item=candidate}
 						<li>

@@ -79,7 +79,13 @@ $videosRelativePrefix = $artistRelative ? $artistRelative.'Videos/' : null;
 $result = null;
 if( !empty( $_REQUEST['fImport'] ) ) {
 	$fetchImages = !empty( $_REQUEST['fetch_images'] );
-	$videosGalleryResult = FisheyeGallery::findOrCreateNestedGallery( 'Videos', $galleryTitle );
+	// FISHEYE_PAGINATION_FILM_GRID here (not just the storePreference() below) - passing it into
+	// findOrCreateNestedGallery()'s own initial store() call is what gets rows_per_page/cols_per_page
+	// force-set correctly at creation time, same reasoning as FisheyeAlbum::createSubGallery()'s own
+	// identical two-step pagination handling (see that method's own comment). Without this, a
+	// freshly-created "Videos" gallery fell back to the site's own default pagination style
+	// (Galleriffic) instead of the film grid its own content (FisheyeFilm rows) actually needs.
+	$videosGalleryResult = FisheyeGallery::findOrCreateNestedGallery( 'Videos', $galleryTitle, FISHEYE_PAGINATION_FILM_GRID );
 	if( !empty( $videosGalleryResult['error'] ) ) {
 		$result = [ 'error' => $videosGalleryResult['error'] ];
 	} else {
@@ -88,6 +94,9 @@ if( !empty( $_REQUEST['fImport'] ) ) {
 		// slot expects.
 		$videosGallery = new FisheyeGallery( null, $videosGalleryResult['content_id'] );
 		$videosGallery->load();
+		if( empty( $videosGalleryResult['already'] ) ) {
+			$videosGallery->storePreference( 'gallery_pagination', FISHEYE_PAGINATION_FILM_GRID );
+		}
 
 		$result = [ 'imported' => [], 'already' => [], 'errors' => [], 'fetch_images' => $fetchImages ];
 		foreach( (array)( $_REQUEST['selected'] ?? [] ) as $relativePath ) {

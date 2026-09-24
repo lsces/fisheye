@@ -63,6 +63,7 @@
 				<input type="submit" class="btn btn-primary" name="fSave" value="{tr}Save{/tr}" />
 				<input type="submit" class="btn btn-secondary" name="fReloadImages" value="{tr}Reload Images{/tr}" />
 				<input type="submit" class="btn btn-secondary" name="fReloadTracks" value="{tr}Reload Tracks{/tr}" />
+				<input type="submit" class="btn btn-secondary" name="fFetchDiscogs" value="{tr}Fetch Discogs Link{/tr}" />
 			</div>
 		{/form}
 	</div><!-- end .body -->

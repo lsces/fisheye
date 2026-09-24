@@ -70,14 +70,15 @@ const FISHEYEALBUM_CATEGORY_FOLDER_NAMES = [ 'studio', 'live', 'compilation', 'r
 // real duration, already probed separately; SCRIPT is just the writing-system code (e.g. "Latn"),
 // no display value; ALBUM duplicates the album object's own already-known title; TSO2/
 // ALBUMARTISTSORT (raw ID3v2 frame and Vorbis spellings of the same "album artist sort order"
-// concept) duplicate the value the 'artist' xref item already promotes - unlike ARTIST/ARTISTS/
-// ARTISTSORT, which hold genuinely different per-credit information left as-is for now (see
-// FISHEYEALBUM_COMMON_TAG_ALTERNATES's own 'artist' entry); TRACKTOTAL/TOTALTRACKS and DISCTOTAL/
-// TOTALDISCS (again two spellings each for the same two concepts) are just counts already implicit
-// in how many track xrefs actually got stored, not real metadata to display.
+// concept) duplicate the value the 'artist' xref item already promotes; TRACKTOTAL/TOTALTRACKS and
+// DISCTOTAL/TOTALDISCS (again two spellings each for the same two concepts) are just counts already
+// implicit in how many track xrefs actually got stored, not real metadata to display; COMMENT/
+// ID3V1COMMENT are ripper-tool artifacts (a matrix/pressing code, an "ExactAudioCopy v0.99pb4"
+// version string) rather than human-authored notes, found live cluttering every single track row
+// once the json-list view actually rendered this data for the first time.
 const FISHEYEALBUM_IGNORED_TAG_KEYS = [
 	'ID3V2_PRIV_PEAKVALUE', 'ID3V2_PRIV_AVERAGELEVEL', 'TLEN', 'SCRIPT', 'ALBUM', 'TSO2', 'ALBUMARTISTSORT',
-	'TRACKTOTAL', 'TOTALTRACKS', 'DISCTOTAL', 'TOTALDISCS',
+	'TRACKTOTAL', 'TOTALTRACKS', 'DISCTOTAL', 'TOTALDISCS', 'COMMENT', 'ID3V1COMMENT',
 ];
 
 // Embedded tag name -> xref item, for tags that only ever make sense at album/disc level, not
@@ -108,6 +109,16 @@ const FISHEYEALBUM_COMMON_TAG_ALTERNATES = [
 	// PUBLISHER (ID3v2 TPUB) and LABEL (Vorbis) - same "record label" concept, different naming.
 	'label'          => [ 'LABEL', 'PUBLISHER' ],
 	'artist'         => [ 'ALBUM_ARTIST', 'ARTIST' ],
+	// ARTISTS/ARTISTSORT hold genuinely different per-credit information from plain ARTIST on a
+	// various-artists compilation (each track's own performer, still correctly promoted away when
+	// they don't actually vary - see extractCommonTags()'s own "only if identical across every
+	// track" rule, same as everything else here); LANGUAGE is almost always album-wide too. Found
+	// live cluttering every single track row identically once the json-list view actually rendered
+	// this data for the first time - none of the three were wired into the promotion check at all
+	// before, unlike plain ARTIST just above.
+	'artists'        => [ 'ARTISTS' ],
+	'artistsort'     => [ 'ARTISTSORT' ],
+	'language'       => [ 'LANGUAGE' ],
 	// IMUS is another non-standard tagger's own frame for composer, same concept as COMPOSER.
 	'composer'       => [ 'COMPOSER', 'IMUS' ],
 	// ICNT is another non-standard tagger's own frame for country, same concept as RELEASECOUNTRY.
@@ -161,6 +172,23 @@ class FisheyeAlbum extends FisheyeImage {
 			return $root;
 		}
 		$pathSegments = [ $this->getTitle() ];
+		// A discography-category album (registerFromDisk()'s own $pCategory param) is linked
+		// directly into its artist's own gallery (the flattened design - no separate category
+		// gallery to walk up through), but its real folder still sits one level deeper on disk
+		// inside that category folder - the gallery-parent walk below has no way to know that on
+		// its own since nothing in the gallery hierarchy carries it, so it has to come from here
+		// instead (found live: reloadTracks() on a category-flattened album resolved one level too
+		// shallow, then walked past the top-level Music gallery itself trying to compensate,
+		// producing a literal "Music/Music/<artist>/<title>/" path that obviously never exists).
+		$this->loadXrefInfo();
+		if( $this->mXrefInfo ) {
+			foreach( $this->mXrefInfo->allXrefs() as $xref ) {
+				if( $xref['item'] === 'category' && !empty( $xref['xkey_ext'] ) ) {
+					array_unshift( $pathSegments, $xref['xkey_ext'] );
+					break;
+				}
+			}
+		}
 		$contentId = $this->mContentId;
 		for( $i = 0; $i < 3; $i++ ) {
 			$candidate = $root.'Music/'.implode( '/', $pathSegments ).'/';
@@ -913,11 +941,20 @@ class FisheyeAlbum extends FisheyeImage {
 		) );
 		\Bitweaver\Liberty\LibertyContent::deleteXrefByItem( $this->mContentId, $clearableItems );
 
+		// A single-disc album showing "Disc: 1" identically on every single track row is just noise
+		// (found live once the json-list view actually rendered per-track data for the first time) -
+		// only worth including once there's genuinely more than one disc to distinguish.
+		$isMultiDisc = count( array_unique( array_column( $trackFiles, 'disc' ) ) ) > 1;
 		$xorder = 0;
 		foreach( $trackFiles as $track ) {
 			// See registerFromDisk()'s own identical block for why this is flattened rather than
 			// nested under a 'tags' key, and why TITLE/DISC are excluded here.
 			$trackTagsForData = array_diff_key( $track['tags'], $promotedTagKeys, [ 'TITLE' => true, 'DISC' => true ] );
+			$trackData = [ 'title' => $track['title'], 'track' => $track['track_num'] ];
+			if( $isMultiDisc ) {
+				$trackData['disc'] = $track['disc'];
+			}
+			$trackData['duration'] = $track['duration_ms'];
 			$xrefHash = [
 				'content_id' => $this->mContentId,
 				'item'       => 'track',
@@ -925,7 +962,7 @@ class FisheyeAlbum extends FisheyeImage {
 				// see getImageStorageRoot()'s own docblock for why the album's folder itself is
 				// never baked into this.
 				'xkey_ext'   => $track['relative'],
-				'edit'       => json_encode( array_merge( [ 'title' => $track['title'], 'disc' => $track['disc'], 'duration' => $track['duration_ms'] ], $trackTagsForData ) ),
+				'edit'       => json_encode( array_merge( $trackData, $trackTagsForData ) ),
 				'xorder'     => ++$xorder,
 			];
 			$this->storeXref( $xrefHash );
@@ -982,10 +1019,22 @@ class FisheyeAlbum extends FisheyeImage {
 	 *                                       attempted when a real MUSICBRAINZ_ALBUMID was actually
 	 *                                       found among this album's tags, since fetchDiscogsLink()
 	 *                                       needs one to look up (see its own docblock)
+	 * @param string|null $pCategory        the discography-category folder (Studio/Live/
+	 *                                      Compilation/...) this album's own folder sits directly
+	 *                                      inside, if any - stored as a plain 'category' xref for
+	 *                                      display-side grouping (Lester, 2026-09-24: deliberately
+	 *                                      NOT a nested gallery per category - load_album.php just
+	 *                                      flattens straight through into this artist's own gallery
+	 *                                      instead, one xref per album rather than a whole gallery
+	 *                                      row per artist per category). Distinct from the
+	 *                                      MusicBrainz-derived 'release_type' common tag (see
+	 *                                      FISHEYEALBUM_COMMON_TAG_ALTERNATES) since a folder
+	 *                                      category like "Tribute"/"Other" isn't a real MB concept
+	 *                                      and the two won't always agree.
 	 * @return array 'already'=>content_id, or 'created'=>content_id plus 'tracks'/'cover'/'discogs'
 	 *               summary info, or 'error'=>string on failure
 	 */
-	public static function registerFromDisk( string $pRelativeFolderPath, ?string $pTitle = null, int $pGalleryContentId = 0, ?string $pDescription = null, bool $pFetchDiscogs = false ): array {
+	public static function registerFromDisk( string $pRelativeFolderPath, ?string $pTitle = null, int $pGalleryContentId = 0, ?string $pDescription = null, bool $pFetchDiscogs = false, ?string $pCategory = null ): array {
 		global $gBitDb;
 
 		$root = \Bitweaver\Liberty\mime_film_get_storage_root();
@@ -1031,6 +1080,9 @@ class FisheyeAlbum extends FisheyeImage {
 			$linked = $gallery->addItem( $album->mContentId );
 		}
 
+		// A single-disc album showing "Disc: 1" identically on every single track row is just noise -
+		// only worth including once there's genuinely more than one disc to distinguish.
+		$isMultiDisc = count( array_unique( array_column( $trackFiles, 'disc' ) ) ) > 1;
 		$xorder = 0;
 		foreach( $trackFiles as $track ) {
 			// Flattened alongside title/disc rather than nested under its own 'tags' key - the
@@ -1044,6 +1096,11 @@ class FisheyeAlbum extends FisheyeImage {
 			// vary per track this time (a various-artists compilation's own per-track ARTIST, a
 			// disc id that only applies within one disc of a multi-disc set) stays here.
 			$trackTagsForData = array_diff_key( $track['tags'], $promotedTagKeys, [ 'TITLE' => true, 'DISC' => true ] );
+			$trackData = [ 'title' => $track['title'], 'track' => $track['track_num'] ];
+			if( $isMultiDisc ) {
+				$trackData['disc'] = $track['disc'];
+			}
+			$trackData['duration'] = $track['duration_ms'];
 			$xrefHash = [
 				'content_id' => $album->mContentId,
 				'item'       => 'track',
@@ -1051,7 +1108,7 @@ class FisheyeAlbum extends FisheyeImage {
 				// see getImageStorageRoot()'s own docblock for why the album's folder itself is
 				// never baked into this.
 				'xkey_ext'   => $track['relative'],
-				'edit'       => json_encode( array_merge( [ 'title' => $track['title'], 'disc' => $track['disc'], 'duration' => $track['duration_ms'] ], $trackTagsForData ) ),
+				'edit'       => json_encode( array_merge( $trackData, $trackTagsForData ) ),
 				'xorder'     => ++$xorder,
 			];
 			$album->storeXref( $xrefHash );
@@ -1060,6 +1117,10 @@ class FisheyeAlbum extends FisheyeImage {
 		foreach( $commonTags as $xrefItem => $value ) {
 			$commonXrefHash = [ 'content_id' => $album->mContentId, 'item' => $xrefItem, 'xkey_ext' => $value ];
 			$album->storeXref( $commonXrefHash );
+		}
+		if( $pCategory !== null && $pCategory !== '' ) {
+			$categoryXrefHash = [ 'content_id' => $album->mContentId, 'item' => 'category', 'xkey_ext' => $pCategory ];
+			$album->storeXref( $categoryXrefHash );
 		}
 
 		$discogsResult = null;
