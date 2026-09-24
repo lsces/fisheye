@@ -63,6 +63,10 @@ if( $gContent->mXrefInfo ) {
 					// credit) is the fallback for a release with no plain ARTIST tag at all - seen
 					// on Classic Composers, which only carries ARTISTS/ARTISTSORT per track.
 					'artist'     => $data['ARTIST'] ?? $data['ARTISTS'] ?? null,
+					// Same TSST (ID3v2) / DISCSUBTITLE (Vorbis) precedence as getDiscTitle() uses
+					// for a box set's own per-disc title - here it's just extra context after the
+					// "Disc X" heading on a single flattened multi-disc album, not the title itself.
+					'discSubtitle' => $data['TSST'] ?? $data['DISCSUBTITLE'] ?? null,
 					'durationMs' => $data['duration'] ?? null,
 					'xorder'     => (int)$xref['xorder'],
 				];
@@ -76,11 +80,16 @@ usort( $tracks, fn( $a, $b ) => $a['xorder'] <=> $b['xorder'] );
 // Grouped by disc here, not detected via a boundary-change check in the template - a single-disc
 // album (the common case) just gets one group and no "Disc 1" heading at all.
 $discs = [];
+$discSubtitles = [];
 foreach( $tracks as $track ) {
 	$discs[$track['disc']][] = $track;
+	if( !empty( $track['discSubtitle'] ) && empty( $discSubtitles[$track['disc']] ) ) {
+		$discSubtitles[$track['disc']] = $track['discSubtitle'];
+	}
 }
 
 $gBitSmarty->assign( 'discs', $discs );
+$gBitSmarty->assign( 'discSubtitles', $discSubtitles );
 $gBitSmarty->assign( 'multiDisc', count( $discs ) > 1 );
 $gBitSmarty->assign( 'artist', $artist );
 $gBitSmarty->assign( 'externalLinks', $externalLinks );

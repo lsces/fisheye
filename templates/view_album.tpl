@@ -41,7 +41,7 @@
 						<h2>{tr}Tracks{/tr}</h2>
 						<audio id="fisheye-track-player" controls style="width:100%;margin-bottom:1em;display:none;"></audio>
 						{foreach from=$discs item=discTracks key=discNum}
-							{if $multiDisc}<h3>{tr}Disc{/tr} {$discNum|escape}</h3>{/if}
+							{if $multiDisc}<h3>{tr}Disc{/tr} {$discNum|escape}{if $discSubtitles.$discNum}: {$discSubtitles.$discNum|escape}{/if}</h3>{/if}
 							<table class="table table-condensed album-track-grid">
 								<thead>
 									<tr>
