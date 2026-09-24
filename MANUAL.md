@@ -191,14 +191,6 @@ path), `xorder` is the episode number. `Track` (album/song) is the same shape, o
 an album — see "Music discography" below for its own `data` JSON shape (`disc`/`track` fields) and
 display template.
 
-**A newly-added `liberty_xref_item` row needs a real `role_id` or it's invisible.**
-`loadXrefInfo()`'s query is permission-filtered by `role_id` — a row inserted directly via `isql`
-with `role_id` left `NULL` (rather than copying a sibling item's value, typically `3`/Registered)
-silently drops out of `allXrefs()` everywhere, with no error anywhere in the chain. Found live: the
-`category` item below worked fine at the raw-data level (row present, value correct) but never
-surfaced in either the Album Details display or any PHP code reading it back via `allXrefs()`,
-until `role_id` was set to match its sibling metadata items.
-
 **Alternate images** (`image` item, `images` group) — extra poster/backdrop artwork for a film,
 album, season, or show, stored as ordinary xref rows rather than a second `LibertyMime` attachment
 row (multiple attachments per `content_id` is not supported on this stack). `xkey_ext` is a bare
