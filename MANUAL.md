@@ -509,9 +509,6 @@ Gallery description text is **plain text**, not wiki/rich text — use `data|esc
   nothing yet walks a whole library unattended.
 - Season-level Plex metadata reload — deliberately not built; Plex's own data model has nothing
   at that level to fetch for this kind of content.
-- A UI for managing the xref vocabulary itself (add/edit groups and items through bitweaver,
-  rather than a hand-authored scheme applied via `LibertyXrefScheme::apply()`) — real, separate
-  work, not started.
 - Music/album/track build-out — see the dedicated "Music discography" section above for current
   shape (category flattening, artist strip layout, track data cleanup). Still not built: a
   whole-library unattended scan (per-artist `load_album.php`/`load_video.php` are discover-and-pick,
