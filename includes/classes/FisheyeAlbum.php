@@ -669,6 +669,39 @@ class FisheyeAlbum extends FisheyeImage {
 	}
 
 	/**
+	 * Stores one already-promoted common-tag xref - 'mb_artistid' gets special-cased, everything
+	 * else is a plain single-row store exactly as before. Confirmed live against a real library
+	 * (Samuel Barber's own gallery, content_id 309, every album mixing ';'-delimited and '/'-
+	 * delimited forms): the underlying MUSICBRAINZ_ARTISTID/MUSICBRAINZ_ALBUMARTISTID tag can bundle
+	 * several different people's MusicBrainz ids into one delimited string on a classical release
+	 * (composer, conductor, orchestra, soloist), not just the one real "artist" the item was designed
+	 * to hold - see THOUGHTS.txt's own 2026-09-26 dump for the fuller diagnosis. Splitting on either
+	 * delimiter and storing one xref row per id (xorder preserving the original list order) turns a
+	 * value that previously either broke a MusicBrainz lookup outright or silently matched the wrong
+	 * thing into a clean, individually-resolvable list - the first one is consistently the same
+	 * person across every album under one composer's own gallery (almost certainly the actual
+	 * composer/primary artist credit, xorder=1), everything after it the varying performers/
+	 * conductors/orchestras. Which id is actually which *role* isn't resolved here at all - that
+	 * needs the ARTIST/ARTISTS/ARTISTSORT tags cross-referenced, not designed yet.
+	 */
+	private function storeCommonTagXref( string $pXrefItem, string $pValue ): void {
+		if( $pXrefItem === 'mb_artistid' && preg_match( '/[;\/]/', $pValue ) ) {
+			$xorder = 0;
+			foreach( preg_split( '/[;\/]/', $pValue ) as $id ) {
+				$id = trim( $id );
+				if( $id === '' ) {
+					continue;
+				}
+				$xrefHash = [ 'content_id' => $this->mContentId, 'item' => $pXrefItem, 'xkey_ext' => $id, 'xorder' => ++$xorder ];
+				$this->storeXref( $xrefHash );
+			}
+			return;
+		}
+		$xrefHash = [ 'content_id' => $this->mContentId, 'item' => $pXrefItem, 'xkey_ext' => $pValue ];
+		$this->storeXref( $xrefHash );
+	}
+
+	/**
 	 * Extract a track's own embedded cover art (FLAC METADATA_BLOCK_PICTURE, MP3 APIC, etc - the
 	 * same "picture" stream ffprobe already reports as a video/mjpeg stream alongside the real
 	 * audio one) into a temp file, for the common single-CD classical case where there's no
@@ -969,8 +1002,7 @@ class FisheyeAlbum extends FisheyeImage {
 			$this->storeXref( $xrefHash );
 		}
 		foreach( $commonTags as $xrefItem => $value ) {
-			$commonXrefHash = [ 'content_id' => $this->mContentId, 'item' => $xrefItem, 'xkey_ext' => $value ];
-			$this->storeXref( $commonXrefHash );
+			$this->storeCommonTagXref( $xrefItem, $value );
 		}
 
 		return [ 'tracks' => count( $trackFiles ) ];
@@ -1116,8 +1148,7 @@ class FisheyeAlbum extends FisheyeImage {
 		}
 
 		foreach( $commonTags as $xrefItem => $value ) {
-			$commonXrefHash = [ 'content_id' => $album->mContentId, 'item' => $xrefItem, 'xkey_ext' => $value ];
-			$album->storeXref( $commonXrefHash );
+			$album->storeCommonTagXref( $xrefItem, $value );
 		}
 		if( $pCategory !== null && $pCategory !== '' ) {
 			$categoryXrefHash = [ 'content_id' => $album->mContentId, 'item' => 'category', 'xkey_ext' => $pCategory ];
