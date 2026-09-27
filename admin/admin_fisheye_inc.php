@@ -31,36 +31,6 @@ $formGalleryGeneral = [
 		'note' => 'This will allow gallery admins to upload and move around images in all galleries. This might cause problems on large sites with many galleries.',
 		'type' => 'checkbox',
 	],
-	// fisheye_disk_storage_root/tvshow_storage_root_am/tvshow_storage_root_nz/plex_db_path/
-	// plex_token below are really fisheyemedia's own settings, not base fisheye's - left here
-	// deliberately rather than moved, since fisheyemedia has no admin settings page of its own
-	// yet (see fisheyemedia.md) and removing them here would mean nowhere left to edit them at
-	// all. Revisit once that page exists.
-	"fisheye_disk_storage_root" => [
-		'label' => 'External Disk Storage Path',
-		'note' => 'Filesystem path an external media library (e.g. a film collection) lives under. Used by mime plugins that register files already on disk without copying them into storage/attachments/. Include a trailing slash.',
-		'type' => 'text',
-	],
-	"fisheye_tvshow_storage_root_am" => [
-		'label' => 'TV Show Storage Path (A-M)',
-		'note' => 'Filesystem path for TV shows whose title starts A-M, if the library is split across two roots. Leave blank if TV shows live under the single External Disk Storage Path above instead. Include a trailing slash.',
-		'type' => 'text',
-	],
-	"fisheye_tvshow_storage_root_nz" => [
-		'label' => 'TV Show Storage Path (N-Z)',
-		'note' => 'Filesystem path for TV shows whose title starts N-Z - see the A-M path above.',
-		'type' => 'text',
-	],
-	"fisheye_plex_db_path" => [
-		'label' => 'Plex Library Database File',
-		'note' => 'Unlike the storage paths above, this is the actual database FILE itself, not its containing folder - the full path ending in com.plexapp.plugins.library.db (e.g. /var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-in Support/Databases/com.plexapp.plugins.library.db). Read-only lookup, for backfilling genre/director/writer/star/rating/duration when importing a film already known to Plex. Leave blank to skip Plex metadata lookup entirely.',
-		'type' => 'text',
-	],
-	"fisheye_plex_token" => [
-		'label' => 'Plex API Token',
-		'note' => 'From Plex\'s own Preferences.xml (PlexOnlineToken) - only needed for external ID lookups (IMDB/TMDB/TheTVDB/MusicBrainz) via Plex\'s local API, since those aren\'t stored in the database itself. Leave blank to skip external-id lookup only (genre/director/etc still works without it).',
-		'type' => 'text',
-	],
 ];
 if( !$gBitSystem->isPackageActive( 'gigaupload' ) ) {
 	$formGalleryGeneral["fisheye_extended_upload_slots"] = [
