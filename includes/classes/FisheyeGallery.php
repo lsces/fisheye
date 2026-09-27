@@ -12,12 +12,8 @@ use Bitweaver\BitBase;
 use Bitweaver\Liberty\LibertyContent;
 
 define( 'FISHEYE_PAGINATION_FIXED_GRID', 'fixed_grid' );
-// Content-type-specific grid variants - same rows*cols grid pagination as FIXED_GRID (see
-// getList()'s layout branch below), own gallery_views/ template so each swaps its floaticon set
-// for the type's own workflow (e.g. film_grid links to load_film.php instead of upload.php).
-define( 'FISHEYE_PAGINATION_FILM_GRID', 'film_grid' );
-define( 'FISHEYE_PAGINATION_PROGRAM_GRID', 'program_grid' );
-define( 'FISHEYE_PAGINATION_MUSIC_GRID', 'music_grid' );
+// Further layouts (content-type-specific grid variants etc.) can be contributed by any package
+// via registerService('fisheye_gallery_layout', ...) - see getAllLayouts() below.
 define( 'FISHEYE_PAGINATION_AUTO_FLOW', 'auto_flow' );
 define( 'FISHEYE_PAGINATION_POSITION_NUMBER', 'position_number' );
 define( 'FISHEYE_PAGINATION_SIMPLE_LIST', 'simple_list' );
@@ -254,7 +250,7 @@ class FisheyeGallery extends FisheyeBase {
 						$whereSql .= " AND floor(item_position)=? ";
 						array_push( $bindVars, $mantissa );
 					}
-				} elseif( in_array( $this->getLayout(), [ FISHEYE_PAGINATION_FIXED_GRID, FISHEYE_PAGINATION_FILM_GRID, FISHEYE_PAGINATION_PROGRAM_GRID, FISHEYE_PAGINATION_MUSIC_GRID ], true ) ) {
+				} elseif( $this->getLayout() === FISHEYE_PAGINATION_FIXED_GRID || isset( self::getGridPaginationTypes()[ $this->getLayout() ] ) ) {
 					$rowCount = ($this->mInfo['rows_per_page'] ?? 3) * ($this->mInfo['cols_per_page'] ?? 3);
 					$offset = $rowCount * ( (int) $pListHash['page'] - 1);
 				} else {
@@ -385,22 +381,19 @@ class FisheyeGallery extends FisheyeBase {
 	public function verifyGalleryData(&$pParamHash) {
 		global $gBitSystem;
 
-		// film_grid/program_grid/music_grid's own row/column counts aren't admin-configurable - the
-		// visual column count (8 across on a wide monitor, folding to 4 then 2) is pure CSS in each
-		// style's own _inc.tpl now, decoupled from cols_per_page entirely (Bootstrap's 12-column
-		// grid doesn't divide evenly into eighths anyway). rows_per_page/cols_per_page still get set
-		// here regardless - images_per_page (= rows*cols) is what the existing shared pagination
-		// mechanism reads (film_grid/program_grid trimmed to 3*8=24, Lester: leaves room top/bottom
-		// for extra features). music_grid keeps 4*8=32 stored too even though its own template
-		// (fisheye_music_grid_inc.tpl) no longer paginates at all - it renders the Plex-style
-		// per-category strip layout instead (FisheyeGallery::getCategorizedItems()), loading every
-		// item in one go - these values are just inert leftovers from before that redesign now.
-		if( in_array( $pParamHash['gallery_pagination'] ?? null, [ FISHEYE_PAGINATION_FILM_GRID, FISHEYE_PAGINATION_PROGRAM_GRID ], true ) ) {
-			$pParamHash['rows_per_page'] = 3;
-			$pParamHash['cols_per_page'] = 8;
-		} elseif( ( $pParamHash['gallery_pagination'] ?? null ) === FISHEYE_PAGINATION_MUSIC_GRID ) {
-			$pParamHash['rows_per_page'] = 4;
-			$pParamHash['cols_per_page'] = 8;
+		// A registered grid layout's own row/column counts aren't admin-configurable - the visual
+		// column count (e.g. 8 across on a wide monitor, folding to 4 then 2) is pure CSS in each
+		// style's own _inc.tpl, decoupled from cols_per_page entirely (Bootstrap's 12-column grid
+		// doesn't divide evenly into eighths anyway). rows_per_page/cols_per_page still get set
+		// here regardless, since images_per_page (= rows*cols) is what the shared pagination
+		// mechanism reads - some registered layouts may not actually paginate with these values at
+		// all (rendering everything in one go some other way instead), in which case the stored
+		// numbers are just inert leftovers; that's the contributing package's own concern, not
+		// something base fisheye needs to know about.
+		$gridPagination = self::getGridPaginationTypes()[ $pParamHash['gallery_pagination'] ?? null ] ?? null;
+		if( $gridPagination ) {
+			$pParamHash['rows_per_page'] = $gridPagination['rows'];
+			$pParamHash['cols_per_page'] = $gridPagination['cols'];
 		} else {
 			if (empty($pParamHash['rows_per_page'])) {
 				$pParamHash['rows_per_page'] = $gBitSystem->getConfig('fisheye_gallery_default_rows_per_page', !empty($this->mInfo['rows_per_page']) ? $this->mInfo['rows_per_page'] : FISHEYE_DEFAULT_ROWS_PER_PAGE);
@@ -666,17 +659,78 @@ class FisheyeGallery extends FisheyeBase {
 	}
 
 	public static function getAllLayouts() {
-		return [
+		global $gLibertySystem;
+		$layouts = [
 			FISHEYE_PAGINATION_GALLERIFFIC     => 'Galleriffic',
 			FISHEYE_PAGINATION_FIXED_GRID      => 'Fixed Grid',
-			FISHEYE_PAGINATION_FILM_GRID       => 'Film Grid',
-			FISHEYE_PAGINATION_PROGRAM_GRID    => 'TV Show Grid',
-			FISHEYE_PAGINATION_MUSIC_GRID      => 'Music Grid',
 			FISHEYE_PAGINATION_AUTO_FLOW       => 'Auto-Flow Images',
 			FISHEYE_PAGINATION_POSITION_NUMBER => 'Image Order Page Number',
 			FISHEYE_PAGINATION_SIMPLE_LIST     => 'Simple List',
 //			FISHEYE_PAGINATION_MATTEO		   => 'Matteo',
 		];
+		// Any package can contribute further layouts (content-type-specific grid variants etc.)
+		// via registerService('fisheye_gallery_layout', $packageName, ['layouts' => [...]])
+		foreach( $gLibertySystem->getServiceValues( 'layouts' ) as $extraLayouts ) {
+			$layouts += $extraLayouts;
+		}
+		return $layouts;
+	}
+
+	/**
+	 * Which layout values (beyond FIXED_GRID itself) use rows*cols grid pagination math, and
+	 * what their row/col counts are - contributed by whichever package registered them via
+	 * registerService('fisheye_gallery_layout', ..., ['grid_pagination' => [...]]). Shared by
+	 * loadImages() (grid-vs-not dispatch) and verifyGalleryData() (setting rows_per_page/
+	 * cols_per_page) so neither has to know any specific layout's name - only whether it's been
+	 * registered as grid-shaped at all.
+	 *
+	 * @return array<string, array{rows:int, cols:int}>
+	 */
+	protected static function getGridPaginationTypes(): array {
+		global $gLibertySystem;
+		$gridPagination = [];
+		foreach( $gLibertySystem->getServiceValues( 'grid_pagination' ) as $extra ) {
+			$gridPagination += $extra;
+		}
+		return $gridPagination;
+	}
+
+	/**
+	 * Which package registered each non-built-in layout value, keyed by layout - so
+	 * getGalleryViewsPath() can find a registered layout's render templates under that
+	 * package's own gallery_views/ folder rather than assuming fisheye's own. Services are
+	 * keyed by service name (not package), so 'package' and 'layouts' are pulled from the same
+	 * registration entry and combined here.
+	 *
+	 * @return array<string, string> layout value => package name
+	 */
+	protected static function getExtensionLayoutPackages(): array {
+		global $gLibertySystem;
+		$packageByService = $gLibertySystem->getServiceValues( 'package' );
+		$ret = [];
+		foreach( $gLibertySystem->getServiceValues( 'layouts' ) as $serviceName => $layouts ) {
+			if( $package = $packageByService[$serviceName] ?? null ) {
+				foreach( array_keys( $layouts ) as $layoutValue ) {
+					$ret[$layoutValue] = $package;
+				}
+			}
+		}
+		return $ret;
+	}
+
+	/**
+	 * Base path to look for this gallery's own render template under gallery_views/ - the
+	 * package that registered the current layout (getExtensionLayoutPackages()), or fisheye
+	 * itself for any of the built-in layouts. Lets view_gallery.tpl's own include stay generic
+	 * rather than hardcoding FISHEYE_PKG_PATH for every layout regardless of which package's
+	 * gallery_views/ folder actually holds it.
+	 *
+	 * @return string
+	 */
+	public function getGalleryViewsPath(): string {
+		$package = self::getExtensionLayoutPackages()[ $this->getLayout() ] ?? FISHEYE_PKG_NAME;
+		$pathConst = strtoupper( $package ).'_PKG_PATH';
+		return defined( $pathConst ) ? constant( $pathConst ) : FISHEYE_PKG_PATH;
 	}
 
 	/**
@@ -1224,194 +1278,6 @@ class FisheyeGallery extends FisheyeBase {
 			readfile($filename);
 			unlink($filename);
 		}
-	}
-
-	/**
-	 * Whether this artist/composer gallery's own folder under Music/ has at least one album folder
-	 * not yet registered - cheap short-circuit (stops at the first match) version of load_album.php's
-	 * own candidate scan, so music_gallery_icons_inc.tpl can hide "Load Album" entirely once there's
-	 * genuinely nothing left, rather than showing a button that always just says "nothing to load"
-	 * (Lester, 2026-09-24). Same folder-resolution and category-flattening logic as that page - see
-	 * its own docblock.
-	 *
-	 * @return bool
-	 */
-	public function hasUnloadedAlbumCandidates(): bool {
-		global $gBitDb;
-		$root = \Bitweaver\Liberty\mime_film_get_storage_root();
-		if( empty( $root ) ) {
-			return false;
-		}
-		$musicDir = $root.'Music/';
-		$galleryTitle = $this->getTitle();
-		$artistDir = null;
-		if( is_dir( $musicDir.$galleryTitle.'/' ) ) {
-			$artistDir = $musicDir.$galleryTitle.'/';
-		} else {
-			$parentGalleries = $this->getParentGalleries();
-			$parentTitle = $parentGalleries ? current( $parentGalleries )['title'] : null;
-			if( $parentTitle && is_dir( $musicDir.$parentTitle.'/'.$galleryTitle.'/' ) ) {
-				$artistDir = $musicDir.$parentTitle.'/'.$galleryTitle.'/';
-			}
-		}
-		if( !$artistDir ) {
-			return false;
-		}
-
-		$checkFolder = function( string $pFolder, string $pTitle ) use ( $gBitDb ): bool {
-			if( str_starts_with( basename( $pFolder ), '.' ) || !FisheyeAlbum::folderHasTracks( $pFolder ) ) {
-				return false;
-			}
-			return !$gBitDb->getOne(
-				"SELECT content_id FROM liberty_content WHERE content_type_guid = 'fisheyealbum' AND title = ?",
-				[ $pTitle ]
-			);
-		};
-		foreach( scandir( $artistDir ) ?: [] as $entry ) {
-			if( str_starts_with( $entry, '.' ) || !is_dir( $artistDir.$entry ) ) {
-				continue;
-			}
-			if( FisheyeAlbum::isCategoryFolder( $entry ) ) {
-				foreach( scandir( $artistDir.$entry.'/' ) ?: [] as $categoryEntry ) {
-					if( str_starts_with( $categoryEntry, '.' ) || !is_dir( $artistDir.$entry.'/'.$categoryEntry ) ) {
-						continue;
-					}
-					if( $checkFolder( $artistDir.$entry.'/'.$categoryEntry.'/', $categoryEntry ) ) {
-						return true;
-					}
-				}
-				continue;
-			}
-			if( $checkFolder( $artistDir.$entry.'/', $entry ) ) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	/**
-	 * Same idea as hasUnloadedAlbumCandidates(), for this gallery's own Videos/ subfolder (see
-	 * load_video.php's own docblock for the folder shape).
-	 *
-	 * @return bool
-	 */
-	public function hasUnloadedVideoCandidates(): bool {
-		global $gBitDb;
-		$root = \Bitweaver\Liberty\mime_film_get_storage_root();
-		if( empty( $root ) ) {
-			return false;
-		}
-		$musicDir = $root.'Music/';
-		$galleryTitle = $this->getTitle();
-		$artistRelative = null;
-		if( is_dir( $musicDir.$galleryTitle.'/' ) ) {
-			$artistRelative = 'Music/'.$galleryTitle.'/';
-		} else {
-			$parentGalleries = $this->getParentGalleries();
-			$parentTitle = $parentGalleries ? current( $parentGalleries )['title'] : null;
-			if( $parentTitle && is_dir( $musicDir.$parentTitle.'/'.$galleryTitle.'/' ) ) {
-				$artistRelative = 'Music/'.$parentTitle.'/'.$galleryTitle.'/';
-			}
-		}
-		$videosDir = $artistRelative ? $root.$artistRelative.'Videos/' : null;
-		if( !$videosDir || !is_dir( $videosDir ) ) {
-			return false;
-		}
-
-		$videoExtensions = [ 'mkv', 'mp4', 'm4v', 'avi' ];
-		$checkFile = function( string $pRelative ) use ( $gBitDb, $videoExtensions ): bool {
-			$ext = strtolower( pathinfo( $pRelative, PATHINFO_EXTENSION ) );
-			if( !in_array( $ext, $videoExtensions, true ) ) {
-				return false;
-			}
-			return !$gBitDb->getOne(
-				"SELECT la.content_id FROM liberty_attachments la INNER JOIN liberty_files lf ON lf.file_id = la.foreign_id WHERE la.attachment_plugin_guid = 'mimefilm' AND lf.file_name = ?",
-				[ $pRelative ]
-			);
-		};
-		foreach( scandir( $videosDir ) ?: [] as $entry ) {
-			$fullPath = $videosDir.$entry;
-			if( is_file( $fullPath ) ) {
-				if( $checkFile( $artistRelative.'Videos/'.$entry ) ) {
-					return true;
-				}
-			} elseif( is_dir( $fullPath ) && !str_starts_with( $entry, '.' ) ) {
-				foreach( scandir( $fullPath ) ?: [] as $subEntry ) {
-					if( is_file( $fullPath.'/'.$subEntry ) && $checkFile( $artistRelative.'Videos/'.$entry.'/'.$subEntry ) ) {
-						return true;
-					}
-				}
-			}
-		}
-		return false;
-	}
-
-	/**
-	 * Groups this gallery's own items for the artist-page "strip" layout (Plex-style, one row
-	 * per discography category) that fisheye_music_grid_inc.tpl renders instead of a single
-	 * paginated grid. Loads every item in one call (see the large max_records below) since
-	 * strips flow down the page rather than paging, then buckets each FisheyeAlbum item by its
-	 * own 'category' xref (FISHEYEALBUM_CATEGORY_FOLDER_NAMES order) - a single bulk query, not
-	 * one per item. A nested FisheyeGallery item (a box set or the "Videos" subgallery - see
-	 * FisheyeAlbum::createSubGallery()/findOrCreateNestedGallery(), both addItem() straight into
-	 * this gallery the same as a plain album) carries no category of its own, so those land in a
-	 * trailing 'collections' bucket instead. The 'other' bucket (last of
-	 * FISHEYEALBUM_CATEGORY_FOLDER_NAMES) also catches any album whose category doesn't match a
-	 * known name - Lester: every album registered through the current flow always gets a real
-	 * category, so in practice this should stay empty.
-	 *
-	 * @return array<string, LibertyContent[]> keyed by category, empty groups dropped, fixed
-	 *         FISHEYEALBUM_CATEGORY_FOLDER_NAMES order with 'collections' last
-	 */
-	public function getCategorizedItems(): array {
-		// loadImages() takes its param by reference - can't pass the array literal directly.
-		$listHash = [ 'page' => -1, 'offset' => 0, 'max_records' => 1000 ];
-		$this->loadImages( $listHash );
-
-		$groups = [];
-		foreach( FISHEYEALBUM_CATEGORY_FOLDER_NAMES as $category ) {
-			$groups[$category] = [];
-		}
-		$collections = [];
-
-		if( $this->mItems ) {
-			$albumContentIds = [];
-			foreach( $this->mItems as $contentId => $item ) {
-				if( $item->isContentType( 'fisheyealbum' ) ) {
-					$albumContentIds[] = $contentId;
-				}
-			}
-
-			$categoryMap = [];
-			if( $albumContentIds ) {
-				$placeholders = implode( ',', array_fill( 0, count( $albumContentIds ), '?' ) );
-				$rows = $this->mDb->getAll(
-					"SELECT content_id, xkey_ext FROM `".BIT_DB_PREFIX."liberty_xref` WHERE item = 'category' AND content_id IN ( $placeholders )",
-					$albumContentIds
-				);
-				foreach( $rows as $row ) {
-					$categoryMap[$row['content_id']] = strtolower( $row['xkey_ext'] );
-				}
-			}
-
-			foreach( $this->mItems as $contentId => $item ) {
-				if( $item->isContentType( 'fisheyegallery' ) ) {
-					$collections[$contentId] = $item;
-					continue;
-				}
-				$category = $categoryMap[$contentId] ?? 'other';
-				if( !isset( $groups[$category] ) ) {
-					$category = 'other';
-				}
-				$groups[$category][$contentId] = $item;
-			}
-		}
-
-		$groups = array_filter( $groups );
-		if( $collections ) {
-			$groups['collections'] = $collections;
-		}
-		return $groups;
 	}
 
 	public static function getServiceIcon() {

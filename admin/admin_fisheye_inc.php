@@ -31,6 +31,11 @@ $formGalleryGeneral = [
 		'note' => 'This will allow gallery admins to upload and move around images in all galleries. This might cause problems on large sites with many galleries.',
 		'type' => 'checkbox',
 	],
+	// fisheye_disk_storage_root/tvshow_storage_root_am/tvshow_storage_root_nz/plex_db_path/
+	// plex_token below are really fisheyemedia's own settings, not base fisheye's - left here
+	// deliberately rather than moved, since fisheyemedia has no admin settings page of its own
+	// yet (see fisheyemedia.md) and removing them here would mean nowhere left to edit them at
+	// all. Revisit once that page exists.
 	"fisheye_disk_storage_root" => [
 		'label' => 'External Disk Storage Path',
 		'note' => 'Filesystem path an external media library (e.g. a film collection) lives under. Used by mime plugins that register files already on disk without copying them into storage/attachments/. Include a trailing slash.',

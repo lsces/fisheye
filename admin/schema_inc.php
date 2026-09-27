@@ -100,17 +100,10 @@ if( defined( 'RSS_PKG_NAME' )) {
 $gBitInstaller->registerContentObjects( FISHEYE_PKG_NAME, [
 	'FisheyeGallery'=>FISHEYE_PKG_CLASS_PATH.'FisheyeGallery.php',
 	'FisheyeImage'=>FISHEYE_PKG_CLASS_PATH.'FisheyeImage.php',
-	'FisheyeFilm'=>FISHEYE_PKG_CLASS_PATH.'FisheyeFilm.php',
-	'FisheyeSeason'=>FISHEYE_PKG_CLASS_PATH.'FisheyeSeason.php',
-	'FisheyeAlbum'=>FISHEYE_PKG_CLASS_PATH.'FisheyeAlbum.php',
 ] );
 
 // Requirements
 $gBitInstaller->registerRequirements( FISHEYE_PKG_NAME, [
 	'liberty' => [ 'min' => '5.0.0' ],
 ]);
-
-// No liberty_xref_group/liberty_xref_item defaults for FisheyeFilm/Season/Album (or the earlier
-// 'fisheyeimage'-level genre/director/etc set) - not a generic feature every fisheye install
-// should get, applied privately per-site instead via LibertyXrefScheme::apply() (liberty).
 
