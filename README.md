@@ -29,6 +29,4 @@ See [`MANUAL.md`](MANUAL.md) for the full current architecture.
 - An `image_processor` configured (`gd` or `imagick`) for thumbnail generation
 
 Since this package isn't through a stable install/upgrade cycle yet, see `MANUAL.md` in this repo
-for the current schema-deployment approach if you're installing it fresh (`CLAUDE.md` is a dated
-development log, not a reference — useful for *why* something's built the way it is, not *how* to
-set it up).
+for the current schema-deployment approach if you're installing it fresh.
