@@ -764,10 +764,20 @@ class FisheyeGallery extends FisheyeBase {
 	 */
 	public static function getTopGalleryId( string $pTitle ): ?int {
 		global $gBitDb;
+		// A plain title match alone is ambiguous - nothing stops a show/collection somewhere else
+		// in the tree from having its own nested gallery that happens to share the same title
+		// (found live: a "Music" bonus-features gallery nested under an unrelated show, alongside
+		// the real top-level "Music" pool). The real top-level pool is never itself linked as an
+		// item under another gallery, so excluding anything that IS filters out that ambiguity -
+		// without this, getOne() had no ordering to prefer one match over the other and could
+		// silently return the wrong gallery's id.
 		$galleryId = $gBitDb->getOne(
 			"SELECT fg.gallery_id FROM `".BIT_DB_PREFIX."fisheye_gallery` fg
 			 JOIN `".BIT_DB_PREFIX."liberty_content` lc ON lc.content_id = fg.content_id
-			 WHERE lc.title = ?",
+			 WHERE lc.title = ? AND NOT EXISTS (
+			 	SELECT 1 FROM `".BIT_DB_PREFIX."fisheye_gallery_image_map` fgim
+			 	WHERE fgim.item_content_id = fg.content_id
+			 )",
 			[ $pTitle ]
 		);
 		return $galleryId ? (int)$galleryId : null;
