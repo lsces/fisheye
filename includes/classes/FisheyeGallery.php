@@ -390,7 +390,7 @@ class FisheyeGallery extends FisheyeBase {
 		// all (rendering everything in one go some other way instead), in which case the stored
 		// numbers are just inert leftovers; that's the contributing package's own concern, not
 		// something base fisheye needs to know about.
-		$gridPagination = self::getGridPaginationTypes()[ $pParamHash['gallery_pagination'] ?? null ] ?? null;
+		$gridPagination = self::getGridPaginationTypes()[ $pParamHash['gallery_pagination'] ?? '' ] ?? null;
 		if( $gridPagination ) {
 			$pParamHash['rows_per_page'] = $gridPagination['rows'];
 			$pParamHash['cols_per_page'] = $gridPagination['cols'];
