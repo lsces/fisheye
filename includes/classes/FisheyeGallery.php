@@ -784,65 +784,51 @@ class FisheyeGallery extends FisheyeBase {
 	}
 
 	/**
-	 * Find (by title) or create a gallery nested one level inside a named parent gallery - e.g. a
+	 * Find (by title) or create a gallery nested one level inside a given parent gallery - e.g. a
 	 * "Videos" gallery under an artist/composer's own top-level gallery, or a box set/discography-
 	 * category's own gallery under its artist (see FisheyeAlbum::createSubGallery(), the original
 	 * of this same shape, generalized here since nesting isn't a music-only concern - any
 	 * FisheyeGallery can hold another, see addItem()'s own docblock). Deliberately cheap - just the
 	 * gallery row, no scanning or importing of whatever will eventually live inside it.
 	 *
-	 * @param string $pTitle              the nested gallery's own title
-	 * @param string $pParentGalleryTitle the existing gallery this one gets linked into
+	 * The parent is passed by content_id, not title, and both lookups match any gallery subclass
+	 * (anything with a fisheye_gallery row), not just content_type_guid 'fisheyegallery' - a
+	 * subclassed parent was otherwise never found, leaving the new gallery orphaned at top level.
+	 *
+	 * @param string      $pTitle             the nested gallery's own title
+	 * @param int         $pParentContentId   content_id of the existing gallery this one is linked into
+	 * @param string|null $pGalleryPagination layout to set at creation (see the store() note below)
+	 * @param string      $pGalleryClass      class to create a new gallery as - a FisheyeGallery
+	 *                                        subclass, so a package's own layouts can rely on its
+	 *                                        own gallery methods being present
 	 * @return array 'gallery_id'=>int, plus 'already'=>true if it already existed, or
 	 *               'error'=>string on failure
 	 */
-	public static function findOrCreateNestedGallery( string $pTitle, string $pParentGalleryTitle, ?string $pGalleryPagination = null ): array {
+	public static function findOrCreateNestedGallery( string $pTitle, int $pParentContentId, ?string $pGalleryPagination = null, string $pGalleryClass = self::class ): array {
 		global $gBitDb;
-
-		$parentGalleryContentId = $gBitDb->getOne(
-			"SELECT lc.content_id FROM `".BIT_DB_PREFIX."liberty_content` lc INNER JOIN `".BIT_DB_PREFIX."fisheye_gallery` fg ON fg.content_id = lc.content_id WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ?",
-			[ $pParentGalleryTitle ]
-		);
 
 		// Scoped to an existing child of THIS parent, not a bare title match - "Compilation"/
 		// "Studio"/"Live"/"Videos" are common enough names that two different artists genuinely
-		// having their own is the normal case, not a collision to dedupe. A bare title lookup here
-		// found live: every artist's own "Compilation"/"Studio"/"Live" folder was silently reusing
-		// whichever one got created first (Bob Marley's, in that case), merging unrelated artists'
-		// albums into it instead of ever creating their own.
-		$existingRow = null;
-		if( $parentGalleryContentId ) {
-			$existingRow = $gBitDb->getRow(
-				"SELECT lc.content_id, fg.gallery_id FROM `".BIT_DB_PREFIX."liberty_content` lc
-				 INNER JOIN `".BIT_DB_PREFIX."fisheye_gallery` fg ON fg.content_id = lc.content_id
-				 INNER JOIN `".BIT_DB_PREFIX."fisheye_gallery_image_map` map ON map.item_content_id = lc.content_id
-				 WHERE lc.content_type_guid = 'fisheyegallery' AND lc.title = ? AND map.gallery_content_id = ?",
-				[ $pTitle, $parentGalleryContentId ]
-			);
-		}
+		// having their own is the normal case, not a collision to dedupe.
+		$existingRow = $gBitDb->getRow(
+			"SELECT lc.content_id, fg.gallery_id FROM `".BIT_DB_PREFIX."liberty_content` lc
+			 INNER JOIN `".BIT_DB_PREFIX."fisheye_gallery` fg ON fg.content_id = lc.content_id
+			 INNER JOIN `".BIT_DB_PREFIX."fisheye_gallery_image_map` map ON map.item_content_id = lc.content_id
+			 WHERE lc.title = ? AND map.gallery_content_id = ?",
+			[ $pTitle, $pParentContentId ]
+		);
 		if( $existingRow ) {
-			// 'gallery_id' is fisheye_gallery's own PK (fg.gallery_id) - the one every existing
-			// gallery-URL builder (load_album.php's bootstrap, music_gallery_icons_inc.tpl,
-			// getDisplayUrlFromHash()) already expects under this exact key. Returning content_id
-			// here instead (an easy mistake - content_id is the "primary currency" everywhere else
-			// in this feature) broke the very "Load its contents now" link this method exists to
-			// support: found live sending Whitesnake's own Compilation link to whatever unrelated
-			// gallery happened to share that number as its real gallery_id (or nothing at all, which
-			// degraded further into showing Music/'s own top-level folder as candidates - see
-			// load_album.php's own docblock for that failure mode).
+			// 'gallery_id' is fisheye_gallery's own PK (fg.gallery_id) - the one every gallery-URL
+			// builder (getDisplayUrlFromHash() etc.) expects under this key, not content_id.
 			return [ 'gallery_id' => $existingRow['gallery_id'], 'content_id' => $existingRow['content_id'], 'already' => true ];
 		}
 
-		$gallery = new FisheyeGallery();
+		$gallery = new $pGalleryClass();
 		$storeHash = [ 'title' => $pTitle ];
 		if( $pGalleryPagination !== null ) {
 			// Must be set in this same store() call, not a storePreference() bolted on afterward -
 			// verifyGalleryData() (called from inside store()) only forces rows_per_page/cols_per_page
-			// to the fixed 4*8 a grid style needs when gallery_pagination is already present in the
-			// param hash it's checking. A gallery created without it here, then switched to music_grid
-			// via a separate storePreference() call, kept whatever generic default rows/cols it got at
-			// creation - found live: a category gallery only showed 2 rows of 8 instead of 4 until
-			// manually re-saved via the edit form (which does pass gallery_pagination on save).
+			// to the fixed grid size when gallery_pagination is already present in the param hash.
 			$storeHash['gallery_pagination'] = $pGalleryPagination;
 		}
 		if( !$gallery->store( $storeHash ) ) {
@@ -850,11 +836,9 @@ class FisheyeGallery extends FisheyeBase {
 		}
 		$galleryContentId = $gallery->mContentId;
 
-		if( $parentGalleryContentId ) {
-			$parentGallery = new FisheyeGallery( null, $parentGalleryContentId );
-			$parentGallery->load();
-			$parentGallery->addItem( $galleryContentId );
-		}
+		$parentGallery = new FisheyeGallery( null, $pParentContentId );
+		$parentGallery->load();
+		$parentGallery->addItem( $galleryContentId );
 
 		return [ 'gallery_id' => $gallery->mGalleryId, 'content_id' => $galleryContentId ];
 	}
