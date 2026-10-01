@@ -794,66 +794,6 @@ class FisheyeGallery extends FisheyeBase {
 	}
 
 	/**
-	 * Find (by title) or create a gallery nested one level inside a given parent gallery - e.g. a
-	 * "Videos" gallery under an artist/composer's own top-level gallery, or a box set/discography-
-	 * category's own gallery under its artist (see FisheyeAlbum::createSubGallery(), the original
-	 * of this same shape, generalized here since nesting isn't a music-only concern - any
-	 * FisheyeGallery can hold another, see addItem()'s own docblock). Deliberately cheap - just the
-	 * gallery row, no scanning or importing of whatever will eventually live inside it.
-	 *
-	 * The parent is passed by content_id, not title, and both lookups match any gallery subclass
-	 * (anything with a fisheye_gallery row), not just content_type_guid 'fisheyegallery' - a
-	 * subclassed parent was otherwise never found, leaving the new gallery orphaned at top level.
-	 *
-	 * @param string      $pTitle             the nested gallery's own title
-	 * @param int         $pParentContentId   content_id of the existing gallery this one is linked into
-	 * @param string|null $pGalleryPagination layout to set at creation (see the store() note below)
-	 * @param string      $pGalleryClass      class to create a new gallery as - a FisheyeGallery
-	 *                                        subclass, so a package's own layouts can rely on its
-	 *                                        own gallery methods being present
-	 * @return array 'gallery_id'=>int, plus 'already'=>true if it already existed, or
-	 *               'error'=>string on failure
-	 */
-	public static function findOrCreateNestedGallery( string $pTitle, int $pParentContentId, ?string $pGalleryPagination = null, string $pGalleryClass = self::class ): array {
-		global $gBitDb;
-
-		// Scoped to an existing child of THIS parent, not a bare title match - "Compilation"/
-		// "Studio"/"Live"/"Videos" are common enough names that two different artists genuinely
-		// having their own is the normal case, not a collision to dedupe.
-		$existingRow = $gBitDb->getRow(
-			"SELECT lc.content_id, fg.gallery_id FROM `".BIT_DB_PREFIX."liberty_content` lc
-			 INNER JOIN `".BIT_DB_PREFIX."fisheye_gallery` fg ON fg.content_id = lc.content_id
-			 INNER JOIN `".BIT_DB_PREFIX."fisheye_gallery_image_map` map ON map.item_content_id = lc.content_id
-			 WHERE lc.title = ? AND map.gallery_content_id = ?",
-			[ $pTitle, $pParentContentId ]
-		);
-		if( $existingRow ) {
-			// 'gallery_id' is fisheye_gallery's own PK (fg.gallery_id) - the one every gallery-URL
-			// builder (getDisplayUrlFromHash() etc.) expects under this key, not content_id.
-			return [ 'gallery_id' => $existingRow['gallery_id'], 'content_id' => $existingRow['content_id'], 'already' => true ];
-		}
-
-		$gallery = new $pGalleryClass();
-		$storeHash = [ 'title' => $pTitle ];
-		if( $pGalleryPagination !== null ) {
-			// Must be set in this same store() call, not a storePreference() bolted on afterward -
-			// verifyGalleryData() (called from inside store()) only forces rows_per_page/cols_per_page
-			// to the fixed grid size when gallery_pagination is already present in the param hash.
-			$storeHash['gallery_pagination'] = $pGalleryPagination;
-		}
-		if( !$gallery->store( $storeHash ) ) {
-			return [ 'error' => implode( '; ', $gallery->mErrors ) ];
-		}
-		$galleryContentId = $gallery->mContentId;
-
-		$parentGallery = new FisheyeGallery( null, $pParentContentId );
-		$parentGallery->load();
-		$parentGallery->addItem( $galleryContentId );
-
-		return [ 'gallery_id' => $gallery->mGalleryId, 'content_id' => $galleryContentId ];
-	}
-
-	/**
 	* Function that returns link to display a piece of content
 	* @param array pGalleryId id of gallery to link
 	* @return string the url to display the gallery.

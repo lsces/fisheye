@@ -227,8 +227,7 @@ if( $gBitSystem->isFeatureActive( 'fisheye_show_all_to_admins' ) && $gBitUser->h
 }
 $galleryList = $gContent->getList( $listHash );
 // Same-titled galleries under different parents are now a real, expected shape (e.g. every
-// artist's own "Compilation"/"Studio"/"Live" category gallery, see
-// FisheyeGallery::findOrCreateNestedGallery()'s own docblock) - a bare title list here would be
+// artist's own "Compilation"/"Studio"/"Live" nested gallery) - a bare title list here would be
 // genuinely ambiguous (found live: Bob Marley's and Diana Ross's own "Compilation" galleries
 // were indistinguishable in this picker), so each row gets its own immediate parent
 // title as a qualifier, same one-level lookup load_album.php's own folder resolution already uses.
