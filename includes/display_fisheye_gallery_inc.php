@@ -31,6 +31,7 @@ switch( $gContent->getLayout() ) {
 		break;
 }
 
+$gContent->prepDisplayList( $listHash );
 $gContent->loadImages( $listHash );
 $gContent->loadParentGalleries();
 $gContent->addHit();

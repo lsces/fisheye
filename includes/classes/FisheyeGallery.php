@@ -658,6 +658,16 @@ class FisheyeGallery extends FisheyeBase {
 		return $this->getPreference( 'gallery_pagination', $gBitSystem->getConfig( 'default_gallery_pagination', FISHEYE_PAGINATION_GALLERIFFIC ) );
 	}
 
+	/**
+	 * Last chance to adjust the list hash display_fisheye_gallery_inc.php passes to loadImages()
+	 * for this gallery's own page - e.g. a subclass whose layout shows every item at once sets
+	 * page/max_records to -1 here (as galleriffic does inline there). No-op by default.
+	 *
+	 * @param array $pListHash
+	 */
+	public function prepDisplayList( array &$pListHash ): void {
+	}
+
 	public static function getAllLayouts() {
 		global $gLibertySystem;
 		$layouts = [
