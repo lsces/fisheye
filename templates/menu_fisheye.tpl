@@ -23,5 +23,10 @@
 	{*if $gBitUser->hasPermission('p_fisheye_admin')}
 		<li><a class="item" href="{$smarty.const.FISHEYE_PKG_URL}admin/admin_imagegals.php">{tr}Admin Galleries{/tr}</a></li>
 	{/if*}
+	{* Sections contributed by other packages through the generic 'fisheye_menu_tpl' service -
+	   fisheye itself names none of them. *}
+	{foreach $gLibertySystem->getServiceValues( 'fisheye_menu_tpl' )|default:[] as $fisheyeMenuTpl}
+		{include file=$fisheyeMenuTpl}
+	{/foreach}
 </ul>
 {/strip}
