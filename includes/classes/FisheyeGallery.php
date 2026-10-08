@@ -27,6 +27,22 @@ define( 'FISHEYE_PAGINATION_GALLERIFFIC', 'galleriffic' );
  */
 #[\AllowDynamicProperties]
 class FisheyeGallery extends FisheyeBase {
+
+	/**
+	 * The ", <column> <direction>" tail of an item query's ORDER BY: a `sort_mode` in the request (title, created, last_modified, hits or
+	 * event_time, _asc or _desc - e.g. view.php?gallery_id=1&sort_mode=title_asc) if it is one of those, else the site's default sort order
+	 * (fisheye_gallery_default_sort_mode), else the order the items were added.
+	 */
+	private function getItemOrderSql(): string {
+		global $gBitSystem;
+		$requested = (string)( $_REQUEST['sort_mode'] ?? '' );
+		if( preg_match( '/^(title|created|last_modified|hits|event_time)_(asc|desc)$/', $requested ) ) {
+			return ", lc.`".substr( $requested, 0, strrpos( $requested, '_' ) )."` ".strtoupper( substr( $requested, strrpos( $requested, '_' ) + 1 ) );
+		}
+		return $gBitSystem->isFeatureActive( 'fisheye_gallery_default_sort_mode' )
+			? ", ".$this->mDb->convertSortmode( $gBitSystem->getConfig( 'fisheye_gallery_default_sort_mode' ) )
+			: ", fgim.`item_content_id`";
+	}
 	public $mGalleryId;		// fisheye_gallery.gallery_id
 	public $mItems;			// Array of FisheyeImage class instances which belong to this gallery
 	public $mPaginationLookup;
@@ -233,9 +249,7 @@ class FisheyeGallery extends FisheyeBase {
 			$rowCount = 0;
 			$this->getServicesSql( 'content_list_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
 
-			$orderSql = $gBitSystem->isFeatureActive( 'fisheye_gallery_default_sort_mode' )
-				? ", ".$this->mDb->convertSortmode( $gBitSystem->getConfig( 'fisheye_gallery_default_sort_mode' ) )
-				: ", fgim.`item_content_id`";
+			$orderSql = $this->getItemOrderSql();
 
 			// load for just a single page
 			if( $pListHash['page'] != -1 ) {
@@ -300,9 +314,7 @@ class FisheyeGallery extends FisheyeBase {
 			$rows = $offset = null;
 			$this->getServicesSql( 'content_list_sql_function', $selectSql, $joinSql, $whereSql, $bindVars );
 
-			$orderSql = $gBitSystem->isFeatureActive( 'fisheye_gallery_default_sort_mode' )
-				? ", ".$this->mDb->convertSortmode( $gBitSystem->getConfig( 'fisheye_gallery_default_sort_mode' ) )
-				: ", fgim.`item_content_id`";
+			$orderSql = $this->getItemOrderSql();
 
 			$this->mItems = [];
 

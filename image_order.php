@@ -38,6 +38,19 @@ if (!empty($_REQUEST['cancel'])) {
 	header( 'Location: '.$gContent->getDisplayUrl() );
 	die;
 } elseif (!empty($_REQUEST['save_order'])) {
+	// A big gallery (a few hundred films) is saved item by item - give it the time it needs.
+	set_time_limit( 300 );
+	// The whole gallery, not just the first page of it: the reorder and the 'did the whole form arrive' check both need every item.
+	$loadHash = [ 'page' => -1, 'max_records' => -1, 'refresh' => true ];
+	$gContent->loadImages( $loadHash );
+	// PHP drops every form field past max_input_vars without a word, so a long gallery used to be saved for its first few dozen items only.
+	// A form that arrives short is refused whole rather than half saved; the 'reorder everything' options below do not depend on the form.
+	$postedItems = count( (array)( $_REQUEST['imagePosition'] ?? [] ) );
+	$galleryItems = count( (array)$gContent->mItems );
+	if( empty( $_REQUEST['reorder_gallery'] ) && $postedItems < $galleryItems ) {
+		$_SESSION['image_order_feedback'] = [ 'error' => [ sprintf( KernelTools::tra( 'Only %d of this gallery\'s %d items arrived from the form (PHP max_input_vars is %s), so nothing was saved. Raise max_input_vars, or use the Reorder Gallery option, which does not need the form.' ), $postedItems, $galleryItems, ini_get( 'max_input_vars' ) ) ] ];
+		KernelTools::bit_redirect( FISHEYE_PKG_URL.'image_order.php?gallery_id='.$gContent->getField( 'gallery_id' ) );
+	}
 	if( !empty( $_REQUEST['batch'] ) ) {
 		// flip so we can do instant hash lookup
 		$batchCon = array_flip( $_REQUEST['batch'] );
@@ -104,7 +117,12 @@ if (!empty($_REQUEST['cancel'])) {
 		}
 	}
 
-	foreach ($_REQUEST['imagePosition'] as $contentId=>$newPos) {
+	$positions = (array)( $_REQUEST['imagePosition'] ?? [] );
+	// 'Reorder gallery' sorts the whole gallery: every item gets its new place, whether or not its form fields arrived.
+	foreach( array_keys( (array)( $newOrder ?? [] ) ) as $orderedId ) {
+		$positions[$orderedId] ??= $newOrder[$orderedId];
+	}
+	foreach( $positions as $contentId => $newPos ) {
 		if( $galleryItem = LibertyBase::getLibertyObject( $contentId ) ) {
 			$galleryItem->load();
 			if( isset( $batchCon[$contentId] ) ) {
@@ -178,7 +196,7 @@ if (!empty($_REQUEST['cancel'])) {
 				// if we are reordered, that takes precident
 				$newPos = preg_replace( '/[^\d\.]/', '', !empty( $newOrder[$contentId] ) ? $newOrder[$contentId] : $newPos);
 
-				if ($galleryItem->mInfo['title'] != $_REQUEST['image_title'][$contentId]) {
+				if( isset( $_REQUEST['image_title'][$contentId] ) && $galleryItem->mInfo['title'] != $_REQUEST['image_title'][$contentId] ) {
 					$storageHash = [ 'title' => $_REQUEST['image_title'][$contentId] ];
 					// make sure we don't delete the 'data' field on en masse title updating
 					$storageHash['edit'] = $galleryItem->getField( 'data' );
