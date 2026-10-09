@@ -33,10 +33,16 @@ class FisheyeGallery extends FisheyeBase {
 	 * event_time, _asc or _desc - e.g. view.php?gallery_id=1&sort_mode=title_asc) if it is one of those, else the site's default sort order
 	 * (fisheye_gallery_default_sort_mode), else the order the items were added.
 	 */
+	/** The sort_mode the request asked for if it is one this gallery honours, else '' (the gallery's own order). */
+	private function getRequestedSortMode(): string {
+		$requested = (string)( $_REQUEST['sort_mode'] ?? '' );
+		return preg_match( '/^(title|created|last_modified|hits|event_time)_(asc|desc)$/', $requested ) ? $requested : '';
+	}
+
 	private function getItemOrderSql(): string {
 		global $gBitSystem;
-		$requested = (string)( $_REQUEST['sort_mode'] ?? '' );
-		if( preg_match( '/^(title|created|last_modified|hits|event_time)_(asc|desc)$/', $requested ) ) {
+		$requested = $this->getRequestedSortMode();
+		if( $requested !== '' ) {
 			return ", lc.`".substr( $requested, 0, strrpos( $requested, '_' ) )."` ".strtoupper( substr( $requested, strrpos( $requested, '_' ) + 1 ) );
 		}
 		return $gBitSystem->isFeatureActive( 'fisheye_gallery_default_sort_mode' )
@@ -241,6 +247,9 @@ class FisheyeGallery extends FisheyeBase {
 
 		$pListHash['cant'] = $this->mInfo['num_images'];
 		LibertyContent::prepGetList( $pListHash );
+		// prepGetList() defaults sort_mode to last_modified_desc, but the items are ordered by getItemOrderSql() (the requested sort, else the gallery's own
+		// order) - so the page links must carry the sort actually used, or none, or page 2 comes from a different order than page 1.
+		$pListHash['sort_mode'] = $this->getRequestedSortMode();
 
 		if( empty( $this->mItems ) || !empty( $pListHash['refresh'] ) ) {
 			$bindVars = [ $this->mContentId ];

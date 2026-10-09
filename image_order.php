@@ -41,7 +41,9 @@ if (!empty($_REQUEST['cancel'])) {
 	// A big gallery (a few hundred films) is saved item by item - give it the time it needs.
 	set_time_limit( 300 );
 	// The whole gallery, not just the first page of it: the reorder and the 'did the whole form arrive' check both need every item.
-	$loadHash = [ 'page' => -1, 'max_records' => -1, 'refresh' => true ];
+	// page -1 means 'every item'; the offset is forced to 0 because prepGetList() works it out as (page - 1) * max_records, which for -1 / -1 is +2 and skipped
+	// the first two items of the gallery on every run.
+	$loadHash = [ 'page' => -1, 'offset' => 0, 'max_records' => -1, 'refresh' => true ];
 	$gContent->loadImages( $loadHash );
 	// PHP drops every form field past max_input_vars without a word, so a long gallery used to be saved for its first few dozen items only.
 	// A form that arrives short is refused whole rather than half saved; the 'reorder everything' options below do not depend on the form.
