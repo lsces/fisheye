@@ -17,7 +17,6 @@ define( 'FISHEYE_PAGINATION_FIXED_GRID', 'fixed_grid' );
 define( 'FISHEYE_PAGINATION_AUTO_FLOW', 'auto_flow' );
 define( 'FISHEYE_PAGINATION_POSITION_NUMBER', 'position_number' );
 define( 'FISHEYE_PAGINATION_SIMPLE_LIST', 'simple_list' );
-define( 'FISHEYE_PAGINATION_MATTEO', 'matteo' );
 define( 'FISHEYE_PAGINATION_GALLERIFFIC', 'galleriffic' );
 
 /**
@@ -183,7 +182,7 @@ class FisheyeGallery extends FisheyeBase {
 						$pagination = $this->getPreference( 'gallery_pagination' );
 						if( $pagination == FISHEYE_PAGINATION_GALLERIFFIC ) {
 							$this->mInfo['images_per_page'] = (int)$this->getPreference( 'galleriffic_num_thumbs', 30 );
-						} elseif( in_array( $pagination, [ FISHEYE_PAGINATION_AUTO_FLOW, FISHEYE_PAGINATION_SIMPLE_LIST, FISHEYE_PAGINATION_MATTEO ] ) ) {
+						} elseif( in_array( $pagination, [ FISHEYE_PAGINATION_AUTO_FLOW, FISHEYE_PAGINATION_SIMPLE_LIST ] ) ) {
 							$this->mInfo['images_per_page'] = (int)$this->getPreference( 'total_per_page', $this->mInfo['rows_per_page'] );
 						} else {
 							$this->mInfo['images_per_page'] = $this->mInfo['cols_per_page'] * $this->mInfo['rows_per_page'];
@@ -697,7 +696,6 @@ class FisheyeGallery extends FisheyeBase {
 			FISHEYE_PAGINATION_AUTO_FLOW       => 'Auto-Flow Images',
 			FISHEYE_PAGINATION_POSITION_NUMBER => 'Image Order Page Number',
 			FISHEYE_PAGINATION_SIMPLE_LIST     => 'Simple List',
-//			FISHEYE_PAGINATION_MATTEO		   => 'Matteo',
 		];
 		// Any package can contribute further layouts (content-type-specific grid variants etc.)
 		// via registerService('fisheye_gallery_layout', $packageName, ['layouts' => [...]])

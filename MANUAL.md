@@ -57,7 +57,7 @@ built-in layouts: `galleriffic` (dispatcher →`_1.tpl`/`_2.tpl`/`_5.tpl` by
 `$gContent->mInfo.galleriffic_style`), `auto_flow`, `fixed_grid` (the generic per-item grid —
 genuinely calls `getThumbnailUri()`/`getThumbnailImage()` as real polymorphic methods, unlike
 `galleriffic`, which reads `$galItem->mPreviewImage->mInfo.thumbnail_url.avatar` directly and
-bypasses any content-type-specific thumbnail override entirely), `matteo`, `position_number`,
+bypasses any content-type-specific thumbnail override entirely), `position_number`,
 `simple_list`.
 
 Standard header pattern for every gallery view inc (matching stock/contact):

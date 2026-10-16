@@ -5,7 +5,6 @@ function updateGalleryPagination() {
 	BitBase.hideById('auto_flow-pagination');
 	BitBase.hideById('position_number-pagination');
 	BitBase.hideById('simple_list-pagination');
-	BitBase.hideById('matteo-pagination');
 	BitBase.hideById('galleriffic-pagination');
 
 	var input = document.getElementById('gallery-pagination');
@@ -116,10 +115,6 @@ function updateGalleryPagination() {
 					<div id="simple_list-pagination">
 						<input type="text" id="gallery-rows-per-page" name="lines_per_page" size="2" maxlength="2" value="{$gBitSystem->getConfig('fisheye_gallery_default_rows_per_page')}"/> {tr}Total lines per page{/tr}
 						{formhelp note="This option allows a single column display of images with mime details where available."}
-					</div>
-					<div id="matteo-pagination">
-						<input type="text" id="gallery-rows-per-page" name="images_per_page" size="2" maxlength="2" value="{$gBitSystem->getConfig('fisheye_gallery_default_rows_per_page')}"/> {tr}Total images per page{/tr}
-						{formhelp note="This option provides an ajax powered scrolling display using the mbGallery jquery library."}
 					</div>
 					<div id="galleriffic-pagination">
 						<input type="text" id="galleriffic-style" name="galleriffic_style" size="2" maxlength="2" value="{$gBitSystem->getConfig('fisheye_gallery_default_galleriffic_style')}"/> {tr}Galleriffic layout style{/tr}

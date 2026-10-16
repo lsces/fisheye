@@ -1,23 +1,25 @@
 {literal}
 <script>//<![CDATA[
 function updateGalleryPagination() {
-	var paginationIds = ['fixed_grid','auto_flow','position_number','simple_list','matteo','galleriffic','film_grid','program_grid','music_grid'];
+	// Every settings panel on the page (a div per layout), however the layout was registered; a
+	// layout with no panel of its own (library_grid) simply has nothing to show.
+	var input = document.getElementById('editGalleryForm').gallery_pagination;
 	// film_grid/program_grid/music_grid all get their own fixed settings panel - 4*8=32 per
 	// page, forced by FisheyeGallery::verifyGalleryData() regardless of what an editable
 	// rows/cols panel might suggest, so showing that editable panel for music_grid was
-	// misleading (found it still silently overriding a typed-in value on desktop) - the visual
+	// misleading (it was found still silently overriding a typed-in value) - the visual
 	// column count is pure CSS now, not admin-configurable.
 	var styleGroup = {};
-	paginationIds.forEach(function(id) {
-		var div = document.getElementById(id+'-pagination');
+	document.querySelectorAll('div[id$="-pagination"]').forEach(function(div) {
 		div.style.display = 'none';
 		div.querySelectorAll('input, select').forEach(function(el) { el.disabled = true; });
 	});
-	var input = document.getElementById('editGalleryForm').gallery_pagination;
 	var select = input.options[input.selectedIndex].value;
 	var activeDiv = document.getElementById((styleGroup[select] || select)+'-pagination');
-	activeDiv.style.display = 'block';
-	activeDiv.querySelectorAll('input, select').forEach(function(el) { el.disabled = false; });
+	if(activeDiv) {
+		activeDiv.style.display = 'block';
+		activeDiv.querySelectorAll('input, select').forEach(function(el) { el.disabled = false; });
+	}
 }
 document.addEventListener('DOMContentLoaded', updateGalleryPagination);
 //]]></script>
@@ -102,11 +104,6 @@ document.addEventListener('DOMContentLoaded', updateGalleryPagination);
 								<div id="simple_list-pagination">
 									<input type="text" id="gallery-total-per-page-list" name="total_per_page" size="3" maxlength="3" value="{$gContent->getPreference('total_per_page', $gContent->mInfo.rows_per_page|default:20)}"/> {tr}Total lines per page{/tr}
 									{formhelp note="This option allows a single column display of images with mime details where available."}
-								</div>
-
-								<div id="matteo-pagination">
-									<input type="text" id="gallery-total-per-page-matteo" name="total_per_page" size="3" maxlength="3" value="{$gContent->getPreference('total_per_page', $gContent->mInfo.rows_per_page|default:20)}"/> {tr}Total images per page{/tr}
-									{formhelp note="This option provides an ajax powered scrolling display using the mbGallery jquery library."}
 								</div>
 
 								<div id="galleriffic-pagination">
