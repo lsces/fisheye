@@ -398,8 +398,10 @@ not ready for primetime
 	 * @return bool
 	 */
 	protected function attachThumbnail( string $pSourcePathOrUrl ): bool {
+		$this->mThumbnailError = '';
 		$imageData = @file_get_contents( $pSourcePathOrUrl );
 		if( empty( $imageData ) ) {
+			$this->mThumbnailError = 'the cover image could not be read';
 			return false;
 		}
 		$tmpFile = tempnam( sys_get_temp_dir(), 'fisheye_thumb_' );
@@ -421,8 +423,17 @@ not ready for primetime
 			'skip_content_store' => true,
 			'_files_override' => [ $upload ],
 		];
+		// LibertyMime::store() rolls the attachment back when the object holds ANY error - including one left by an unrelated
+		// earlier step (a refused xref write, say), which silently lost the thumbnail while its files were already on disk.
+		// Run on a clean slate, then put the earlier errors back.
+		$earlierErrors = $this->mErrors;
+		$this->mErrors = [];
 		$ret = \Bitweaver\Liberty\LibertyMime::store( $pParamHash );
 		@unlink( $tmpFile );
+		if( !$ret ) {
+			$this->mThumbnailError = $this->mErrors ? implode( '; ', array_map( 'strval', $this->mErrors ) ) : 'the attachment could not be stored';
+		}
+		$this->mErrors = array_merge( $earlierErrors, $this->mErrors );
 		if( $ret ) {
 			\Bitweaver\Liberty\LibertyMime::load();
 			// method_exists guard - FisheyeProgram has no renderThumbnails()/getSourceFile() at
