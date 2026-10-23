@@ -218,7 +218,7 @@ class FisheyeGallery extends FisheyeBase {
 							$this->mInfo['previous_image_id'] = $rows[$i-1]['image_id'];
 							$this->mInfo['previous_image_avatar'] = \Bitweaver\Liberty\liberty_fetch_thumbnail_url( [
 								'file_name' => $rows[$i-1]['file_name'],
-								'source_file'	=> $tempImage->getSourceFile( $rows[$i-1] ),
+								'source_file'	=> $tempImage->getSourceFile( [ 'file_name' => basename( $rows[$i-1]['file_name'] ) ] + $rows[$i-1] ),
 								'mime_image'   => true,
 								'size'         => 'avatar',
 							] );
@@ -227,7 +227,7 @@ class FisheyeGallery extends FisheyeBase {
 							$this->mInfo['next_image_id'] = $rows[$i+1]['image_id'];
 							$this->mInfo['next_image_avatar'] = \Bitweaver\Liberty\liberty_fetch_thumbnail_url( [
 								'file_name' => $rows[$i+1]['file_name'],
-								'source_file'	=> $tempImage->getSourceFile( $rows[$i+1] ),
+								'source_file'	=> $tempImage->getSourceFile( [ 'file_name' => basename( $rows[$i+1]['file_name'] ) ] + $rows[$i+1] ),
 								'mime_image'   => true,
 								'size'         => 'avatar',
 							] );
