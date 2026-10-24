@@ -25,6 +25,21 @@ points it relies on, usable by any package the same way:
   own generic defaults (`view_image.php`/`edit.php`) never try to guess a content type's real
   destination from anything other than the object's own override.
 
+## Default gallery settings (admin)
+
+**Fisheye admin > Default Gallery Display Settings** sets what a *new* gallery starts with:
+
+| Setting | Meaning |
+|---|---|
+| Layout | the default pagination type (Galleriffic, Fixed Grid, Auto-Flow, Image Order Page Number, Simple List, plus any layout another package contributes) |
+| Rows / columns per page | for Fixed Grid: images per page = rows x columns |
+| Total images per page | for Auto-Flow |
+| Total lines per page | for Simple List |
+| Galleriffic layout style | which Galleriffic template a new Galleriffic gallery uses |
+
+Existing galleries keep the values they were saved with; change one on its own **Edit** page. A layout
+contributed by another package fixes its own rows and columns and ignores these two fields.
+
 ## Real thumbnail attachments (subclass gotchas)
 
 Both `FisheyeImage` and `FisheyeGallery` descend from `LibertyMime`, so both have an unused
