@@ -38,6 +38,8 @@ $indices = [
 	'fisheye_gallery_content_idx' => [ 'table' => 'fisheye_gallery', 'cols' => 'content_id', 'opts' => [ 'UNIQUE' ] ],
 	'fisheye_image_id_idx'        => [ 'table' => 'fisheye_image', 'cols' => 'image_id', 'opts' => null ],
 	'fisheye_image_content_idx'   => [ 'table' => 'fisheye_image', 'cols' => 'content_id', 'opts' => [ 'UNIQUE' ] ],
+	'fisheye_map_gallery_idx'     => [ 'table' => 'fisheye_gallery_image_map', 'cols' => 'gallery_content_id', 'opts' => null ],
+	'fisheye_map_item_idx'        => [ 'table' => 'fisheye_gallery_image_map', 'cols' => 'item_content_id', 'opts' => null ],
 ];
 $gBitInstaller->registerSchemaIndexes( FISHEYE_PKG_NAME, $indices );
 
