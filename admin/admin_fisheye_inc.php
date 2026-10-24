@@ -165,9 +165,15 @@ if (!empty($_REQUEST['fisheyeAdminSubmit'])) {
 		simple_set_toggle($item, FISHEYE_PKG_NAME);
 	}
 
-	foreach( [ 'fisheye_list_thumbnail_size', 'fisheye_gallery_default_thumbnail_size', 'default_gallery_pagination', 'rows_per_page', 'cols_per_page', 'total_per_page', 'lines_per_page', 'galleriffic_style', 'fisheye_gallery_default_sort_mode' ] as $key ) {
+	foreach( [ 'fisheye_list_thumbnail_size', 'fisheye_gallery_default_thumbnail_size', 'default_gallery_pagination', 'total_per_page', 'lines_per_page', 'fisheye_gallery_default_sort_mode' ] as $key ) {
 		$gBitSystem->storeConfig($key, $_REQUEST[$key], FISHEYE_PKG_NAME);
 	}
+	// The form's field names are short; the settings new galleries read carry the fisheye_gallery_default_ prefix.
+	foreach( [ 'rows_per_page', 'cols_per_page' ] as $key ) {
+		$gBitSystem->storeConfig( 'fisheye_gallery_default_'.$key, $_REQUEST[$key], FISHEYE_PKG_NAME );
+	}
+	// kernel_config names stop at 40 characters; fisheye_gallery_default_galleriffic_style is 41.
+	$gBitSystem->storeConfig( 'fisheye_default_galleriffic_style', $_REQUEST['galleriffic_style'], FISHEYE_PKG_NAME );
 
 	// Image Display Settings
 	foreach ($formImageLists as $item => $data) {

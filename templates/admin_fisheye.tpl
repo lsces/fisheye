@@ -117,7 +117,7 @@ function updateGalleryPagination() {
 						{formhelp note="This option allows a single column display of images with mime details where available."}
 					</div>
 					<div id="galleriffic-pagination">
-						<input type="text" id="galleriffic-style" name="galleriffic_style" size="2" maxlength="2" value="{$gBitSystem->getConfig('fisheye_gallery_default_galleriffic_style')}"/> {tr}Galleriffic layout style{/tr}
+						<input type="text" id="galleriffic-style" name="galleriffic_style" size="2" maxlength="2" value="{$gBitSystem->getConfig('fisheye_default_galleriffic_style')}"/> {tr}Galleriffic layout style{/tr}
 						{formhelp note="This option provides a javascript powered tabbed thumbnail list display using the galleriffic jquery library."}
 					</div>
 				</div>
