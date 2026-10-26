@@ -33,6 +33,11 @@ trait FisheyePicturesFolderTrait {
 		return preg_replace( '/^fisheye/', '', (string)$this->getContentType() ).'_content_id';
 	}
 
+	/** The gallery layout a new pictures folder is given - null for the fisheye default; a package can name its own. */
+	public function picturesFolderLayout(): ?string {
+		return null;
+	}
+
 	/**
 	 * This item's pictures folder - a plain fisheye gallery, Images / <Types> / <title>, holding every other picture
 	 * of it (the 'image' xref rows stay the small pictures the item's own page uses). Found by the preference the
@@ -73,7 +78,7 @@ trait FisheyePicturesFolderTrait {
 			}
 			$parentContentId = $found;
 		}
-		$folder = $this->findOrMakePicturesGallery( $this->picturesFolderTitle(), $parentContentId, true );
+		$folder = $this->findOrMakePicturesGallery( $this->picturesFolderTitle(), $parentContentId, true, $this->picturesFolderLayout() );
 		if( !$folder ) {
 			return [ 'error' => 'The pictures folder could not be made.' ];
 		}
@@ -112,7 +117,7 @@ trait FisheyePicturesFolderTrait {
 	}
 
 	/** content_id of the plain gallery with this title under a parent (null = top level), made when it is not there. */
-	protected function findOrMakePicturesGallery( string $pTitle, ?int $pParentContentId, bool $pAlwaysNew = false ): ?int {
+	protected function findOrMakePicturesGallery( string $pTitle, ?int $pParentContentId, bool $pAlwaysNew = false, ?string $pLayout = null ): ?int {
 		$contentId = null;
 		if( !$pAlwaysNew ) {
 			if( $pParentContentId ) {
@@ -131,8 +136,14 @@ trait FisheyePicturesFolderTrait {
 		}
 		$new = new FisheyeGallery();
 		$storeHash = [ 'title' => $pTitle ];
+		if( $pLayout ) {
+			$storeHash['gallery_pagination'] = $pLayout;
+		}
 		if( !$new->store( $storeHash ) ) {
 			return null;
+		}
+		if( $pLayout ) {
+			$new->storePreference( 'gallery_pagination', $pLayout );
 		}
 		if( $pParentContentId ) {
 			$new->addToGalleries( [ (int)$this->mDb->getOne( "SELECT `gallery_id` FROM `".BIT_DB_PREFIX."fisheye_gallery` WHERE `content_id` = ?", [ $pParentContentId ] ) ] );
