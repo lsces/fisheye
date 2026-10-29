@@ -505,11 +505,21 @@ class FisheyeGallery extends FisheyeBase {
 						$pThumbnailContentId = $row['content_id'];
 					}
 				} else {
+					$bindVars = [ $pContentId ];
+					$protectSql = '';
+					// The preview is picked at random from what is in the gallery: leave out anything the protector service would refuse this user,
+					// otherwise loading the pick fatals the whole list (an anonymous visitor listing a public gallery that holds a role-restricted one)
+					global $gBitSystem;
+					if( $gBitSystem->isPackageActive( 'protector' ) ) {
+						$roles = \array_keys( $gBitUser->getRoles( $gBitUser->mUserId ?? -1, true ) ) ?: [ -1 ];
+						$protectSql = " AND NOT EXISTS ( SELECT 1 FROM `".BIT_DB_PREFIX."liberty_content_role_map` lcrm WHERE lcrm.`content_id`=fgim.`item_content_id` AND lcrm.`role_id` NOT IN (".implode( ',', array_fill( 0, count( $roles ), '?' ) ).") ) ";
+						$bindVars = array_merge( $bindVars, $roles );
+					}
 					$query = "SELECT fgim.`item_content_id`, lc.`content_type_guid`
 							FROM `".BIT_DB_PREFIX."fisheye_gallery_image_map` fgim INNER JOIN `".BIT_DB_PREFIX."liberty_content` lc ON ( fgim.`item_content_id`=lc.`content_id` )
-							WHERE fgim.`gallery_content_id` = ?
+							WHERE fgim.`gallery_content_id` = ? $protectSql
 							ORDER BY ".$this->mDb->convertSortmode('random');
-					$rs = $this->mDb->getRow($query, [ $pContentId ], 1);
+					$rs = $this->mDb->getRow($query, $bindVars, 1);
 					if( !empty( $rs ) ) {
 						$pThumbnailContentId = $rs['item_content_id'];
 						$pThumbnailContentType = $rs['content_type_guid'];
