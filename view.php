@@ -35,6 +35,13 @@ if ( !$gContent->isValid() ) {
 	die;
 }
 
+// A content_id that belongs to something other than a gallery (a film, book, album...) has no gallery layout
+// to display - send it to its own page rather than fatal in the gallery display.
+if( !method_exists( $gContent, 'getLayout' ) ) {
+	KernelTools::bit_redirect( $gContent->getDisplayUrl(), HttpStatusCodes::HTTP_FOUND );
+	die;
+}
+
 if( $gContent->isCommentable() ) {
 	$commentsParentId = $gContent->mContentId;
 	$comments_vars = [ 'fisheyegallery' ];
