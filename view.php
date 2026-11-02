@@ -55,7 +55,9 @@ if (!empty($_REQUEST['download'])){
 	// Checked against global users group assignment so that feature can be restricted on a group level.
 	// If content was checked, user would always have permission to do this.
 	$gContent->verifyUserPermission('p_fisheye_download_gallery_arc');
-	$gContent->download();
+	if( $gContent->download() === false && !empty( $gContent->mErrors['download'] ) ){
+		$gBitSystem->fatalError( KernelTools::tra( $gContent->mErrors['download'] ), null, null, HttpStatusCodes::HTTP_NOT_FOUND );
+	}
 } else {
 	require_once FISHEYE_PKG_INCLUDE_PATH.'display_fisheye_gallery_inc.php';
 }

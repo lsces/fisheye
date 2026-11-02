@@ -1231,7 +1231,15 @@ class FisheyeGallery extends FisheyeBase {
 			}else{
 				addGalleryRecursive( $this->mGalleryId, $zip, $path);
 			}
+			$count = $zip->numFiles;
 			$zip->close();
+
+			// An empty zip is never written, so there is nothing to send
+			if( $count == 0 || !is_file( $filename ) || !( $filesize = filesize( $filename ) ) ){
+				@unlink( $filename );
+				$this->mErrors['download'] = "There are no files in this gallery to download";
+				return false;
+			}
 
 			//escape backslashes
 			$outputFileTitle = str_replace("\\",'\\\\',$this->getTitle() ?? '');
@@ -1245,7 +1253,6 @@ class FisheyeGallery extends FisheyeBase {
 			header('Expires: 0');
 			header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
 			header('Pragma: public');
-			$filesize = filesize($filename);
 			Header ("Content-Length: ".$filesize );
 			ob_end_flush();
 			readfile($filename);
