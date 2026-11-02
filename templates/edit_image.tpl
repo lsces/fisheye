@@ -1,6 +1,11 @@
 {strip}
 
 <div class="edit fisheye">
+	{if $gContent->mInfo.image_id && $gContent->hasAdminPermission()}
+		<div class="floaticon">
+			<a title="{tr}Delete Image{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}edit_image.php?image_id={$gContent->mImageId}&amp;delete=1">{biticon ipackage="icons" iname="user-trash" iexplain="Delete Image"}</a>
+		</div>
+	{/if}
 	<div class="header">
 		<h1>{if $gContent->mInfo.image_id}{tr}Edit Image{/tr}: {$gContent->getTitle()|escape} {else}{tr}Add New Image{/tr} {/if}</h1>
 	</div>

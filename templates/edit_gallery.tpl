@@ -26,6 +26,11 @@ document.addEventListener('DOMContentLoaded', updateGalleryPagination);
 {/literal}
 {strip}
 <div class="edit fisheye">
+	{if $gContent->isValid() && $gContent->hasAdminPermission()}
+		<div class="floaticon">
+			<a title="{tr}Delete Gallery{/tr}" href="{$smarty.const.FISHEYE_PKG_URL}edit.php?gallery_id={$gContent->mGalleryId}&amp;delete=1">{biticon ipackage="icons" iname="user-trash" iexplain="Delete Gallery"}</a>
+		</div>
+	{/if}
 	<div class="header">
 		<h1>
 			{if $gContent->getTitle()}
