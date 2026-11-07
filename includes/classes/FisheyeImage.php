@@ -260,7 +260,8 @@ class FisheyeImage extends FisheyeBase {
 			}
 
 			if( strpos( $pParamHash['_files_override'][0]['name'], '.' ) ) {
-				list( $defaultName, $ext ) = explode( '.', $pParamHash['_files_override'][0]['name'] );
+				// Only the last dot is the extension: "1.1 course notes.zip" is "1.1 course notes", not "1".
+				$defaultName = pathinfo( $pParamHash['_files_override'][0]['name'], PATHINFO_FILENAME );
 			}
 			$pParamHash['title'] = str_replace( '_', ' ', $defaultName );
 		}
