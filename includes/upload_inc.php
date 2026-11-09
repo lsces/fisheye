@@ -38,7 +38,8 @@ function fisheye_handle_upload( &$pFiles ) {
 	foreach( array_keys( $pFiles ) as $key ) {
 		if ( !empty($pFiles[$key]['name']) ) {
 			$pFiles[$key]['type'] = $gBitSystem->verifyMimeType( $pFiles[$key]['tmp_name'] );
-			if( preg_match( '/(^image|pdf|vnd)/i', $pFiles[$key]['type'] ?? '' ) ) {
+			// an image, or a document that is stored as it is (pdf, epub, mobi); anything else is taken to be an archive
+			if( preg_match( '/(^image|pdf|vnd|epub|mobipocket)/i', $pFiles[$key]['type'] ?? '' ) ) {
 				$upImages[$key] = $pFiles[$key];
 				// clone the request data so edit service values are passed into store process
 				$upData[$key] = $_REQUEST;
@@ -191,7 +192,15 @@ function fisheye_process_archive( &$pFileHash, &$pParentGallery, $pRoot=false ) 
 	} else {
 		global $gBitUser;
 		if( $gBitUser->hasPermission( 'p_fisheye_upload_nonimages' ) ) {
-			$errors = array_merge( $errors, fisheye_store_upload( $pFileHash ));
+			// a file that is not an archive is stored as it is, in the gallery it was uploaded into (the one being filled, else the one asked for) -
+			// without that it went to the user's most recent gallery
+			$imageData = [];
+			if( is_object( $pParentGallery ) && $pParentGallery->isValid() ) {
+				$imageData['gallery_additions'] = [ $pParentGallery->getField( 'gallery_id' ) ];
+			} elseif( !empty( $_REQUEST['gallery_additions'] ) ) {
+				$imageData['gallery_additions'] = $_REQUEST['gallery_additions'];
+			}
+			$errors = array_merge( $errors, fisheye_store_upload( $pFileHash, $imageData ));
 		} else {
 			$errors['upload'] = KernelTools::tra( 'Your upload could not be processed because it was determined to be a non-image and you only have permission to upload images.' );
 		}
@@ -203,7 +212,7 @@ if( !function_exists( 'fisheye_verify_upload_item' ) ) {
 // Possible override
 function fisheye_verify_upload_item( $pScanFile ) {
 	global $gBitUser;
-	return $gBitUser->hasPermission( 'p_fisheye_upload_nonimages' ) || preg_match( '/^video\/*/', $pScanFile['type'] ) || preg_match( '/^image\/*/', $pScanFile['type'] ) || preg_match( '/pdf/i', $pScanFile['type'] );
+	return $gBitUser->hasPermission( 'p_fisheye_upload_nonimages' ) || preg_match( '/^video\/*/', $pScanFile['type'] ) || preg_match( '/^image\/*/', $pScanFile['type'] ) || preg_match( '/pdf|epub|mobipocket/i', $pScanFile['type'] );
 }
 }
 
@@ -257,7 +266,8 @@ function fisheye_process_directory( $pDestinationDir, &$pParentGallery, $pRoot=f
 							$errors = array_merge( $errors, array_values( $newGallery->mErrors ) );
 						}
 					}
-				} elseif( preg_match( '/.+\/*zip*/', $scanFile['type'] ) ) {
+				} elseif( preg_match( '/.+\/*zip*/', $scanFile['type'] ) && !str_contains( $scanFile['type'], '+zip' ) ) {
+					// an archive - but not an epub (application/epub+zip), which is a document that is stored as it is
 					//recurse down in!
 					$errors = array_merge( $errors, fisheye_process_archive( $scanFile, $pParentGallery ) );
 				} elseif( fisheye_verify_upload_item( $scanFile ) ) {
