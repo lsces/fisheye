@@ -737,6 +737,14 @@ class FisheyeImage extends FisheyeBase {
 		return $this->mContentId;
 	}
 
+	/**
+	 * The text of a document stored as an image (a PDF's text layer, liberty_content_data 'text') for the search index: liberty_content.data holds
+	 * only a short summary of it. LibertyContent::setIndexData() and verify() append this to the words they index.
+	 */
+	public function getExtraIndexWords( array $pParamHash ): string {
+		return $this->mContentId ? (string)$this->mDb->getOne( "SELECT `data` FROM `".BIT_DB_PREFIX."liberty_content_data` WHERE `content_id` = ? AND `data_type` = 'text'", [ $this->mContentId ] ) : '';
+	}
+
 	public function getThumbnailUrl( string $pSize = 'small', ?array $pInfoHash = null, ?int $pSecondaryId = null, ?int $pDefault = null ): string|null {
 		$ret = null;
 		if( $this->isValid() && isset( $this->mInfo['thumbnail_url'][$pSize] ) ) {
