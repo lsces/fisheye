@@ -253,7 +253,15 @@ function fisheye_process_directory( $pDestinationDir, &$pParentGallery, $pRoot=f
 						// We found a new Gallery!
 						$newGallery = new FisheyeGallery();
 						$galleryHash = [ 'title' => str_replace( '_', ' ', $fileName ) ];
+						// a gallery made from a folder takes the layout the gallery it is made in has been given (when it has one of its own), not the site default
+						$parentLayout = is_object( $pParentGallery ) && $pParentGallery->isValid() ? $pParentGallery->getPreference( 'gallery_pagination' ) : null;
+						if( $parentLayout ) {
+							$galleryHash['gallery_pagination'] = $parentLayout;
+						}
 						if( $newGallery->store( $galleryHash ) ) {
+							if( $parentLayout ) {
+								$newGallery->storePreference( 'gallery_pagination', $parentLayout );
+							}
 							if( $pRoot ) {
 								$newGallery->addToGalleries( $_REQUEST['gallery_additions'] );
 							}
