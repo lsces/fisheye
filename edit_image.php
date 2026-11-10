@@ -88,6 +88,10 @@ if( !empty($_REQUEST['saveImage']) || !empty($_REQUEST['regenerateThumbnails'] )
 		if( !empty( $_REQUEST['rotate_image'] ) ) {
 			$gContent->rotateImage( $_REQUEST['rotate_image'] );
 		}
+		// before the ajax redirect below, or the inline edit never gets to it
+		if( !empty( $_REQUEST['generate_thumbnails'] ) ) {
+			$gContent->generateThumbnails( null, true );
+		}
 		if( !empty( $_REQUEST['ajax'] ) ) {
 			// we need to refresh the images in the page after saving - not working yet - xing
 			header( 'Location: '.FISHEYE_PKG_URL."image_order.php?refresh=1&gallery_id=".$_REQUEST['gallery_id'] );
@@ -95,9 +99,6 @@ if( !empty($_REQUEST['saveImage']) || !empty($_REQUEST['regenerateThumbnails'] )
 		}
 		if( !empty( $_REQUEST['gallery_additions'] ) ) {
 			$gContent->addToGalleries( $_REQUEST['gallery_additions'] );
-		}
-		if( !empty( $_REQUEST['generate_thumbnails'] ) ) {
-			$gContent->generateThumbnails();
 		}
 		if( $isPdf && !empty( $_REQUEST['reload_pdf'] ) ) {
 			foreach( $gContent->mStorage as $attachmentId => $attachment ) {
