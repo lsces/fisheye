@@ -112,6 +112,36 @@ function fisheye_get_default_gallery_id( $pUserId, $pNewName ) {
 }
 
 /**
+ * Whether an image just stored is really there, and a trace when it is not. LibertyMime::store() ends in CompleteTrans(), which rolls the whole object
+ * back when a SQL statement failed and still reports success (mErrors stays empty), and an empty error list gave the page nothing to show - so files
+ * were lost from an upload without a word (4 PDFs of a 147-file load, 2026-11-10). A failure is now logged (error_log: file name, the reasons the object
+ * gave, the database's last error) and added to the errors the page shows.
+ *
+ * @param FisheyeImage $pImage   the image store() was just called on
+ * @param string       $pName    the file's name
+ * @param bool         $pStored  what store() returned
+ * @param array        $pErrors  the errors of the upload, added to
+ */
+function fisheye_check_stored( $pImage, $pName, $pStored, array &$pErrors ) {
+	$reasons = array_values( array_map( 'strval', (array)$pImage->mErrors ) );
+	if( $pStored && !empty( $pImage->mContentId )
+		&& !$pImage->mDb->getOne( "SELECT COUNT(*) FROM `".BIT_DB_PREFIX."liberty_content` WHERE `content_id` = ?", [ $pImage->mContentId ] ) ) {
+		$pStored = false;
+		$reasons[] = 'the database rolled the new item back after store() reported success';
+	}
+	if( $pStored ) {
+		return true;
+	}
+	$sqlError = is_object( $pImage->mDb ) && is_object( $pImage->mDb->mDb ) ? trim( (string)$pImage->mDb->mDb->ErrorMsg() ) : '';
+	if( $sqlError !== '' ) {
+		$reasons[] = 'last database error: '.$sqlError;
+	}
+	error_log( 'fisheye upload: "'.$pName.'" was not stored'.( !empty( $pImage->mContentId ) ? ' (content_id '.$pImage->mContentId.' was taken and lost)' : '' ).': '.( $reasons ? implode( '; ', $reasons ) : 'no reason given' ) );
+	$pErrors[] = sprintf( KernelTools::tra( '%s could not be stored: %s' ), $pName, $reasons ? implode( '; ', $reasons ) : KernelTools::tra( 'no reason was given' ) );
+	return false;
+}
+
+/**
  * fisheye_store_upload
  */
 function fisheye_store_upload( &$pFileHash, $pImageData = [], $pAutoRotate=true ) {
@@ -143,8 +173,8 @@ function fisheye_store_upload( &$pFileHash, $pImageData = [], $pAutoRotate=true 
 		$pImageData['process_storage'] = STORAGE_IMAGE;
 		$pImageData['purge_from_galleries'] = true;
 		// store the image
-		if( !$image->store( $pImageData ) ) {
-			$ret = $image->mErrors;
+		if( !fisheye_check_stored( $image, (string)( $pFileHash['name'] ?? '' ), $image->store( $pImageData ), $ret ) ) {
+			// not stored: fisheye_check_stored() has logged it and put the reason in $ret
 		} else {
 			$pFileHash['content_id'] = $image->getField( 'content_id' );
 			$pFileHash['image_id'] = $image->getField( 'image_id' );
@@ -281,7 +311,7 @@ function fisheye_process_directory( $pDestinationDir, &$pParentGallery, $pRoot=f
 				} elseif( fisheye_verify_upload_item( $scanFile ) ) {
 					$newImage = new FisheyeImage();
 					$imageHash = [ '_files_override' => [ $scanFile ] ];
-					if( $newImage->store( $imageHash ) ) {
+					if( fisheye_check_stored( $newImage, $scanFile['name'], $newImage->store( $imageHash ), $errors ) ) {
 						if( $pRoot ) {
 							$newImage->addToGalleries( $_REQUEST['gallery_additions'] );
 						}
@@ -291,8 +321,6 @@ function fisheye_process_directory( $pDestinationDir, &$pParentGallery, $pRoot=f
 							$pParentGallery->load();
 						}
 						$pParentGallery->addItem( $newImage->mContentId );
-					} else {
-						$errors = array_merge( $errors, array_values( $newImage->mErrors ) );
 					}
 				} elseif( is_file( $scanFile['tmp_name'] ) ) {
 					// unknown file type, let's be tidy and clean it up
@@ -352,7 +380,7 @@ function fisheye_process_ftp_directory( $pProcessDir ) {
 						// process image
 						$newImage = new FisheyeImage();
 						$imageHash = [ 'upload' => $scanFile ];
-						if( $newImage->store( $imageHash ) ) {
+						if( fisheye_check_stored( $newImage, $scanFile['name'], $newImage->store( $imageHash ), $errors ) ) {
 							$newImage->addToGalleries( $_REQUEST['gallery_additions'] );
 
 							// if we have a gallery to add these images to, load one of them
@@ -374,8 +402,6 @@ function fisheye_process_ftp_directory( $pProcessDir ) {
 							}
 
 							$imageGallery->addItem( $newImage->mContentId );
-						} else {
-							$errors = array_merge( $errors, array_values( $newImage->mErrors ) );
 						}
 					} else {
 						// create a new gallery from archive
