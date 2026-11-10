@@ -526,6 +526,14 @@ class FisheyeImage extends FisheyeBase {
 				\Bitweaver\Liberty\mime_video_create_thumbnail( $fileHash['source_file'] );
 			} elseif( preg_match( '/pdf/i', $fileHash['type'] ?? '' ) ) {
 				\Bitweaver\Liberty\mime_pdf_thumbnail( $fileHash );
+			} elseif( preg_match( '/epub/i', $fileHash['type'] ?? '' ) ) {
+				// an epub's thumbnails are made from its cover image (the image thumbnailer cannot read the epub itself): read the cover again
+				if( function_exists( '\\Bitweaver\\Liberty\\mime_epub_read' ) && function_exists( '\\Bitweaver\\Liberty\\mime_epub_thumbnails' ) ) {
+					$epub = \Bitweaver\Liberty\mime_epub_read( $fileHash['source_file'] );
+					if( !empty( $epub['cover'] ) ) {
+						\Bitweaver\Liberty\mime_epub_thumbnails( $epub['cover'], rtrim( dirname( $fileHash['source_file'] ), '/' ).'/', (int)$fileHash['attachment_id'] );
+					}
+				}
 			} else {
 				\Bitweaver\Liberty\liberty_generate_thumbnails( $fileHash );
 				if( !empty( $fileHash['error'] ) ) {

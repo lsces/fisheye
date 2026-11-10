@@ -151,8 +151,14 @@ if (!empty($_REQUEST['cancel'])) {
 							}
 							break;
 						case 'thumbnail':
-							$galleryItem->generateGalleryThumbnails();
-							$feedback['success'] = KernelTools::tra( "Thumbnail regeneration queued" );
+							// a gallery regenerates the thumbnails of what it holds; an image (a PDF, a picture) its own, drawn now
+							if( method_exists( $galleryItem, 'generateGalleryThumbnails' ) ) {
+								$galleryItem->generateGalleryThumbnails();
+								$feedback['success'] = KernelTools::tra( "Thumbnail regeneration queued" );
+							} elseif( method_exists( $galleryItem, 'generateThumbnails' ) ) {
+								$galleryItem->generateThumbnails( null, true );
+								$feedback['success'] = KernelTools::tra( "Thumbnails regenerated" );
+							}
 							break;
 						case 'grayscale':
 							$galleryItem->convertColorspace( 'grayscale' );
