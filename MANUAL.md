@@ -96,7 +96,7 @@ Standard header pattern for every gallery view inc (matching stock/contact):
   via the parent object's own `getDisplayUrl()` instead of including this wholesale.
 - `gallery_nav.tpl` — prev/next image navigation only.
 
-Do NOT use `<div class="header">` (the merg theme's blue background applies only to `<header>`);
+Do NOT use `<div class="header">` (a theme may colour `<header>` elements but not a plain div);
 do NOT add a `container` class to the outer div (the Bitweaver layout already provides one).
 
 Gallery description text is **plain text**, not wiki/rich text — use `data|escape`, never
