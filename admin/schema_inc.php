@@ -106,6 +106,6 @@ $gBitInstaller->registerContentObjects( FISHEYE_PKG_NAME, [
 
 // Requirements
 $gBitInstaller->registerRequirements( FISHEYE_PKG_NAME, [
-	'liberty' => [ 'min' => '5.0.0' ],
+	'liberty' => [ 'min' => '5.1.1' ],
 ]);
 
