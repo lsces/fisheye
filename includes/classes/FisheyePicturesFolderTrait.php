@@ -33,6 +33,18 @@ trait FisheyePicturesFolderTrait {
 		return preg_replace( '/^fisheye/', '', (string)$this->getContentType() ).'_content_id';
 	}
 
+	/**
+	 * Where this kind of item's pictures folders are rooted: 'key', the site config entry that keeps the content_id of the root "Images" gallery,
+	 * and, for an item that belongs to a base gallery of its own (a library's books), 'parentKey' and 'parentTitle' - the config entry for that base and the
+	 * title it is adopted by the first time - so the root is the base's own Images (Library / Images). Core items use the one root, fisheye_pictures_gallery;
+	 * a package names its own entries with its own prefix.
+	 *
+	 * @return array{key:string,parentKey:?string,parentTitle:?string}
+	 */
+	public function picturesFolderRoot(): array {
+		return [ 'key' => 'fisheye_pictures_gallery', 'parentKey' => null, 'parentTitle' => null ];
+	}
+
 	/** The gallery layout a new pictures folder is given - null for the fisheye default; a package can name its own. */
 	public function picturesFolderLayout(): ?string {
 		return null;
@@ -70,9 +82,18 @@ trait FisheyePicturesFolderTrait {
 			return $existing;
 		}
 		$types = $this->picturesFolderTypes();
+		$root = $this->picturesFolderRoot();
+		// every level is found by the content_id kept in the site config - never by its name; made, or the first time on a site that already has it adopted by
+		// name, when none is kept yet
 		$parentContentId = null;
-		foreach( [ 'Images', $types ] as $title ) {
-			$found = $this->findOrMakePicturesGallery( $title, $parentContentId );
+		if( $root['parentKey'] ) {
+			if( !( $parentContentId = $this->findOrMakePicturesGallery( (string)$root['parentTitle'], null, false, null, $root['parentKey'] ) ) ) {
+				return [ 'error' => 'The '.$root['parentTitle'].' gallery could not be found.' ];
+			}
+		}
+		$typesKey = substr( preg_replace( '/_gallery$/', '', $root['key'] ).'_'.strtolower( $types ), 0, 40 );   // a config name is 40 characters at most
+		foreach( [ 'Images' => $root['key'], $types => $typesKey ] as $title => $configKey ) {
+			$found = $this->findOrMakePicturesGallery( $title, $parentContentId, false, null, $configKey );
 			if( !$found ) {
 				return [ 'error' => 'The '.$title.' gallery could not be made.' ];
 			}
@@ -116,9 +137,16 @@ trait FisheyePicturesFolderTrait {
 		return $images;
 	}
 
-	/** content_id of the plain gallery with this title under a parent (null = top level), made when it is not there. */
-	protected function findOrMakePicturesGallery( string $pTitle, ?int $pParentContentId, bool $pAlwaysNew = false, ?string $pLayout = null ): ?int {
+	/**
+	 * content_id of the plain gallery with this title under a parent (null = the root), made when it is not there. With a $pConfigKey the id kept under it
+	 * in the site config is the answer while it still names a gallery; with none kept, the gallery of that title - under the parent, or at the top level - is adopted and its id kept, so a name is looked up once, not every time.
+	 */
+	protected function findOrMakePicturesGallery( string $pTitle, ?int $pParentContentId, bool $pAlwaysNew = false, ?string $pLayout = null, ?string $pConfigKey = null ): ?int {
+		global $gBitSystem;
 		$contentId = null;
+		if( $pConfigKey && ( $kept = (int)$gBitSystem->getConfig( $pConfigKey, 0 ) ) && $this->mDb->getOne( "SELECT `content_id` FROM `".BIT_DB_PREFIX."fisheye_gallery` WHERE `content_id` = ?", [ $kept ] ) ) {
+			return $kept;
+		}
 		if( !$pAlwaysNew ) {
 			if( $pParentContentId ) {
 				$contentId = $this->mDb->getOne(
@@ -132,6 +160,9 @@ trait FisheyePicturesFolderTrait {
 			}
 		}
 		if( $contentId ) {
+			if( $pConfigKey ) {
+				$gBitSystem->storeConfig( $pConfigKey, (int)$contentId, FISHEYE_PKG_NAME );
+			}
 			return (int)$contentId;
 		}
 		$new = new FisheyeGallery();
@@ -147,6 +178,9 @@ trait FisheyePicturesFolderTrait {
 		}
 		if( $pParentContentId ) {
 			$new->addToGalleries( [ (int)$this->mDb->getOne( "SELECT `gallery_id` FROM `".BIT_DB_PREFIX."fisheye_gallery` WHERE `content_id` = ?", [ $pParentContentId ] ) ] );
+		}
+		if( $pConfigKey ) {
+			$gBitSystem->storeConfig( $pConfigKey, (int)$new->mContentId, FISHEYE_PKG_NAME );
 		}
 		return (int)$new->mContentId;
 	}
