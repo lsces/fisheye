@@ -28,6 +28,38 @@ define( 'FISHEYE_PAGINATION_GALLERIFFIC', 'galleriffic' );
 class FisheyeGallery extends FisheyeBase {
 
 	/**
+	 * Content ids of everything inside a gallery at any depth (items and sub-galleries), without the gallery itself. The answer a container gives to
+	 * anything that acts on what it holds - protector's "apply this access to everything inside", for one.
+	 *
+	 * @return list<int>
+	 */
+	public static function containedContentIds( int $pGalleryContentId ): array {
+		global $gBitDb;
+		$seen = [ $pGalleryContentId => true ];
+		$queue = [ $pGalleryContentId ];
+		$found = [];
+		while( $queue ) {
+			$batch = array_splice( $queue, 0, 400 );
+			$rows = $gBitDb->getCol( "SELECT `item_content_id` FROM `".BIT_DB_PREFIX."fisheye_gallery_image_map` WHERE `gallery_content_id` IN (".implode( ',', array_fill( 0, count( $batch ), '?' ) ).")", $batch ) ?: [];
+			foreach( $rows as $cid ) {
+				$cid = (int)$cid;
+				if( !isset( $seen[$cid] ) ) {
+					$seen[$cid] = true;
+					$found[] = $cid;
+					$queue[] = $cid;
+				}
+			}
+		}
+		return $found;
+	}
+
+	/** @return list<int>  see containedContentIds() */
+	public function getContainedContentIds(): array {
+		return $this->mContentId ? self::containedContentIds( (int)$this->mContentId ) : [];
+	}
+
+
+	/**
 	 * The ", <column> <direction>" tail of an item query's ORDER BY: a `sort_mode` in the request (title, created, last_modified, hits or
 	 * event_time, _asc or _desc - e.g. view.php?gallery_id=1&sort_mode=title_asc) if it is one of those, else the site's default sort order
 	 * (fisheye_gallery_default_sort_mode), else the order the items were added.
