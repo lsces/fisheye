@@ -57,6 +57,7 @@ if( !empty( $_REQUEST['savegallery'] ) ) {
 		$gContent->storePreference( 'galleriffic_num_thumbs', !empty( $_REQUEST['galleriffic_num_thumbs'] ) ? (int)$_REQUEST['galleriffic_num_thumbs'] : null );
 		$gContent->storePreference( 'galleriffic_style', !empty( $_REQUEST['galleriffic_style'] ) ? (int)$_REQUEST['galleriffic_style'] : null );
 		$gContent->storePreference( 'show_description', !empty( $_REQUEST['show_description'] ) ? 'y' : 'n' );
+		FisheyeGallery::storeMenuIcon( $gContent, $_REQUEST['menu_icon'] ?? '' );
 		// make sure var is fully stuffed with current data
 		$gContent->load();
 		// set the mappings, or if nothing checked, nuke them all

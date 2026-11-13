@@ -27,6 +27,28 @@ define( 'FISHEYE_PAGINATION_GALLERIFFIC', 'galleriffic' );
 #[\AllowDynamicProperties]
 class FisheyeGallery extends FisheyeBase {
 
+	/** The preference holding a gallery's menu icon. */
+	public const MENU_ICON_PREFERENCE = 'menu_icon';
+
+	/**
+	 * The icons a gallery may take for its entry in the media menu (icon name => what to call it in the picker): a short list, not the whole icon set.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function menuIconChoices(): array {
+		return [
+			'folder-open' => 'Folder', 'video-x-generic' => 'Video', 'video-display' => 'Television', 'audio-x-generic' => 'Music',
+			'bwfm-book' => 'Book', 'document' => 'Documents', 'text-x-generic' => 'Text', 'applications-education' => 'Tutorials',
+			'image-x-generic' => 'Pictures', 'camera-photo' => 'Photographs', 'applications-multimedia' => 'Media', 'package-x-generic' => 'Archive',
+		];
+	}
+
+	/** Keep a posted menu icon if it is one of the choices; anything else clears the setting (the menu then uses the folder). */
+	public static function storeMenuIcon( $pGallery, $pValue ): void {
+		$value = (string)$pValue;
+		$pGallery->storePreference( self::MENU_ICON_PREFERENCE, isset( self::menuIconChoices()[$value] ) && $value !== 'folder-open' ? $value : null );
+	}
+
 	/**
 	 * Content ids of everything inside a gallery at any depth (items and sub-galleries), without the gallery itself. The answer a container gives to
 	 * anything that acts on what it holds - protector's "apply this access to everything inside", for one.

@@ -145,6 +145,8 @@ document.addEventListener('DOMContentLoaded', updateGalleryPagination);
 							</div>
 						{/if}
 
+						{include file="bitpackage:fisheye/edit_gallery_menu_icon_inc.tpl"}
+
 						{if $gContent->isValid()}
 							<div class="form-group">
 								{forminput label="checkbox"}
