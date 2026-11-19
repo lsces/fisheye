@@ -262,6 +262,8 @@ foreach( $galleryList as $galleryId => &$galleryRow ) {
 	$galleryRow['parentTitle'] = $parentGalleries ? current( $parentGalleries )['title'] : null;
 }
 unset( $galleryRow );
+// The database sorts by raw bytes, so 'HMS Victory' came before 'Harbour'; the picker is ordered here ignoring case, as the reorder options above are.
+uasort( $galleryList, fn( $a, $b ) => strnatcasecmp( (string)$a['title'], (string)$b['title'] ) ?: strnatcasecmp( (string)( $a['parentTitle'] ?? '' ), (string)( $b['parentTitle'] ?? '' ) ) );
 $gBitSmarty->assign( 'galleryList', $galleryList );
 $gContent->loadImages( $listHash );
 if ( !empty( $feedback ) ) {
