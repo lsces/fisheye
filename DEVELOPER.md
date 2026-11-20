@@ -24,3 +24,13 @@
   (`getGridPaginationTypes()`) overwrites rows and columns with its own on every save.
 - Posting this form with only some fields switches the omitted checkboxes off (`simple_set_toggle`); test it
   with the complete form.
+
+## Where derived pictures are written
+`FisheyeImage::renderThumbnails()` (the thumbnails of a stored picture, called by the Regenerate Thumbnails actions) and `resizeOriginal()` write beside the picture's own file, in the folder the
+page reads them from: `branchBesideSource()` gives that folder when the file is under the storage root, and the item's attachment folder (`attachments/<id mod 1000>/<id>/`) otherwise.
+`getStorageBranch()`, `getStorageUrl()` and `getStoragePath()` are the legacy lookups used to FIND an existing file; for an item with no owner they give `storage/common/<id>/`, a folder nothing reads, so thumbnail
+code must not write there (regenerating used to leave thumbnails in `common` that were never shown). Nothing should be created under `storage/common`.
+
+`FisheyeGallery::expunge()` removes a gallery, its links and the sub-galleries that sit in no other gallery, but not the items in it: the recursive-delete option is not implemented (the code is commented out).
+fisheyemedia's managed-gallery delete (`FisheyeManagedGallery::deleteTree()`) deletes a tree with its items.
+
