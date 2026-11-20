@@ -454,7 +454,7 @@ class FisheyeImage extends FisheyeBase {
 			$fileHash['dest_base_name'] = preg_replace('/(.+)\..*$/', '$1', basename( $fileHash['source_file'] ) );
 			$fileHash['type'] = $gBitSystem->verifyMimeType( $fileHash['source_file'] );
 			$fileHash['size'] = filesize( $fileHash['source_file'] );
-			$fileHash['dest_branch'] = $this->getStorageBranch();
+			$fileHash['dest_branch'] = $this->branchBesideSource( $fileHash['source_file'] );
 			$fileHash['name'] = $this->getField( 'file_name' );
 			$fileHash['max_height'] = $fileHash['max_width'] = $pResizeOriginal;
 			// make a copy of the fileHash that we can compare output after processing
@@ -518,7 +518,7 @@ class FisheyeImage extends FisheyeBase {
 			$fileHash['source_file'] = $this->getSourceFile();
 			$fileHash['type'] = $gBitSystem->verifyMimeType( $fileHash['source_file'] );
 			$fileHash['size'] = filesize( $fileHash['source_file'] );
-			$fileHash['dest_branch'] = $this->getStorageBranch( $fileHash );
+			$fileHash['dest_branch'] = $this->branchBesideSource( $fileHash['source_file'], $fileHash );
 			$fileHash['name'] = $this->getField( 'file_name' );
 			$fileHash['thumbnail_sizes'] = $pThumbSizes;
 			$fileHash['attachment_id'] = $this->getField( 'attachment_id' );
@@ -542,6 +542,25 @@ class FisheyeImage extends FisheyeBase {
 			}
 		}
 		return count($this->mErrors) == 0;
+	}
+
+	/**
+	 * The storage branch to write a picture's derived files (thumbnails, a resized original) into: the folder the file itself is in, which is where the page
+	 * reads them from. getStorageBranch() is the legacy lookup for finding a file and gives storage/common/<id>/ for an item with no owner, a folder nothing
+	 * reads (and which should not exist at all). A file outside the storage tree goes to the item's attachment folder.
+	 *
+	 * @param string $pSourceFile the picture's file
+	 * @param array $pParamHash passed to getStorageBranch() for the fallback
+	 * @return string branch relative to STORAGE_PKG_PATH, with a closing slash
+	 */
+	private function branchBesideSource( string $pSourceFile, array $pParamHash = [] ): string {
+		$dir = rtrim( dirname( $pSourceFile ), '/' ).'/';
+		if( str_starts_with( $dir, STORAGE_PKG_PATH ) ) {
+			return substr( $dir, strlen( STORAGE_PKG_PATH ) );
+		}
+		// a file outside the storage tree: the item's own attachment folder, never 'common'
+		$attachmentId = $this->getParameter( $pParamHash, 'attachment_id', $this->getField( 'attachment_id' ) );
+		return $attachmentId ? \Bitweaver\Liberty\liberty_mime_get_storage_branch( [ 'attachment_id' => $attachmentId ] ) : $this->getStorageBranch( $pParamHash );
 	}
 
 	public function getStorageUrl( $pParamHash = [] ) {
