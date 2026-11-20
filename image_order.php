@@ -160,6 +160,20 @@ if (!empty($_REQUEST['cancel'])) {
 								$feedback['success'] = KernelTools::tra( "Thumbnails regenerated" );
 							}
 							break;
+						case 'rereadtext':
+							// an item that holds its own PDF or epub (a Book of the fisheyemedia package) reads the text of the file again; a file is read whole, so a press does 20 at most
+							if( method_exists( $galleryItem, 'rereadText' ) ) {
+								$reread ??= [ 'stored' => 0, 'none' => 0, 'nofile' => 0, 'skipped' => 0 ];
+								if( array_sum( $reread ) - $reread['skipped'] >= 20 ) {
+									$reread['skipped']++;
+								} else {
+									$reread[$galleryItem->rereadText()['status']]++;
+								}
+								$feedback['success'] = KernelTools::tra( "Text re-read" ).': '.$reread['stored'].' '.KernelTools::tra( "stored" ).', '.$reread['none'].' '.KernelTools::tra( "still without text" )
+									.( $reread['nofile'] ? ', '.$reread['nofile'].' '.KernelTools::tra( "without a file" ) : '' )
+									.( $reread['skipped'] ? ', '.$reread['skipped'].' '.KernelTools::tra( "left for the next press (20 at a time)" ) : '' );
+							}
+							break;
 						case 'grayscale':
 							$galleryItem->convertColorspace( 'grayscale' );
 							break;

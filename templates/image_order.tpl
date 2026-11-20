@@ -86,6 +86,9 @@
 							<option value="delete">{tr}Delete{/tr}</option>
 							<option value="remove">{tr}Remove{/tr} ({tr}Don't delete if in other galleries{/tr})</option>
 							<option value="thumbnail">{tr}Regenerate Thumbnails{/tr}</option>
+							{if $gBitSystem->isPackageActive( 'fisheyemedia' )}
+							<option value="rereadtext">{tr}Re-read text from file{/tr}</option>
+							{/if}
 							{if $gBitUser->hasPermission('p_fisheye_admin')}
 							<option value="filenametoimagename">{tr}Rename Images Based on File Name{/tr} *{tr}Cannot be undone!{/tr}*</option>
 							{/if}
